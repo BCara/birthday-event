@@ -1,0 +1,9 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /memories/{eventId}/{fileName} {
+      // Anyone can upload photos/videos for a memory wall, as guests are unauthenticated
+      allow read, write: if true;
+    }
+  }
+}

@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- users ----
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ---- events ----
+    match /events/{eventId} {
+      // host can do anything to their own events
+      allow read, update, delete: if request.auth != null
+        && resource.data.hostId == request.auth.uid;
+      // anyone can read a published event (for the guest landing page)
+      allow read: if resource.data.published == true;
+      // authenticated users can create
+      allow create: if request.auth != null;
+    }
+
+    // ---- rsvps ----
+    match /rsvps/{rsvpId} {
+      // host can read all RSVPs for their event
+      allow read, update, delete: if request.auth != null
+        && get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.hostId
+           == request.auth.uid;
+      // anyone can RSVP if the event is published and rsvpEnabled
+      allow create: if
+        get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data.published == true
+        && get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data.rsvpEnabled == true;
+    }
+
+    // ---- memories (photos/messages) ----
+    match /memories/{memoryId} {
+      // host can read, delete
+      allow read, delete: if request.auth != null
+        && get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.hostId
+           == request.auth.uid;
+      // anyone can read approved memories for a published event
+      allow read: if
+        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.published == true
+        && resource.data.approved == true;
+      // anyone can create
+      allow create: if
+        get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data.published == true;
+    }
+
+    // default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

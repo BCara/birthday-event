@@ -1,0 +1,70 @@
+/* src/theme/ThemedPage.css */
+.tp-root {
+  width: 100%;
+  position: relative;
+  background-attachment: fixed;
+  transition: background 0.3s ease, color 0.3s ease;
+
+  /* Default light mode variables mapping */
+  --t-bg-from: var(--t-light-bg-from);
+  --t-bg-to: var(--t-light-bg-to);
+  --t-accent: var(--t-light-accent);
+  --t-primary: var(--t-light-primary);
+  --t-secondary: var(--t-light-secondary);
+  --t-accent-color: var(--t-light-accent-color);
+  --t-soft-bg: var(--t-light-soft-bg);
+  --t-border: var(--t-light-border);
+  --t-text: var(--t-light-text);
+  --t-text-light: var(--t-light-text-light);
+  --t-btn-bg: var(--t-light-btn-bg);
+  --t-btn-text: var(--t-light-btn-text);
+  --t-font-heading: var(--t-light-font-heading);
+  --t-font-body: var(--t-light-font-body);
+
+  /* Card & component background and border defaults */
+  --t-card-bg: var(--t-light-card-bg, linear-gradient(135deg, color-mix(in srgb, var(--t-soft-bg) 18%, rgba(255, 255, 255, 0.85)) 0%, color-mix(in srgb, var(--t-soft-bg) 50%, rgba(255, 255, 255, 0.78)) 100%));
+  --t-card-border: var(--t-light-card-border, rgba(255, 255, 255, 0.6));
+  --t-input-bg: color-mix(in srgb, var(--t-soft-bg) 15%, rgba(255, 255, 255, 0.8));
+  --t-input-border: rgba(0, 0, 0, 0.1);
+  --t-toggle-bg: color-mix(in srgb, var(--t-soft-bg) 20%, rgba(255, 255, 255, 0.65));
+  --t-toggle-border: rgba(0, 0, 0, 0.08);
+  --t-toggle-bg-hover: color-mix(in srgb, var(--t-soft-bg) 35%, rgba(255, 255, 255, 0.8));
+
+  --t-banner-bg: rgba(255, 255, 255, 0.85);
+  --t-banner-border: rgba(255, 255, 255, 0.5);
+  --t-btn-light-bg: rgba(255, 255, 255, 0.8);
+  --t-btn-light-bg-hover: rgba(255, 255, 255, 0.95);
+  --t-btn-ghost-bg: rgba(255, 255, 255, 0.45);
+  --t-btn-ghost-bg-hover: rgba(255, 255, 255, 0.65);
+}
+
+/* Dark theme overrides for themed pages */
+[data-theme="dark"] .tp-root {
+  --t-bg-from: color-mix(in srgb, var(--t-accent) 6%, #0b0b0d);
+  --t-bg-to: color-mix(in srgb, var(--t-accent) 18%, #0b0b0d);
+  --t-text: #ffffff;
+  --t-text-light: rgba(255, 255, 255, 0.7);
+  --t-soft-bg: rgba(255, 255, 255, 0.06);
+  --t-border: rgba(255, 255, 255, 0.15);
+  --t-card-bg: linear-gradient(135deg, color-mix(in srgb, var(--t-accent) 8%, rgba(20, 20, 24, 0.85)) 0%, color-mix(in srgb, var(--t-accent) 22%, rgba(20, 20, 24, 0.78)) 100%);
+  --t-card-border: rgba(255, 255, 255, 0.08);
+  --t-input-bg: color-mix(in srgb, var(--t-accent) 5%, rgba(255, 255, 255, 0.05));
+  --t-input-border: rgba(255, 255, 255, 0.12);
+  --t-toggle-bg: color-mix(in srgb, var(--t-accent) 8%, rgba(255, 255, 255, 0.04));
+  --t-toggle-border: rgba(255, 255, 255, 0.1);
+  --t-toggle-bg-hover: color-mix(in srgb, var(--t-accent) 15%, rgba(255, 255, 255, 0.08));
+
+  --t-banner-bg: rgba(24, 24, 28, 0.85);
+  --t-banner-border: rgba(255, 255, 255, 0.08);
+  --t-btn-light-bg: rgba(255, 255, 255, 0.15);
+  --t-btn-light-bg-hover: rgba(255, 255, 255, 0.25);
+  --t-btn-ghost-bg: rgba(255, 255, 255, 0.08);
+  --t-btn-ghost-bg-hover: rgba(255, 255, 255, 0.15);
+}
+
+@media (max-width: 767px) {
+  .tp-root {
+    background-attachment: fixed !important;
+  }
+}
+

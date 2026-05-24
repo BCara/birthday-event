@@ -1,0 +1,296 @@
+/* src/pages/guest/LiveDisplayPage.css */
+
+.ldp-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+}
+
+.ldp-root-container {
+  display: flex;
+  min-height: 100dvh;
+  width: 100%;
+  color: var(--t-text);
+  overflow: hidden;
+}
+
+/* Sidebar Styling */
+.ldp-sidebar {
+  width: 380px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(24px);
+  border-right: 1px solid var(--t-card-border);
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.05);
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.ldp-sidebar-top {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ldp-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--t-accent);
+  text-decoration: none;
+  font-family: var(--t-font-body);
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: transform 0.2s;
+  align-self: flex-start;
+}
+.ldp-back-btn:hover {
+  transform: translateX(-4px);
+}
+
+.ldp-event-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ldp-event-title {
+  font-family: var(--t-font-heading);
+  font-size: 1.8rem;
+  color: var(--t-text);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.ldp-event-sub {
+  font-family: var(--t-font-body);
+  font-size: 1.05rem;
+  color: var(--t-text-light);
+  margin: 0;
+}
+
+/* QR Code Section */
+.ldp-qr-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: var(--t-card-bg);
+  border: 1px solid var(--t-card-border);
+  border-radius: 24px;
+  padding: 28px 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.ldp-qr-wrapper {
+  background: #fff;
+  padding: 16px;
+  border-radius: 18px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ldp-qr-image {
+  width: 210px;
+  height: 210px;
+  display: block;
+}
+
+.ldp-qr-title {
+  font-family: var(--t-font-heading);
+  font-size: 1.25rem;
+  color: var(--t-text);
+  margin: 0 0 8px 0;
+}
+
+.ldp-qr-desc {
+  font-family: var(--t-font-body);
+  font-size: 0.9rem;
+  color: var(--t-text-light);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.ldp-sidebar-footer {
+  font-family: var(--t-font-body);
+  font-size: 0.8rem;
+  color: var(--t-text-light);
+  opacity: 0.6;
+  margin: 0;
+}
+
+.ldp-footer-link {
+  color: var(--t-accent);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+/* Main Display / Slideshow Area */
+.ldp-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Slideshow Card container */
+.ldp-slideshow-wrap {
+  width: 100%;
+  max-width: 800px;
+  height: 100%;
+  max-height: 680px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ldp-card {
+  position: absolute;
+  width: 100%;
+  max-height: 100%;
+  background: var(--t-card-bg);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--t-card-border);
+  border-radius: 32px;
+  padding: 32px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  box-sizing: border-box;
+}
+
+/* Media styling inside slideshow card */
+.ldp-media-container {
+  width: 100%;
+  max-height: 380px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ldp-media {
+  max-width: 100%;
+  max-height: 380px;
+  object-fit: contain;
+  display: block;
+}
+
+/* Content block in slideshow card */
+.ldp-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  justify-content: center;
+}
+
+.ldp-msg {
+  font-family: var(--t-font-body);
+  font-size: 1.6rem;
+  color: var(--t-text);
+  line-height: 1.5;
+  margin: 0;
+  white-space: pre-wrap;
+  text-align: center;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.ldp-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  padding-top: 16px;
+}
+
+.ldp-author {
+  font-family: var(--t-font-heading);
+  font-size: 1.35rem;
+  color: var(--t-accent);
+  margin: 0;
+  font-weight: 600;
+}
+
+.ldp-date {
+  font-family: var(--t-font-body);
+  font-size: 0.95rem;
+  color: var(--t-text-light);
+}
+
+/* Empty State / Welcome Screen styling */
+.ldp-empty {
+  text-align: center;
+  max-width: 600px;
+  padding: 48px;
+  background: var(--t-card-bg);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--t-card-border);
+  border-radius: 32px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+}
+
+.ldp-empty-emoji {
+  font-size: 5rem;
+  display: block;
+  margin-bottom: 24px;
+}
+
+.ldp-empty-title {
+  font-family: var(--t-font-heading);
+  font-size: 2.2rem;
+  color: var(--t-text);
+  margin: 0 0 12px 0;
+}
+
+.ldp-empty-sub {
+  font-family: var(--t-font-body);
+  color: var(--t-text-light);
+  font-size: 1.2rem;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Responsive / Screen sizes */
+@media (max-width: 900px) {
+  .ldp-root-container {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  
+  .ldp-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--t-card-border);
+    padding: 32px 24px;
+    gap: 32px;
+  }
+
+  .ldp-main {
+    padding: 24px;
+    min-height: 500px;
+  }
+
+  .ldp-slideshow-wrap {
+    height: 500px;
+  }
+
+  .ldp-msg {
+    font-size: 1.35rem;
+  }
+}

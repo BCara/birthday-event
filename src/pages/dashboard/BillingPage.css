@@ -1,0 +1,196 @@
+.billing-page-container {
+  padding: 40px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Inter', sans-serif;
+  color: #333;
+}
+
+.billing-header {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.billing-header h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #111;
+  margin-bottom: 16px;
+  letter-spacing: -0.02em;
+}
+
+.billing-header p {
+  font-size: 1.1rem;
+  color: #666;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.pricing-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  align-items: center;
+}
+
+@media (min-width: 900px) {
+  .pricing-cards {
+    flex-direction: row;
+    justify-content: center;
+    align-items: stretch;
+  }
+}
+
+.pricing-card {
+  background: #fff;
+  border-radius: 24px;
+  padding: 40px;
+  width: 100%;
+  max-width: 350px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+  border: 1px solid #eaeaea;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.pricing-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+}
+
+.pricing-card.popular {
+  border: 2px solid #6366f1;
+  box-shadow: 0 20px 40px rgba(99, 102, 241, 0.15);
+  transform: scale(1.05);
+}
+
+.pricing-card.popular:hover {
+  transform: scale(1.05) translateY(-5px);
+}
+
+.popular-badge {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #6366f1;
+  color: #fff;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+}
+
+.card-header {
+  border-bottom: 1px solid #eaeaea;
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+}
+
+.card-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 12px;
+}
+
+.card-header .price {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #111;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.card-header .price span {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #888;
+}
+
+.card-header .description {
+  font-size: 0.95rem;
+  color: #666;
+  line-height: 1.5;
+}
+
+.features-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 32px 0;
+  flex-grow: 1;
+}
+
+.features-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+  color: #444;
+}
+
+.features-list li svg {
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.features-list li.disabled {
+  color: #aaa;
+}
+
+.features-list li.disabled svg {
+  color: transparent;
+}
+
+.upgrade-btn, .current-plan-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.current-plan-btn {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.upgrade-btn {
+  background: #fff;
+  color: #111;
+  border: 1px solid #d1d5db;
+}
+
+.upgrade-btn:hover:not(:disabled) {
+  border-color: #111;
+  background: #f9fafb;
+}
+
+.upgrade-btn.primary {
+  background: #6366f1;
+  color: #fff;
+  border: none;
+}
+
+.upgrade-btn.primary:hover:not(:disabled) {
+  background: #4f46e5;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.upgrade-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}

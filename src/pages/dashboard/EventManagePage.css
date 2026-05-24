@@ -1,0 +1,48 @@
+/* src/pages/dashboard/EventManagePage.css */
+
+.em-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: flex-start;
+}
+
+@media (max-width: 900px) {
+  .em-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.em-form-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.em-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: sticky;
+  top: 24px;
+}
+
+@media (max-width: 900px) {
+  .em-side-col {
+    position: static;
+  }
+}
+
+.em-share-flex {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 480px) {
+  .em-share-flex {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+}
