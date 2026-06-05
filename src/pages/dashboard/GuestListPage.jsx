@@ -155,7 +155,9 @@ function AttendingBadge({ attending }) {
 
 function exportCSV(rsvps, event) {
   const askAdultCount = event?.askAdultCount !== false;
-  const headers = ['Child Name', 'Child Age', 'Parent Name', 'Attending'];
+  const showParentAttendance = event?.showParentAttendance !== false;
+  const headers = ['Child Name', 'Child Age', 'Parent Name', 'Email', 'Phone', 'Attending'];
+  if (showParentAttendance) headers.push('Stay/Drop-off');
   if (askAdultCount) headers.push('Adults Attending');
   headers.push('Siblings', 'Dietary Notes', 'Comments', 'Date');
 
@@ -165,8 +167,14 @@ function exportCSV(rsvps, event) {
       r.childName ?? '',
       r.childAge ?? '',
       r.parentName ?? '',
+      r.email ?? '',
+      r.phone ?? '',
       isAttending ? 'Yes' : 'No',
     ];
+
+    if (showParentAttendance) {
+      row.push(r.stayOrDropOff === 'staying' ? 'Staying' : (r.stayOrDropOff === 'dropoff' ? 'Drop-off' : '—'));
+    }
 
     if (askAdultCount) {
       const finalAdults = r.adultsCount === null
@@ -215,6 +223,7 @@ export default function GuestListPage() {
   const [newGuestPhone, setNewGuestPhone] = useState('');
 
   const askAdultCount = event?.askAdultCount !== false;
+  const showParentAttendance = event?.showParentAttendance !== false;
 
   useEffect(() => {
     const q = query(
@@ -430,8 +439,27 @@ export default function GuestListPage() {
 
   const handleSaveGuest = async (updatedGuest) => {
     try {
-      const guestDocRef = doc(db, 'rsvps', updatedGuest.id);
-      await updateDoc(guestDocRef, updatedGuest);
+      if (updatedGuest.isSiblingRow) {
+        const parentRsvp = rsvps.find(r => r.id === updatedGuest.mainGuestId);
+        if (!parentRsvp) throw new Error('Parent RSVP not found');
+
+        const newSiblings = [...(parentRsvp.siblings || [])];
+        const sibIndex = parseInt(updatedGuest.id.split('-sib-')[1], 10);
+        
+        if (newSiblings[sibIndex]) {
+          newSiblings[sibIndex] = {
+            ...newSiblings[sibIndex],
+            name: updatedGuest.childName,
+            age: updatedGuest.childAge,
+            dietary: updatedGuest.dietary
+          };
+          
+          await updateDoc(doc(db, 'rsvps', parentRsvp.id), { siblings: newSiblings });
+        }
+      } else {
+        const guestDocRef = doc(db, 'rsvps', updatedGuest.id);
+        await updateDoc(guestDocRef, updatedGuest);
+      }
       toast.success('Guest updated!');
       setEditingGuest(null);
     } catch (err) {
@@ -477,6 +505,12 @@ export default function GuestListPage() {
               <span>📅 {eventDateStr}</span>
               <span>•</span>
               <span>📍 {eventLocation}</span>
+              {event?.hostContact && (
+                <>
+                  <span>•</span>
+                  <span>📞 {event.hostContact}</span>
+                </>
+              )}
               <span>•</span>
               <span style={{...styles.themeTag, background: themeObj.vars['--t-soft-bg'], color: themeObj.vars['--t-primary']}}>{eventTheme}</span>
             </div>
@@ -749,7 +783,7 @@ export default function GuestListPage() {
               <table style={styles.table}>
                 <thead>
                   <tr>
-                    {['Name', 'Age', 'Parent/Email', 'Attending', askAdultCount && 'Adults', 'Dietary/Notes', 'Comments', 'Date', 'Action'].filter(Boolean).map(h => (
+                    {['Name', 'Age', 'Parent Name', 'Email', 'Phone', 'Attending', showParentAttendance && 'Stay/Drop-off', askAdultCount && 'Adults', 'Dietary/Notes', 'Comments', 'Date', 'Action'].filter(Boolean).map(h => (
                        <th key={h} style={styles.th}>{h}</th>
                     ))}
                   </tr>
@@ -768,17 +802,9 @@ export default function GuestListPage() {
                       <tr key={r.id} style={styles.tr}>
                         <td style={styles.td}><strong>{r.childName ?? '—'}</strong></td>
                         <td style={styles.td}>{r.childAge !== undefined && r.childAge !== null && r.childAge !== '' ? `${r.childAge} yo` : '—'}</td>
-                        <td style={styles.td}>
-                          {r.isImported ? (
-                            <div style={{ fontSize: 13 }}>
-                              {r.email && <div>✉️ {r.email}</div>}
-                              {r.phone && <div>📞 {r.phone}</div>}
-                              {!r.email && !r.phone && '—'}
-                            </div>
-                          ) : (
-                            r.parentName ?? '—'
-                          )}
-                        </td>
+                        <td style={styles.td}>{r.parentName || '—'}</td>
+                        <td style={styles.td}>{r.email || '—'}</td>
+                        <td style={styles.td}>{r.phone || '—'}</td>
                         <td style={styles.td}>
                           {r.attending === 'pending' ? (
                             <span style={{ fontSize: 13, color: 'var(--kb-text-muted)', fontWeight: 600, padding: '4px 8px', background: 'var(--kb-surface-2)', borderRadius: 12 }}>Pending</span>
@@ -788,6 +814,15 @@ export default function GuestListPage() {
                             <AttendingBadge attending={r.attending || r.isAttending} />
                           )}
                         </td>
+                        {showParentAttendance && (
+                          <td style={styles.td}>
+                            {r.isSiblingRow ? (
+                              <span style={{ fontSize: 13, color: 'var(--kb-text-muted)' }}>—</span>
+                            ) : (
+                              r.stayOrDropOff === 'staying' ? '🏠 Staying' : (r.stayOrDropOff === 'dropoff' ? '🚗 Drop-off' : '—')
+                            )}
+                          </td>
+                        )}
                         <td style={styles.td}>
                           {r.isSiblingRow ? (
                             <span style={{ fontSize: 13, color: 'var(--kb-text-muted)' }}>—</span>
@@ -886,6 +921,7 @@ export default function GuestListPage() {
           <EditGuestModal
             guest={editingGuest}
             askAdultCount={askAdultCount}
+            showParentAttendance={showParentAttendance}
             onClose={() => setEditingGuest(null)}
             onSave={handleSaveGuest}
           />

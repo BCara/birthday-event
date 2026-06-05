@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { db } from '../../firebase';
+import { db, storage } from '../../firebase';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { THEME_COLOR_SCHEMES, getTheme } from '../../theme/themes';
@@ -42,6 +43,7 @@ function MiniPreview({
   endTime, 
   rsvpByDate,
   location, 
+  hostContact,
   photoUrl,
   description,
   giftRegistryNote,
@@ -149,6 +151,15 @@ function MiniPreview({
                     <div className="elp-detail-value-clean" style={{ fontSize: '0.85rem' }}>{location || 'Party Location'}</div>
                   </div>
                 </div>
+                {hostContact && (
+                  <div className="elp-detail-item">
+                    <span className="elp-detail-icon-clean" style={{ fontSize: '1.4rem' }}>📞</span>
+                    <div className="elp-detail-content-clean">
+                      <div className="elp-detail-label-clean">Contact</div>
+                      <div className="elp-detail-value-clean" style={{ fontSize: '0.85rem' }}>{hostContact}</div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* RSVP By Deadline */}
@@ -215,13 +226,21 @@ export default function EventManagePage() {
   const [description, setDescription] = useState('');
   const [schedule, setSchedule] = useState('');
   const [parkingInfo, setParkingInfo] = useState('');
+  const [location, setLocation] = useState('');
+  const [hostContact, setHostContact] = useState('');
   const [rsvpEnabled, setRsvpEnabled] = useState(true);
+  const [showParentAttendance, setShowParentAttendance] = useState(true);
+  const [stayOrDropOffMode, setStayOrDropOffMode] = useState('ask'); // 'ask' | 'stay' | 'dropoff'
   const [askChildAge, setAskChildAge] = useState(true);
   const [askAdultCount, setAskAdultCount] = useState(true);
   const [kidsEstimate, setKidsEstimate] = useState(10);
   const [adultsEstimate, setAdultsEstimate] = useState(10);
   const [giftRegistryNote, setGiftRegistryNote] = useState('');
   const [giftRegistryLink, setGiftRegistryLink] = useState('');
+  
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = React.useRef(null);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'events', eventId), snap => {
@@ -244,13 +263,17 @@ export default function EventManagePage() {
       setDescription(data.description ?? '');
       setSchedule(data.schedule ?? '');
       setParkingInfo(data.parkingInfo ?? '');
+      setHostContact(data.hostContact ?? '');
       setRsvpEnabled(data.rsvpEnabled ?? true);
+      setShowParentAttendance(data.showParentAttendance ?? true);
+      setStayOrDropOffMode(data.stayOrDropOffMode ?? 'ask');
       setAskChildAge(data.askChildAge ?? true);
       setAskAdultCount(data.askAdultCount ?? true);
       setKidsEstimate(data.kidsEstimate ?? (data.guestEstimate ? Math.floor(data.guestEstimate / 2) : 10));
-      setAdultsEstimate(data.adultsEstimate ?? (data.guestEstimate ? Math.ceil(data.guestEstimate / 2) : 10));
+      setAdultsEstimate(data.adultsEstimate ?? (data.guestEstimate ? Math.floor(data.guestEstimate / 2) : 10)); // Fixed: adultsEstimate should use ceil or keep consistent
       setGiftRegistryNote(data.giftRegistryNote ?? '');
       setGiftRegistryLink(data.giftRegistryLink ?? '');
+      setPhotoUrl(data.photoUrl ?? '');
       setLoading(false);
     }, err => {
       console.error(err);
@@ -278,13 +301,17 @@ export default function EventManagePage() {
         description: description.trim(),
         schedule: schedule.trim(),
         parkingInfo: parkingInfo.trim(),
+        hostContact: hostContact.trim(),
         rsvpEnabled,
+        showParentAttendance,
+        stayOrDropOffMode,
         askChildAge,
         askAdultCount,
         kidsEstimate: kidsEstimate !== '' ? Number(kidsEstimate) : 10,
         adultsEstimate: adultsEstimate !== '' ? Number(adultsEstimate) : 10,
         giftRegistryNote: giftRegistryNote.trim(),
         giftRegistryLink: giftRegistryLink.trim(),
+        photoUrl,
       });
       toast.success('Changes saved! ✅');
     } catch (err) {
@@ -293,6 +320,40 @@ export default function EventManagePage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handlePhotoUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image is too large. Max 5MB.');
+      return;
+    }
+
+    setUploading(true);
+    const storageRef = ref(storage, `event-photos/${eventId}/${Date.now()}_${file.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on('state_changed', 
+      null, 
+      (err) => {
+        console.error(err);
+        toast.error('Failed to upload image.');
+        setUploading(false);
+      }, 
+      async () => {
+        const url = await getDownloadURL(uploadTask.snapshot.ref);
+        setPhotoUrl(url);
+        setUploading(false);
+        toast.success('Photo uploaded!');
+      }
+    );
+  }
+
+  async function handleRemovePhoto() {
+    setPhotoUrl('');
+    toast.success('Photo removed. Illustration will be shown.');
   }
 
   function handleCopyLink() {
@@ -352,21 +413,18 @@ export default function EventManagePage() {
               <h1 style={styles.heading}>{name || 'New Event'}</h1>
               <div style={styles.themeSubtitle}>
                 {activeTheme?.emoji} <span style={{color: 'var(--kb-mint)'}}>{activeTheme?.label} Theme</span>
+                {location && <span style={{color: 'var(--kb-text-muted)', marginLeft: 12}}>• 📍 {location}</span>}
+                {hostContact && <span style={{color: 'var(--kb-text-muted)', marginLeft: 12}}>• 📞 {hostContact}</span>}
               </div>
             </div>
           </div>
           <div style={styles.navBtns}>
+            <a href={`${getDevSafeOrigin()}/${event?.slug}`} target="_blank" rel="noreferrer" className="kb-btn kb-btn-secondary kb-btn-sm" style={{ ...styles.navBtn, borderColor: 'var(--kb-mint)', color: 'var(--kb-mint)' }}>
+              <span>👁️</span> View Invite
+            </a>
             <Link to={`/dashboard/event/${eventId}/rsvps`} className="kb-btn kb-btn-secondary kb-btn-sm" style={styles.navBtn}>
               <span style={{color: 'var(--kb-purple)'}}>👥</span> RSVPs
             </Link>
-            <Link to={`/dashboard/event/${eventId}/memories`} className="kb-btn kb-btn-secondary kb-btn-sm" style={styles.navBtn}>
-              <span style={{color: 'var(--kb-coral)'}}>📸</span> Memories
-            </Link>
-            {event?.slug && (
-              <Link to={`/${event.slug}/live`} target="_blank" className="kb-btn kb-btn-secondary kb-btn-sm" style={styles.navBtn}>
-                <span style={{color: 'var(--kb-blue)'}}>💬</span> Live Wall
-              </Link>
-            )}
           </div>
         </div>
 
@@ -375,7 +433,42 @@ export default function EventManagePage() {
           <form onSubmit={handleSave} className="em-form-col">
             
             <div className="kb-card" style={styles.card}>
-              <h3 style={styles.cardTitle}>🎉 Basic Information</h3>
+              <h3 style={styles.cardTitle}><span>📝</span> Basic Information</h3>
+              
+              {/* Photo Upload Row */}
+              <div style={{ display: 'flex', gap: 24, alignItems: 'center', marginBottom: 28, padding: '20px', background: 'rgba(155, 93, 229, 0.04)', borderRadius: 20, border: '1px solid rgba(155, 93, 229, 0.1)' }}>
+                <div style={{ position: 'relative', width: 90, height: 90, borderRadius: '50%', overflow: 'hidden', background: 'var(--kb-surface)', border: '3px solid var(--kb-surface)', boxShadow: 'var(--kb-shadow-md)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {photoUrl ? (
+                    <img src={photoUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ textAlign: 'center', opacity: 0.5 }}>
+                      <span style={{ fontSize: 28 }}>👶</span>
+                    </div>
+                  )}
+                  {uploading && (
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div className="kb-spinner-sm" />
+                    </div>
+                  )}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="kb-btn kb-btn-secondary kb-btn-sm" style={{ padding: '8px 16px', borderRadius: 12 }} disabled={uploading}>
+                      {photoUrl ? 'Change Photo' : 'Upload Star Photo'}
+                    </button>
+                    {photoUrl && (
+                      <button type="button" onClick={handleRemovePhoto} className="kb-btn kb-btn-secondary kb-btn-sm" style={{ color: 'var(--kb-coral)', padding: '8px 16px', borderRadius: 12 }}>
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--kb-text-muted)', marginTop: 10, lineHeight: 1.5, fontWeight: 500 }}>
+                    Add a photo of the birthday star! If left blank, the <strong>{activeTheme?.label}</strong> illustration will be used.
+                  </p>
+                  <input type="file" ref={fileInputRef} onChange={handlePhotoUpload} accept="image/*" style={{ display: 'none' }} />
+                </div>
+              </div>
+
               <div style={styles.row}>
                 <div className="kb-field" style={{ flex: 1 }}>
                   <label className="kb-label" htmlFor="em-childName">Child's Name</label>
@@ -386,10 +479,14 @@ export default function EventManagePage() {
                   <input id="em-name" type="text" className="kb-input" value={name} onChange={e => setName(e.target.value)} required placeholder="Robins 3rd Birthday" />
                 </div>
               </div>
+              <div className="kb-field" style={{ marginTop: '16px' }}>
+                <label className="kb-label" htmlFor="em-hostContact">Host Contact Info (shown to guests)</label>
+                <input id="em-hostContact" type="text" className="kb-input" value={hostContact} onChange={e => setHostContact(e.target.value)} placeholder="e.g. Sarah - 0400 000 000" />
+              </div>
             </div>
 
             <div className="kb-card" style={styles.card}>
-              <h3 style={styles.cardTitle}>✨ Theme</h3>
+              <h3 style={styles.cardTitle}><span>🎨</span> Theme & Style</h3>
               <div style={styles.themePicker}>
                 {THEMES.map(t => (
                   <button key={t.key} type="button" onClick={() => { setTheme(t.key); setThemeColor('default'); }}
@@ -453,7 +550,7 @@ export default function EventManagePage() {
             </div>
 
             <div className="kb-card" style={styles.card}>
-              <h3 style={styles.cardTitle}>📅 Date &amp; Time</h3>
+              <h3 style={styles.cardTitle}><span>📅</span> Date & Time</h3>
               <div style={styles.row}>
                 <div className="kb-field" style={{ flex: 2 }}>
                   <label className="kb-label" htmlFor="em-date">Date</label>
@@ -477,7 +574,7 @@ export default function EventManagePage() {
             </div>
 
             <div className="kb-card" style={{ ...styles.card, overflow: 'visible' }}>
-              <h3 style={styles.cardTitle}>📍 Location</h3>
+              <h3 style={styles.cardTitle}><span>📍</span> Event Location</h3>
               <div style={{display: 'flex', gap: 16, alignItems: 'flex-end'}}>
                 <div className="kb-field" style={{ flex: 1, marginBottom: 0 }}>
                   <LocationInput id="em-location" value={location} onChange={setLocation} placeholder="Myuna Farm" />
@@ -487,7 +584,7 @@ export default function EventManagePage() {
             </div>
 
             <div className="kb-card" style={styles.card}>
-              <h3 style={styles.cardTitle}>💬 Message to Guests</h3>
+              <h3 style={styles.cardTitle}><span>💬</span> Message to Guests</h3>
               <div className="kb-field" style={{marginBottom: 0, position: 'relative'}}>
                 <textarea id="em-description" className="kb-input" value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Add a special message for your guests..." style={styles.textarea} />
                 <span style={{position: 'absolute', bottom: 12, right: 12, fontSize: 20}}>🎉</span>
@@ -495,40 +592,33 @@ export default function EventManagePage() {
             </div>
 
             <div className="kb-card" style={styles.card}>
-              <h3 style={styles.cardTitle}>📝 Additional Info (Optional)</h3>
-              <div className="kb-field">
-                <label className="kb-label" htmlFor="em-schedule">Schedule / Timeline</label>
-                <textarea
-                  id="em-schedule"
-                  className="kb-input"
-                  placeholder="e.g. 2:00 PM - Welcome, 3:00 PM - Cake cutting"
-                  value={schedule}
-                  onChange={e => setSchedule(e.target.value)}
-                  rows={3}
-                  style={styles.textarea}
-                />
-              </div>
-              <div className="kb-field" style={{ marginBottom: 0 }}>
-                <label className="kb-label" htmlFor="em-parkingInfo">Parking & Transport Info</label>
-                <textarea
-                  id="em-parkingInfo"
-                  className="kb-input"
-                  placeholder="e.g. Street parking available on Main St. or catch bus 42."
-                  value={parkingInfo}
-                  onChange={e => setParkingInfo(e.target.value)}
-                  rows={3}
-                  style={styles.textarea}
-                />
-              </div>
-            </div>
-
-            <div className="kb-card" style={styles.card}>
-              <h3 style={styles.cardTitle}>👥 RSVP Settings</h3>
+              <h3 style={styles.cardTitle}><span>✅</span> RSVP Settings</h3>
               <div style={styles.toggleGroup}>
                 <Toggle id="em-rsvp" checked={rsvpEnabled} onChange={setRsvpEnabled} label="Enable RSVP for this event" />
                 {rsvpEnabled && (
                   <>
                     <div style={{ borderTop: '1px solid var(--kb-border)', paddingTop: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap', marginBottom: 16 }}>
+                        <Toggle id="em-showParentAttendance" checked={showParentAttendance} onChange={setShowParentAttendance} label="Parent Attendance Options" />
+
+                        {showParentAttendance && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 260 }}>
+                            <label className="kb-label" htmlFor="em-stayOrDropOffMode" style={{ marginBottom: 0, whiteSpace: 'nowrap' }}>Mode:</label>
+                            <select 
+                              id="em-stayOrDropOffMode" 
+                              className="kb-select" 
+                              value={stayOrDropOffMode} 
+                              onChange={e => setStayOrDropOffMode(e.target.value)}
+                              style={{ marginBottom: 0, flex: 1 }}
+                            >
+                              <option value="ask">Ask guest (Staying vs Drop-off)</option>
+                              <option value="stay">Parents must stay</option>
+                              <option value="dropoff">Drop-off allowed (No parents)</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+
                       <div style={{ display: 'flex', gap: 12 }}>
                         <div style={{ flex: 1 }}>
                           <label className="kb-label" htmlFor="em-kidsEstimate">Estimated Kids</label>
@@ -567,29 +657,57 @@ export default function EventManagePage() {
             </div>
 
             <div className="kb-card" style={styles.card}>
-              <h3 style={styles.cardTitle}>🎁 Gift Registry (Optional)</h3>
+              <h3 style={styles.cardTitle}><span>✨</span> Event Info (Optional)</h3>
               <div className="kb-field">
-                <label className="kb-label" htmlFor="em-giftNote">Gift Registry Note</label>
+                <label className="kb-label" htmlFor="em-schedule">Schedule / Timeline</label>
                 <textarea
-                  id="em-giftNote"
+                  id="em-schedule"
                   className="kb-input"
-                  placeholder="e.g. No gifts necessary, but if you'd like to contribute, we have a wishlist!"
-                  value={giftRegistryNote}
-                  onChange={e => setGiftRegistryNote(e.target.value)}
+                  placeholder="e.g. 2:00 PM - Welcome, 3:00 PM - Cake cutting"
+                  value={schedule}
+                  onChange={e => setSchedule(e.target.value)}
                   rows={3}
                   style={styles.textarea}
                 />
               </div>
-              <div className="kb-field" style={{ marginBottom: 0 }}>
-                <label className="kb-label" htmlFor="em-giftLink">Gift Registry Link</label>
-                <input
-                  id="em-giftLink"
-                  type="url"
+              <div className="kb-field">
+                <label className="kb-label" htmlFor="em-parkingInfo">Parking & Transport Info</label>
+                <textarea
+                  id="em-parkingInfo"
                   className="kb-input"
-                  placeholder="https://www.myer.com.au/wishlist/..."
-                  value={giftRegistryLink}
-                  onChange={e => setGiftRegistryLink(e.target.value)}
+                  placeholder="e.g. Street parking available on Main St. or catch bus 42."
+                  value={parkingInfo}
+                  onChange={e => setParkingInfo(e.target.value)}
+                  rows={3}
+                  style={styles.textarea}
                 />
+              </div>
+              
+              <div style={{ borderTop: '1px solid var(--kb-border)', marginTop: 24, paddingTop: 24 }}>
+                <h4 style={{ ...styles.cardTitle, fontSize: '1rem', marginBottom: 16 }}>🎁 Gift Registry</h4>
+                <div className="kb-field">
+                  <label className="kb-label" htmlFor="em-giftNote">Gift Registry Note</label>
+                  <textarea
+                    id="em-giftNote"
+                    className="kb-input"
+                    placeholder="e.g. No gifts necessary, but if you'd like to contribute, we have a wishlist!"
+                    value={giftRegistryNote}
+                    onChange={e => setGiftRegistryNote(e.target.value)}
+                    rows={2}
+                    style={styles.textarea}
+                  />
+                </div>
+                <div className="kb-field" style={{ marginBottom: 0 }}>
+                  <label className="kb-label" htmlFor="em-giftLink">Gift Registry Link</label>
+                  <input
+                    id="em-giftLink"
+                    type="url"
+                    className="kb-input"
+                    placeholder="https://www.myer.com.au/wishlist/..."
+                    value={giftRegistryLink}
+                    onChange={e => setGiftRegistryLink(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
 
@@ -619,7 +737,8 @@ export default function EventManagePage() {
                   time={time} 
                   endTime={endTime} 
                   rsvpByDate={rsvpByDate}
-                  location={location} 
+                  location={location}
+                  hostContact={hostContact}
                   photoUrl={event?.photoUrl}
                   description={description}
                   giftRegistryNote={giftRegistryNote}
@@ -685,11 +804,11 @@ export default function EventManagePage() {
 }
 
 const toggleStyles = {
-  wrap: { display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '6px 0' },
-  track: { position: 'relative', width: 44, height: 24, borderRadius: 100, transition: 'background 0.2s', flexShrink: 0, background: 'var(--kb-border)' },
+  wrap: { display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', padding: '8px 0', userSelect: 'none' },
+  track: { position: 'relative', width: 44, height: 24, borderRadius: 100, transition: 'background 0.3s cubic-bezier(0.4, 0, 0.2, 1)', flexShrink: 0, background: 'var(--kb-border)' },
   input: { position: 'absolute', opacity: 0, width: 0, height: 0 },
-  thumb: { position: 'absolute', top: 3, left: 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'transform 0.2s', pointerEvents: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
-  label: { fontFamily: 'var(--kb-font-body)', fontSize: 14, color: 'var(--kb-text)', fontWeight: 500 },
+  thumb: { position: 'absolute', top: 3, left: 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)', pointerEvents: 'none', boxShadow: '0 2px 5px rgba(0,0,0,0.15)' },
+  label: { fontFamily: 'var(--kb-font-body)', fontSize: 15, color: 'var(--kb-text)', fontWeight: 600 },
 };
 
 const styles = {
@@ -704,21 +823,21 @@ const styles = {
   navBtns: { display: 'flex', gap: 12 },
   navBtn: { background: 'var(--kb-surface)', borderRadius: '12px', padding: '8px 16px', border: '1px solid var(--kb-border)', boxShadow: 'var(--kb-shadow-sm)' },
   
-  card: { padding: 24 },
-  cardTitle: { fontFamily: 'var(--kb-font-display)', fontSize: 18, margin: '0 0 20px', color: 'var(--kb-text)', display: 'flex', alignItems: 'center', gap: 8 },
-  row: { display: 'flex', gap: 16, flexWrap: 'wrap' },
-  textarea: { resize: 'vertical', minHeight: 60 },
+  card: { padding: 32, borderRadius: 24, boxShadow: 'var(--kb-shadow-md)', border: '1px solid var(--kb-border)' },
+  cardTitle: { fontFamily: 'var(--kb-font-display)', fontSize: 20, margin: '0 0 24px', color: 'var(--kb-text)', display: 'flex', alignItems: 'center', gap: 12, fontWeight: 700 },
+  row: { display: 'flex', gap: 20, flexWrap: 'wrap' },
+  textarea: { resize: 'vertical', minHeight: 70, borderRadius: 16 },
   
-  themePicker: { display: 'flex', gap: 12, flexWrap: 'wrap' },
-  themeBtn: { display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', border: '1px solid var(--kb-border)', borderRadius: 12, background: 'var(--kb-surface-2)', cursor: 'pointer', transition: 'all 0.2s', position: 'relative' },
-  themeBtnActive: { border: '2px solid var(--kb-mint)', background: 'rgba(6, 214, 160, 0.05)', padding: '9px 15px' },
-  themeBtnLabel: { fontFamily: 'var(--kb-font-body)', fontSize: 14, fontWeight: 600, color: 'var(--kb-text)' },
-  themeCheck: { position: 'absolute', top: -6, right: -6, width: 20, height: 20, background: 'var(--kb-mint)', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 'bold', border: '2px solid var(--kb-surface)' },
+  themePicker: { display: 'flex', gap: 14, flexWrap: 'wrap' },
+  themeBtn: { display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px', border: '1px solid var(--kb-border)', borderRadius: 16, background: 'var(--kb-surface)', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', position: 'relative' },
+  themeBtnActive: { border: '2px solid var(--kb-purple)', background: 'rgba(155, 93, 229, 0.04)', boxShadow: '0 4px 15px rgba(155, 93, 229, 0.1)' },
+  themeBtnLabel: { fontFamily: 'var(--kb-font-body)', fontSize: 15, fontWeight: 700, color: 'var(--kb-text)' },
+  themeCheck: { position: 'absolute', top: -8, right: -8, width: 24, height: 24, background: 'var(--kb-purple)', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 'bold', border: '3px solid var(--kb-surface)', boxShadow: '0 2px 8px rgba(155, 93, 229, 0.3)' },
   
-  colorPicker: { display: 'flex', gap: 14, alignItems: 'center', marginTop: 12, flexWrap: 'wrap', minHeight: 44 },
-  colorBtn: { width: 38, height: 38, borderRadius: '50%', cursor: 'pointer', position: 'relative', transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)', display: 'flex', alignItems: 'center', justifyContent: 'center', outline: 'none', padding: 0 },
-  colorCheckBtn: { color: '#fff', fontSize: 16, fontWeight: 'bold', textShadow: '0 1px 2px rgba(0,0,0,0.5)' },
-  colorLabel: { fontFamily: 'var(--kb-font-body)', fontSize: 13, color: 'var(--kb-text-muted)', marginTop: 8 },
+  colorPicker: { display: 'flex', gap: 16, alignItems: 'center', marginTop: 16, flexWrap: 'wrap', minHeight: 48 },
+  colorBtn: { width: 42, height: 42, borderRadius: '50%', cursor: 'pointer', position: 'relative', transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)', display: 'flex', alignItems: 'center', justifyContent: 'center', outline: 'none', padding: 0 },
+  colorCheckBtn: { color: '#fff', fontSize: 18, fontWeight: 'bold', textShadow: '0 1px 2px rgba(0,0,0,0.3)' },
+  colorLabel: { fontFamily: 'var(--kb-font-body)', fontSize: 14, color: 'var(--kb-text-muted)', marginTop: 12, fontWeight: 600 },
   
   toggleGroup: { display: 'flex', flexDirection: 'column', gap: 12 },
   saveRow: { display: 'flex', justifyContent: 'flex-start', paddingTop: 8 },

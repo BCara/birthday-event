@@ -33,7 +33,11 @@ function EventCard({ event }) {
       </div>
 
       <h2 style={cardStyles.name}>{event.name}</h2>
-      <p style={cardStyles.date}>📅 {formatDate(event.date)}</p>
+      <div style={cardStyles.details}>
+        <p style={cardStyles.detail}>📅 {formatDate(event.date)}</p>
+        {event.location && <p style={cardStyles.detail}>📍 {event.location}</p>}
+        {event.hostContact && <p style={cardStyles.detail}>📞 {event.hostContact}</p>}
+      </div>
 
       <div style={cardStyles.badges}>
         <span style={cardStyles.badge}>
@@ -258,6 +262,17 @@ const cardStyles = {
     lineHeight: 1.2,
   },
   date: {
+    fontFamily: 'var(--kb-font-body)',
+    fontSize: 13,
+    color: 'var(--kb-text-muted)',
+    margin: 0,
+  },
+  details: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  detail: {
     fontFamily: 'var(--kb-font-body)',
     fontSize: 13,
     color: 'var(--kb-text-muted)',

@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import ThemedPage from '../../theme/ThemedPage';
+import ThemeIllustration from '../../theme/ThemeIllustration';
 import { fetchEventBySlug } from '../../utils/fetchEvent';
 import { db, storage } from '../../firebase';
 import './LeaveMemoryPage.css';
@@ -152,11 +153,8 @@ export default function LeaveMemoryPage() {
             <h1 className="lm-success-title">Memory saved!</h1>
             <p className="lm-success-msg">Thank you for sharing this special moment.</p>
             <div className="lm-success-actions">
-              <Link to={`/${slug}`} className="lm-btn lm-btn-outline">
-                ← Back to event
-              </Link>
-              <Link to={`/${slug}/memories`} className="lm-btn lm-btn-accent">
-                🖼️ View Memory Wall
+              <Link to={`/${slug}`} className="lm-btn lm-btn-accent" style={{ width: '100%' }}>
+                ← View Event Details
               </Link>
             </div>
           </div>
@@ -172,8 +170,11 @@ export default function LeaveMemoryPage() {
         {/* Header */}
         <div className="lm-header">
           <Link to={`/${slug}`} className="lm-back">← Back</Link>
-          <h1 className="lm-page-title">Leave a Memory</h1>
-          <p className="lm-page-sub">Share a photo, video, or birthday wish 💌</p>
+          <div style={{ width: '100%', maxWidth: '80px', margin: '0 auto 8px' }}>
+            <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
+          </div>
+          <h1 className="lm-page-title">Share a Memory</h1>
+          <p className="lm-page-sub">for {event.name}</p>
         </div>
 
         <form className="lm-card" onSubmit={handleSubmit} noValidate>

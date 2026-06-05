@@ -291,6 +291,15 @@ body {
   animation: kb-spin 0.8s linear infinite;
 }
 
+.kb-spinner-sm {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--kb-border);
+  border-top-color: var(--kb-coral);
+  border-radius: 50%;
+  animation: kb-spin 0.8s linear infinite;
+}
+
 .kb-loader-wrap {
   display: flex;
   flex-direction: column;
@@ -337,6 +346,32 @@ body {
 .kb-animate-fade-up  { animation: kb-fade-up 0.6s ease-out both; }
 .kb-animate-fade-in  { animation: kb-fade-in 0.4s ease-out both; }
 .kb-animate-float    { animation: kb-float 4s ease-in-out infinite; }
+
+@keyframes kb-skeleton-loading {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.kb-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(0,0,0,0.05) 25%,
+    rgba(0,0,0,0.08) 37%,
+    rgba(0,0,0,0.05) 63%
+  );
+  background-size: 400% 100%;
+  animation: kb-skeleton-loading 1.4s ease infinite;
+}
+
+[data-theme="dark"] .kb-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.05) 25%,
+    rgba(255,255,255,0.1) 37%,
+    rgba(255,255,255,0.05) 63%
+  );
+  background-size: 400% 100%;
+}
 
 /* ── Responsive ── */
 @media (max-width: 768px) {

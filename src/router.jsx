@@ -68,7 +68,6 @@ const router = createBrowserRouter([
           { path: '/dashboard/create',                   element: <Lazy><CreateEventPage /></Lazy> },
           { path: '/dashboard/event/:eventId',           element: <Lazy><EventManagePage /></Lazy> },
           { path: '/dashboard/event/:eventId/rsvps',     element: <Lazy><GuestListPage /></Lazy> },
-          { path: '/dashboard/event/:eventId/memories',  element: <Lazy><MemoriesPage /></Lazy> },
         ],
       },
 
@@ -82,9 +81,6 @@ const router = createBrowserRouter([
     children: [
       { path: '/:slug',         element: <Lazy><EventLandingPage /></Lazy> },
       { path: '/:slug/rsvp',    element: <Lazy><RSVPPage /></Lazy> },
-      { path: '/:slug/memories',element: <Lazy><MemoryWallPage /></Lazy> },
-      { path: '/:slug/leave',   element: <Lazy><LeaveMemoryPage /></Lazy> },
-      { path: '/:slug/live',    element: <Lazy><LiveDisplayPage /></Lazy> },
     ],
   },
 

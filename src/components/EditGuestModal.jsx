@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 
-export default function EditGuestModal({ guest, askAdultCount, onClose, onSave }) {
+export default function EditGuestModal({ guest, askAdultCount, showParentAttendance, onClose, onSave }) {
   const [name, setName] = useState(guest.childName || '');
+  const [childAge, setChildAge] = useState(guest.childAge || '');
+  const [parentName, setParentName] = useState(guest.parentName || '');
   const [email, setEmail] = useState(guest.email || '');
   const [phone, setPhone] = useState(guest.phone || '');
+  const [stayOrDropOff, setStayOrDropOff] = useState(guest.stayOrDropOff || 'staying');
   
   // Normalize attending status
   let initialAttending = 'pending';
@@ -23,12 +26,16 @@ export default function EditGuestModal({ guest, askAdultCount, onClose, onSave }
   const handleSave = (e) => {
     e.preventDefault();
     onSave({
+      ...guest,
       childName: name.trim(),
+      childAge: childAge !== '' ? Number(childAge) : null,
+      parentName: parentName.trim(),
       email: email.trim(),
       phone: phone.trim(),
       attending,
       isAttending: attending === 'yes',
-      adultsCount: (attending === 'yes') ? (unsureAdults ? null : adultsCount) : 0,
+      stayOrDropOff: (attending === 'yes' && showParentAttendance) ? stayOrDropOff : null,
+      adultsCount: (attending === 'yes') ? ((showParentAttendance && stayOrDropOff === 'dropoff') ? 0 : (unsureAdults ? null : adultsCount)) : 0,
       dietary: dietary.trim(),
       comments: comments.trim()
     });
@@ -44,9 +51,20 @@ export default function EditGuestModal({ guest, askAdultCount, onClose, onSave }
 
         <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flex: 2 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--kb-text-muted)', marginBottom: 6, display: 'block' }}>Child Name *</label>
+              <input required value={name} onChange={e => setName(e.target.value)} className="kb-input" style={{ width: '100%' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--kb-text-muted)', marginBottom: 6, display: 'block' }}>Age</label>
+              <input type="number" value={childAge} onChange={e => setChildAge(e.target.value)} className="kb-input" style={{ width: '100%' }} />
+            </div>
+          </div>
+
           <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--kb-text-muted)', marginBottom: 6, display: 'block' }}>Name *</label>
-            <input required value={name} onChange={e => setName(e.target.value)} className="kb-input" style={{ width: '100%' }} />
+            <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--kb-text-muted)', marginBottom: 6, display: 'block' }}>Parent Name</label>
+            <input value={parentName} onChange={e => setParentName(e.target.value)} className="kb-input" style={{ width: '100%' }} />
           </div>
 
           <div style={{ display: 'flex', gap: 12 }}>
@@ -70,7 +88,31 @@ export default function EditGuestModal({ guest, askAdultCount, onClose, onSave }
             </div>
           </div>
 
-          {askAdultCount && attending === 'yes' && (
+          {attending === 'yes' && showParentAttendance && (
+            <div style={{ background: 'var(--kb-surface-2)', padding: 16, borderRadius: 16, border: '1px solid var(--kb-border)' }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--kb-text)', marginBottom: 12, display: 'block' }}>Staying or Drop-off?</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button 
+                  type="button" 
+                  onClick={() => setStayOrDropOff('staying')} 
+                  className={`kb-btn ${stayOrDropOff === 'staying' ? 'kb-btn-primary' : 'kb-btn-secondary'}`} 
+                  style={{ flex: 1, padding: '8px', fontSize: 13, background: stayOrDropOff === 'staying' ? 'var(--kb-mint)' : undefined, border: stayOrDropOff === 'staying' ? 'none' : undefined }}
+                >
+                  🏠 Staying
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setStayOrDropOff('dropoff')} 
+                  className={`kb-btn ${stayOrDropOff === 'dropoff' ? 'kb-btn-primary' : 'kb-btn-secondary'}`} 
+                  style={{ flex: 1, padding: '8px', fontSize: 13, background: stayOrDropOff === 'dropoff' ? 'var(--kb-coral)' : undefined, border: stayOrDropOff === 'dropoff' ? 'none' : undefined }}
+                >
+                  🚗 Drop-off
+                </button>
+              </div>
+            </div>
+          )}
+
+          {askAdultCount && attending === 'yes' && (showParentAttendance ? stayOrDropOff === 'staying' : true) && (
             <div style={{ background: 'var(--kb-surface-2)', padding: 16, borderRadius: 16, border: '1px solid var(--kb-border)' }}>
               <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--kb-text)', marginBottom: 12, display: 'block' }}>Adults Attending</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: unsureAdults ? 0.5 : 1 }}>

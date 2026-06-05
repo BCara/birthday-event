@@ -34,7 +34,7 @@ const BillingPage = () => {
     <div className="billing-page-container">
       <div className="billing-header">
         <h1>Upgrade Your Event</h1>
-        <p>Unlock premium features to make your event unforgettable.</p>
+        <p>Unlock premium features to make your event unforgettable. <strong>Free for a limited time during our launch!</strong></p>
       </div>
 
       <div className="pricing-cards">
@@ -62,11 +62,12 @@ const BillingPage = () => {
 
         {/* Essential Tier */}
         <motion.div 
-          className="pricing-card popular"
+          className="pricing-card popular disabled"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
         >
+          <div className="coming-soon-badge">COMING SOON</div>
           <div className="popular-badge"><Zap size={14} /> Most Popular</div>
           <div className="card-header">
             <h3>Essential</h3>
@@ -83,19 +84,20 @@ const BillingPage = () => {
           <button 
             className="upgrade-btn primary"
             onClick={() => handleUpgrade('essential')}
-            disabled={loadingTier === 'essential'}
+            disabled
           >
-            {loadingTier === 'essential' ? 'Processing...' : 'Upgrade to Essential'}
+            Upgrade to Essential
           </button>
         </motion.div>
 
         {/* Premium Tier */}
         <motion.div 
-          className="pricing-card"
+          className="pricing-card disabled"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
+          <div className="coming-soon-badge">COMING SOON</div>
           <div className="card-header">
             <h3>Premium</h3>
             <div className="price">$99<span>/event</span></div>
@@ -111,9 +113,9 @@ const BillingPage = () => {
           <button 
             className="upgrade-btn"
             onClick={() => handleUpgrade('premium')}
-            disabled={loadingTier === 'premium'}
+            disabled
           >
-            {loadingTier === 'premium' ? 'Processing...' : 'Upgrade to Premium'}
+            Upgrade to Premium
           </button>
         </motion.div>
       </div>

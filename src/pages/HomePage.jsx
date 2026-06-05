@@ -15,14 +15,12 @@ const STEPS = [
   { emoji: '✨', step: '01', title: 'Create your party', desc: 'Pick a theme, fill in the details — date, time, location, and a personal message.' },
   { emoji: '📲', step: '02', title: 'Share the invite', desc: 'Get a unique QR code and link to share via WhatsApp, email, or print.' },
   { emoji: '🎉', step: '03', title: 'Guests RSVP instantly', desc: 'Friends and family confirm in seconds — no app download needed.' },
-  { emoji: '📸', step: '04', title: 'Build a memory wall', desc: 'Guests leave photos, videos, and messages. You get a gorgeous keepsake to treasure.' },
 ];
 
 const FEATURES = [
   { emoji: '🎨', title: '5 Stunning Themes', desc: 'Dinosaurs, Unicorns, Princesses, Racing Cars, or a classic Birthday bash — each fully designed.' },
   { emoji: '✉️', title: 'One-tap RSVP', desc: "Guests respond in seconds with their name, dietary needs, and whether they're staying or dropping off." },
   { emoji: '📅', title: 'Add to Calendar', desc: 'Guests can save to Apple, Google, or Outlook calendar with the event link baked in.' },
-  { emoji: '📸', title: 'Built-in Memory Wall', desc: 'A photo and message wall guests can add to before, during, and after the party.' },
   { emoji: '🎁', title: 'Gift Registry', desc: "Optionally add a wish list note or link so guests know what the birthday star would love." },
   { emoji: '📊', title: 'Host Dashboard', desc: 'See every RSVP at a glance, track dietary alerts, and export the list as CSV.' },
 ];
@@ -57,7 +55,7 @@ export default function HomePage() {
             birthday party
           </h1>
           <p className="hp-hero-subtitle kb-body">
-            Beautiful themed invitations, instant RSVPs, and a built-in memory wall —
+            Beautiful themed invitations and instant RSVPs —
             all in one link your guests scan with their phone.
           </p>
           <div className="hp-hero-actions">
@@ -88,8 +86,7 @@ export default function HomePage() {
                     <div className="hp-mock-detail">📍 123 Rainbow Lane, Sunnyville</div>
                   </div>
                   <div className="hp-mock-btns">
-                    <div className="hp-mock-btn-primary">✉️ RSVP Now</div>
-                    <div className="hp-mock-btn-secondary">📸 Leave a Memory</div>
+                    <div className="hp-mock-btn-primary" style={{ width: '100%' }}>✉️ RSVP Now</div>
                   </div>
                 </div>
               </div>
@@ -97,11 +94,6 @@ export default function HomePage() {
                 <div className="hp-preview-stat">
                   <span className="hp-preview-stat-num">24</span>
                   <span className="hp-preview-stat-label">RSVPs received</span>
-                </div>
-                <div className="hp-preview-divider" />
-                <div className="hp-preview-stat">
-                  <span className="hp-preview-stat-num">18</span>
-                  <span className="hp-preview-stat-label">Memories shared</span>
                 </div>
                 <div className="hp-preview-divider" />
                 <div className="hp-preview-stat">

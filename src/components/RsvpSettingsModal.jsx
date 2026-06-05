@@ -240,6 +240,7 @@ function MiniPreview({
 
 export default function RsvpSettingsModal({ event, onClose, onSave }) {
   const [rsvpEnabled, setRsvpEnabled] = useState(event?.rsvpEnabled !== false);
+  const [showParentAttendance, setShowParentAttendance] = useState(event?.showParentAttendance !== false);
   const [lockDownRSVP, setLockDownRSVP] = useState(event?.lockDownRSVP === true);
   const [askChildAge, setAskChildAge] = useState(event?.askChildAge !== false);
   const [askAdultCount, setAskAdultCount] = useState(event?.askAdultCount !== false);
@@ -250,6 +251,7 @@ export default function RsvpSettingsModal({ event, onClose, onSave }) {
   const handleSave = () => {
     onSave({
       rsvpEnabled,
+      showParentAttendance,
       lockDownRSVP,
       askChildAge,
       askAdultCount,
@@ -334,6 +336,7 @@ export default function RsvpSettingsModal({ event, onClose, onSave }) {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 32 }}>
               <h3 style={{ fontSize: '1.1rem', margin: '0 0 -8px 0' }}>Form Questions</h3>
+              <Toggle id="show-parent-attendance-modal" checked={showParentAttendance} onChange={setShowParentAttendance} label="Ask about parent attendance" />
               <Toggle id="ask-age-modal" checked={askChildAge} onChange={setAskChildAge} label="Ask for guest child's age" />
               <Toggle id="ask-adults-modal" checked={askAdultCount} onChange={setAskAdultCount} label="Ask for number of adults attending" />
 

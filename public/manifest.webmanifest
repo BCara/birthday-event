@@ -1,0 +1,17 @@
+{
+  "name": "KidsBash - Easy Kids Birthday Planning",
+  "short_name": "KidsBash",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF9F2",
+  "theme_color": "#FF6B6B",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "description": "Plan the perfect birthday with beautiful themed invitations and instant RSVPs."
+}

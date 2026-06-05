@@ -9,6 +9,7 @@ import {
   onSnapshot,
 } from 'firebase/firestore';
 import ThemedPage from '../../theme/ThemedPage';
+import ThemeIllustration from '../../theme/ThemeIllustration';
 import { fetchEventBySlug } from '../../utils/fetchEvent';
 import { db } from '../../firebase';
 import './MemoryWallPage.css';
@@ -104,7 +105,10 @@ export default function MemoryWallPage() {
         {/* Header */}
         <div className="mwp-header">
           <div className="mwp-header-left">
-            <Link to={`/${slug}`} className="mwp-back-btn" aria-label="Back to Event">←</Link>
+            <Link to={`/${slug}`} className="mwp-back-btn" aria-label="View Event Details">←</Link>
+            <div style={{ width: '40px', height: '40px', marginRight: '8px', flexShrink: 0 }}>
+              <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
+            </div>
             <div>
               <h1 className="mwp-title">Memory Wall 📸</h1>
               <p className="mwp-subtitle">
