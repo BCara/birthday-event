@@ -1,78 +1,69 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export default function LocationInput({ id, value, onChange, placeholder, style }) {
   const [suggestions, setSuggestions] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [googleLoaded, setGoogleLoaded] = useState(false);
+  const [autocompleteService, setAutocompleteService] = useState(null);
+  
   const wrapperRef = useRef(null);
-  const justSelectedRef = useRef(false);
 
-  // Format helper to split suggestion into Main Title and Subtitle Address
-  const getSuggestionDetails = (feature) => {
-    const { properties } = feature;
-    const mainName = properties.name || '';
-    const addressParts = [];
-
-    const streetAddress = [properties.housenumber, properties.street].filter(Boolean).join(' ');
-    if (streetAddress && streetAddress !== mainName) {
-      addressParts.push(streetAddress);
-    }
-
-    const city = properties.city || properties.town || properties.suburb || properties.village;
-    if (city && city !== mainName) {
-      addressParts.push(city);
-    }
-
-    if (properties.state && properties.state !== mainName) {
-      addressParts.push(properties.state);
-    }
-
-    if (properties.country && properties.country !== mainName) {
-      addressParts.push(properties.country);
-    }
-
-    return {
-      mainName,
-      secondaryText: addressParts.join(', '),
-      fullName: [mainName, ...addressParts].filter(Boolean).join(', ')
-    };
-  };
-
-  // Debounced API fetch when value changes
+  // Load Google Maps Script dynamically if not present
   useEffect(() => {
-    if (!value || value.trim().length < 3) {
+    const existingScript = document.getElementById('google-maps-script');
+    if (existingScript || window.google) {
+      setGoogleLoaded(true);
+      if (window.google?.maps?.places) {
+        setAutocompleteService(new window.google.maps.places.AutocompleteService());
+      }
+      return;
+    }
+    
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      console.warn("LocationInput: VITE_GOOGLE_MAPS_API_KEY is missing in .env. Search will be disabled.");
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.id = 'google-maps-script';
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      setGoogleLoaded(true);
+      if (window.google?.maps?.places) {
+        setAutocompleteService(new window.google.maps.places.AutocompleteService());
+      }
+    };
+    script.onerror = () => console.error("LocationInput: Failed to load Google Maps script.");
+    document.head.appendChild(script);
+  }, []);
+
+  // Fetch predictions when value changes
+  useEffect(() => {
+    if (!autocompleteService || !value || value.trim().length < 2) {
       setSuggestions([]);
       return;
     }
 
-    if (justSelectedRef.current) {
-      justSelectedRef.current = false;
-      return;
-    }
-
-    setIsLoading(true);
-    const timer = setTimeout(async () => {
-      try {
-        const response = await fetch(
-          `https://photon.komoot.io/api/?q=${encodeURIComponent(value)}&limit=5`
-        );
-        if (!response.ok) throw new Error('API request failed');
-        const data = await response.json();
-        if (data && data.features) {
-          setSuggestions(data.features);
-        } else {
-          setSuggestions([]);
+    // Debounce the fetch slightly
+    const timer = setTimeout(() => {
+      autocompleteService.getPlacePredictions(
+        { input: value },
+        (predictions, status) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setSuggestions(predictions);
+          } else {
+            setSuggestions([]);
+          }
         }
-      } catch (err) {
-        console.error('Error fetching location suggestions:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }, 350);
+      );
+    }, 300);
 
     return () => clearTimeout(timer);
-  }, [value]);
+  }, [value, autocompleteService]);
 
   // Click outside handler
   useEffect(() => {
@@ -111,9 +102,8 @@ export default function LocationInput({ id, value, onChange, placeholder, style 
     }
   };
 
-  const selectSuggestion = (feature) => {
-    const { fullName } = getSuggestionDetails(feature);
-    justSelectedRef.current = true;
+  const selectSuggestion = (suggestion) => {
+    const fullName = suggestion.description;
     onChange(fullName);
     setSuggestions([]);
     setIsOpen(false);
@@ -134,18 +124,22 @@ export default function LocationInput({ id, value, onChange, placeholder, style 
           onFocus={() => setIsOpen(true)}
           autoComplete="off"
           style={styles.input}
+          disabled={!googleLoaded && import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
         />
-        {isLoading && <div style={styles.loader} />}
+        {/* Simple loader if script is still loading */}
+        {!googleLoaded && import.meta.env.VITE_GOOGLE_MAPS_API_KEY && (
+          <div style={styles.loader} />
+        )}
       </div>
 
       {isOpen && suggestions.length > 0 && (
         <div style={styles.dropdown}>
           {suggestions.map((suggestion, index) => {
-            const { mainName, secondaryText } = getSuggestionDetails(suggestion);
+            const { main_text, secondary_text } = suggestion.structured_formatting;
             const isHighlighted = index === highlightedIndex;
             return (
               <div
-                key={suggestion.properties.osm_id || index}
+                key={suggestion.place_id}
                 onClick={() => selectSuggestion(suggestion)}
                 onMouseEnter={() => setHighlightedIndex(index)}
                 style={{
@@ -155,8 +149,8 @@ export default function LocationInput({ id, value, onChange, placeholder, style 
               >
                 <span style={styles.pinIcon}>📍</span>
                 <div style={styles.textContainer}>
-                  <div style={styles.mainName}>{mainName}</div>
-                  {secondaryText && <div style={styles.secondaryText}>{secondaryText}</div>}
+                  <div style={styles.mainName}>{main_text}</div>
+                  {secondary_text && <div style={styles.secondaryText}>{secondary_text}</div>}
                 </div>
               </div>
             );

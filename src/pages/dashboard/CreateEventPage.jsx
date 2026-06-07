@@ -82,6 +82,9 @@ export default function CreateEventPage() {
   const [adultsEstimate, setAdultsEstimate] = useState(10);
   const [giftRegistryNote, setGiftRegistryNote] = useState('');
   const [giftRegistryLink, setGiftRegistryLink] = useState('');
+  const [requireGuestMatch, setRequireGuestMatch] = useState(false);
+  const [authType, setAuthType] = useState('name');
+  const [eventPassword, setEventPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
@@ -136,6 +139,9 @@ export default function CreateEventPage() {
         adultsEstimate: adultsEstimate !== '' ? Number(adultsEstimate) : 10,
         giftRegistryNote: giftRegistryNote.trim(),
         giftRegistryLink: giftRegistryLink.trim(),
+        requireGuestMatch,
+        authType,
+        eventPassword: authType === 'password' ? eventPassword : '',
         published: true,
         createdAt: serverTimestamp(),
       });
@@ -351,6 +357,38 @@ export default function CreateEventPage() {
                     onChange={setLockDownRSVP}
                     label="Require approval for unknown guests"
                   />
+                  <Toggle
+                    id="ce-guestmatch"
+                    checked={requireGuestMatch}
+                    onChange={setRequireGuestMatch}
+                    label="Require Guest List Match (only invited guests can RSVP)"
+                  />
+                </div>
+
+                <SectionTitle>Event Portal Security</SectionTitle>
+                <div className="kb-field" style={{marginTop: 8}}>
+                  <label className="kb-label">Cross-device Re-authentication Method</label>
+                  <select 
+                    className="kb-input" 
+                    value={authType} 
+                    onChange={e => setAuthType(e.target.value)}
+                    style={{ marginBottom: 12 }}
+                  >
+                    <option value="name">Name & Contact Lookup</option>
+                    <option value="password">Event Password</option>
+                  </select>
+                  {authType === 'password' && (
+                    <>
+                      <label className="kb-label">Event Password</label>
+                      <input 
+                        className="kb-input" 
+                        type="text" 
+                        placeholder="e.g. Birthday2026" 
+                        value={eventPassword} 
+                        onChange={e => setEventPassword(e.target.value)} 
+                      />
+                    </>
+                  )}
                 </div>
 
                 <div style={{...styles.row, marginTop: 16}}>

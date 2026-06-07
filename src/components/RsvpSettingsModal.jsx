@@ -247,6 +247,9 @@ export default function RsvpSettingsModal({ event, onClose, onSave }) {
   const [kidsEstimate, setKidsEstimate] = useState(event?.kidsEstimate ?? (event?.guestEstimate ? Math.floor(event?.guestEstimate / 2) : 10));
   const [adultsEstimate, setAdultsEstimate] = useState(event?.adultsEstimate ?? (event?.guestEstimate ? Math.ceil(event?.guestEstimate / 2) : 10));
   const [rsvpByDate, setRsvpByDate] = useState(event?.rsvpByDate || '');
+  const [requireGuestMatch, setRequireGuestMatch] = useState(event?.requireGuestMatch === true);
+  const [authType, setAuthType] = useState(event?.authType || 'name');
+  const [eventPassword, setEventPassword] = useState(event?.eventPassword || '');
 
   const handleSave = () => {
     onSave({
@@ -257,7 +260,10 @@ export default function RsvpSettingsModal({ event, onClose, onSave }) {
       askAdultCount,
       kidsEstimate: kidsEstimate ? parseInt(kidsEstimate, 10) : 0,
       adultsEstimate: adultsEstimate ? parseInt(adultsEstimate, 10) : 0,
-      rsvpByDate
+      rsvpByDate,
+      requireGuestMatch,
+      authType,
+      eventPassword: authType === 'password' ? eventPassword : ''
     });
   };
 
@@ -342,6 +348,37 @@ export default function RsvpSettingsModal({ event, onClose, onSave }) {
 
               <h3 style={{ fontSize: '1.1rem', margin: '16px 0 -8px 0' }}>Security</h3>
               <Toggle id="lock-rsvp-modal" checked={lockDownRSVP} onChange={setLockDownRSVP} label="Lock RSVP list (Require approval for guests not on your list)" />
+              <Toggle id="require-match-modal" checked={requireGuestMatch} onChange={setRequireGuestMatch} label="Require Guest List Match (only invited guests can RSVP)" />
+
+              <div style={{ marginTop: 8 }}>
+                <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: 600, color: 'var(--kb-text)', marginBottom: 8 }}>
+                  Cross-device Re-authentication Method
+                </label>
+                <select 
+                  className="kb-input" 
+                  value={authType} 
+                  onChange={e => setAuthType(e.target.value)}
+                  style={{ width: '100%', maxWidth: 300, marginBottom: 12 }}
+                >
+                  <option value="name">Name & Contact Lookup</option>
+                  <option value="password">Event Password</option>
+                </select>
+                {authType === 'password' && (
+                  <>
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--kb-text-muted)', marginBottom: 4 }}>
+                      Event Password
+                    </label>
+                    <input 
+                      className="kb-input" 
+                      type="text" 
+                      placeholder="e.g. Birthday2026" 
+                      value={eventPassword} 
+                      onChange={e => setEventPassword(e.target.value)}
+                      style={{ width: '100%', maxWidth: 300 }}
+                    />
+                  </>
+                )}
+              </div>
             </div>
 
           </div>

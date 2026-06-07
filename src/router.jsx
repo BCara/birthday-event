@@ -81,6 +81,9 @@ const router = createBrowserRouter([
     children: [
       { path: '/:slug',         element: <Lazy><EventLandingPage /></Lazy> },
       { path: '/:slug/rsvp',    element: <Lazy><RSVPPage /></Lazy> },
+      { path: '/:slug/memories',element: <Lazy><MemoryWallPage /></Lazy> },
+      { path: '/:slug/memories/new', element: <Lazy><LeaveMemoryPage /></Lazy> },
+      { path: '/:slug/live',    element: <Lazy><LiveDisplayPage /></Lazy> },
     ],
   },
 

@@ -11,6 +11,20 @@ import LocationInput from '../../components/LocationInput';
 import '../guest/EventLandingPage.css';
 import './EventManagePage.css';
 import { getDevSafeOrigin } from '../../utils/url';
+import { Cake, Wand2, Gamepad2, Car, Utensils, Gift, Hand, Music, Star, Trash2, Plus, Tent } from 'lucide-react';
+
+export const SCHEDULE_ICONS = [
+  { id: 'cake', icon: Cake, label: 'Cake' },
+  { id: 'magician', icon: Wand2, label: 'Magician / Show' },
+  { id: 'play', icon: Gamepad2, label: 'Play / Games' },
+  { id: 'ride', icon: Car, label: 'Cars / Ride' },
+  { id: 'tent', icon: Tent, label: 'Outdoors' },
+  { id: 'food', icon: Utensils, label: 'Eating / Food' },
+  { id: 'gift', icon: Gift, label: 'Gifts' },
+  { id: 'welcome', icon: Hand, label: 'Welcome / Bye' },
+  { id: 'music', icon: Music, label: 'Music / Dance' },
+  { id: 'star', icon: Star, label: 'Special Activity' },
+];
 
 const THEMES = [
   { key: 'generic', emoji: '🎈', label: 'Classic' },
@@ -31,6 +45,7 @@ function Toggle({ id, checked, onChange, label }) {
     </label>
   );
 }
+
 
 function MiniPreview({ 
   themeKey, 
@@ -225,10 +240,14 @@ export default function EventManagePage() {
   const [endTime, setEndTime] = useState('');
   const [description, setDescription] = useState('');
   const [schedule, setSchedule] = useState('');
+  const [scheduleItems, setScheduleItems] = useState([]);
+  const [generalInfo, setGeneralInfo] = useState('');
   const [parkingInfo, setParkingInfo] = useState('');
   const [location, setLocation] = useState('');
   const [hostContact, setHostContact] = useState('');
   const [rsvpEnabled, setRsvpEnabled] = useState(true);
+  const [websiteEnabled, setWebsiteEnabled] = useState(true);
+  const [memoriesEnabled, setMemoriesEnabled] = useState(false);
   const [showParentAttendance, setShowParentAttendance] = useState(true);
   const [stayOrDropOffMode, setStayOrDropOffMode] = useState('ask'); // 'ask' | 'stay' | 'dropoff'
   const [askChildAge, setAskChildAge] = useState(true);
@@ -262,9 +281,13 @@ export default function EventManagePage() {
       setLocation(data.location ?? '');
       setDescription(data.description ?? '');
       setSchedule(data.schedule ?? '');
+      setScheduleItems(data.scheduleItems ?? []);
+      setGeneralInfo(data.generalInfo ?? '');
       setParkingInfo(data.parkingInfo ?? '');
       setHostContact(data.hostContact ?? '');
       setRsvpEnabled(data.rsvpEnabled ?? true);
+      setWebsiteEnabled(data.websiteEnabled ?? true);
+      setMemoriesEnabled(data.memoriesEnabled ?? false);
       setShowParentAttendance(data.showParentAttendance ?? true);
       setStayOrDropOffMode(data.stayOrDropOffMode ?? 'ask');
       setAskChildAge(data.askChildAge ?? true);
@@ -300,9 +323,13 @@ export default function EventManagePage() {
         location: location.trim(),
         description: description.trim(),
         schedule: schedule.trim(),
+        scheduleItems,
+        generalInfo: generalInfo.trim(),
         parkingInfo: parkingInfo.trim(),
         hostContact: hostContact.trim(),
         rsvpEnabled,
+        websiteEnabled,
+        memoriesEnabled,
         showParentAttendance,
         stayOrDropOffMode,
         askChildAge,
@@ -321,6 +348,20 @@ export default function EventManagePage() {
       setSaving(false);
     }
   }
+
+  const addScheduleItem = () => {
+    setScheduleItems([...scheduleItems, { id: Date.now().toString(), time: '12:00 PM', name: '', desc: '', iconKey: 'star' }]);
+  };
+
+  const updateScheduleItem = (index, field, value) => {
+    const newItems = [...scheduleItems];
+    newItems[index][field] = value;
+    setScheduleItems(newItems);
+  };
+
+  const removeScheduleItem = (index) => {
+    setScheduleItems(scheduleItems.filter((_, i) => i !== index));
+  };
 
   async function handlePhotoUpload(e) {
     const file = e.target.files[0];
@@ -431,7 +472,8 @@ export default function EventManagePage() {
         <div className="em-grid">
           {/* Edit Form Column */}
           <form onSubmit={handleSave} className="em-form-col">
-            
+
+
             <div className="kb-card" style={styles.card}>
               <h3 style={styles.cardTitle}><span>📝</span> Basic Information</h3>
               
@@ -597,7 +639,7 @@ export default function EventManagePage() {
                 <Toggle id="em-rsvp" checked={rsvpEnabled} onChange={setRsvpEnabled} label="Enable RSVP for this event" />
                 {rsvpEnabled && (
                   <>
-                    <div style={{ borderTop: '1px solid var(--kb-border)', paddingTop: 12 }}>
+                    <div style={{ paddingTop: 12 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap', marginBottom: 16 }}>
                         <Toggle id="em-showParentAttendance" checked={showParentAttendance} onChange={setShowParentAttendance} label="Parent Attendance Options" />
 
@@ -658,18 +700,76 @@ export default function EventManagePage() {
 
             <div className="kb-card" style={styles.card}>
               <h3 style={styles.cardTitle}><span>✨</span> Event Info (Optional)</h3>
-              <div className="kb-field">
-                <label className="kb-label" htmlFor="em-schedule">Schedule / Timeline</label>
+              
+              <div className="kb-field" style={{ marginBottom: 32 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <label className="kb-label" style={{ marginBottom: 0 }}>Schedule / Timeline</label>
+                  <button type="button" onClick={addScheduleItem} className="kb-btn kb-btn-secondary kb-btn-sm" style={{ padding: '6px 12px', fontSize: 13, gap: 4 }}>
+                    <Plus size={14} /> Add Item
+                  </button>
+                </div>
+                
+                {scheduleItems.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '32px 16px', background: 'var(--kb-surface)', border: '1px dashed var(--kb-border)', borderRadius: 16 }}>
+                    <p style={{ margin: '0 0 12px', color: 'var(--kb-text-muted)', fontSize: 14 }}>No schedule items added yet.</p>
+                    <button type="button" onClick={addScheduleItem} className="kb-btn kb-btn-primary kb-btn-sm">Create Schedule</button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {scheduleItems.map((item, index) => (
+                      <div key={item.id} style={{ display: 'flex', gap: 16, background: 'var(--kb-surface)', padding: 16, borderRadius: 16, border: '1px solid var(--kb-border)', position: 'relative', flexWrap: 'wrap' }}>
+                        <button type="button" onClick={() => removeScheduleItem(index)} style={{ position: 'absolute', top: -10, right: -10, width: 28, height: 28, background: '#fff', border: '1px solid var(--kb-border)', borderRadius: '50%', color: 'var(--kb-coral)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', zIndex: 2 }}>
+                          <X size={14} />
+                        </button>
+                        
+                        <div style={{ width: '100%', maxWidth: 100 }}>
+                          <label className="kb-label" style={{ fontSize: 12 }}>Time</label>
+                          <input type="text" className="kb-input" style={{ padding: '8px', fontSize: 14 }} value={item.time} onChange={e => updateScheduleItem(index, 'time', e.target.value)} placeholder="1:00 PM" />
+                        </div>
+                        
+                        <div style={{ width: '100%', maxWidth: 120 }}>
+                          <label className="kb-label" style={{ fontSize: 12 }}>Icon</label>
+                          <select className="kb-select" style={{ padding: '8px', fontSize: 14 }} value={item.iconKey} onChange={e => updateScheduleItem(index, 'iconKey', e.target.value)}>
+                            {SCHEDULE_ICONS.map(icon => (
+                              <option key={icon.id} value={icon.id}>{icon.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div style={{ flex: 1, minWidth: 200 }}>
+                          <label className="kb-label" style={{ fontSize: 12 }}>Activity Name</label>
+                          <input type="text" className="kb-input" style={{ padding: '8px', fontSize: 14, marginBottom: 8 }} value={item.name} onChange={e => updateScheduleItem(index, 'name', e.target.value)} placeholder="Cake Cutting" />
+                          
+                          <label className="kb-label" style={{ fontSize: 12 }}>Description (Optional)</label>
+                          <textarea className="kb-input" style={{ padding: '8px', fontSize: 13, minHeight: 40, resize: 'vertical' }} value={item.desc} onChange={e => updateScheduleItem(index, 'desc', e.target.value)} placeholder="Gather around for cake!" rows={1} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Fallback for old string schedule */}
+                {schedule && scheduleItems.length === 0 && (
+                  <div style={{ marginTop: 16, padding: 12, background: 'rgba(255, 183, 77, 0.1)', borderRadius: 12, border: '1px solid rgba(255, 183, 77, 0.3)' }}>
+                    <p style={{ margin: 0, fontSize: 13, color: '#d84315' }}>You have an old text-based schedule. It will still show to guests until you delete it and use the new schedule builder above.</p>
+                    <button type="button" onClick={() => setSchedule('')} style={{ marginTop: 8, background: 'transparent', border: 'none', color: '#d84315', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: 13 }}>Delete Old Schedule</button>
+                  </div>
+                )}
+              </div>
+
+              <div className="kb-field" style={{ borderTop: '1px solid var(--kb-border)', paddingTop: 24 }}>
+                <label className="kb-label" htmlFor="em-generalInfo">General Information</label>
                 <textarea
-                  id="em-schedule"
+                  id="em-generalInfo"
                   className="kb-input"
-                  placeholder="e.g. 2:00 PM - Welcome, 3:00 PM - Cake cutting"
-                  value={schedule}
-                  onChange={e => setSchedule(e.target.value)}
-                  rows={3}
+                  placeholder="e.g. Please wear enclosed shoes. Dietary requirements can be added in the RSVP."
+                  value={generalInfo}
+                  onChange={e => setGeneralInfo(e.target.value)}
+                  rows={4}
                   style={styles.textarea}
                 />
               </div>
+
               <div className="kb-field">
                 <label className="kb-label" htmlFor="em-parkingInfo">Parking & Transport Info</label>
                 <textarea

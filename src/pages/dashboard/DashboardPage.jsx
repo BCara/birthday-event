@@ -22,8 +22,33 @@ function formatDate(dateStr) {
 
 function EventCard({ event }) {
   const emoji = THEME_EMOJI[event.theme] || '🎈';
-  const rsvpCount = event.rsvpCount ?? 0;
-  const memoryCount = event.memoryCount ?? 0;
+  const [rsvpCount, setRsvpCount] = useState(0);
+  const [memoryCount, setMemoryCount] = useState(0);
+
+  useEffect(() => {
+    const qRsvps = query(collection(db, 'rsvps'), where('eventId', '==', event.id));
+    const unsubRsvps = onSnapshot(qRsvps, snap => {
+      let count = 0;
+      snap.forEach(doc => {
+        const data = doc.data();
+        const isAttending = data.attending === true || data.attending === 'yes' || data.isAttending === true || data.isAttending === 'yes';
+        if (isAttending) {
+          count += 1 + (data.siblings?.length || 0);
+        }
+      });
+      setRsvpCount(count);
+    });
+
+    const qMemories = query(collection(db, 'memories'), where('eventId', '==', event.id));
+    const unsubMemories = onSnapshot(qMemories, snap => {
+      setMemoryCount(snap.size);
+    });
+
+    return () => {
+      unsubRsvps();
+      unsubMemories();
+    };
+  }, [event.id]);
 
   return (
     <div style={cardStyles.card} className="kb-card">

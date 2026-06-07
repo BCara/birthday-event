@@ -8,8 +8,12 @@ import { fetchEventBySlug } from '../../utils/fetchEvent';
 import { getGoogleCalendarUrl } from '../../utils/calendarUtils';
 import { getDevSafeOrigin } from '../../utils/url';
 import { db } from '../../firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import './RSVPPage.css';
+import '../guest/EventLandingPage.css'; // ensure we have styles for invitation card
+import { downloadICS, generateICS } from '../../utils/calendarUtils';
 
 function SkeletonRSVP() {
   return (
@@ -56,6 +60,12 @@ export default function RSVPPage() {
   const [lookupContact, setLookupContact] = useState('');
   const [lookupError, setLookupError] = useState('');
   const [lookupLoading, setLookupLoading] = useState(false);
+
+  const [matchFound, setMatchFound] = useState(false);
+  const [showContactOrganiser, setShowContactOrganiser] = useState(false);
+  const [contactMessage, setContactMessage] = useState("Hi, I couldn't find my invitation on the list. Could you please check?");
+  const [sendingContact, setSendingContact] = useState(false);
+  const [calOpen, setCalOpen] = useState(false);
 
   useEffect(() => {
     console.log("Fetching event for RSVP, slug:", slug);
@@ -104,9 +114,15 @@ export default function RSVPPage() {
                 if (!isEditMode) {
                   setSuccess(true);
                 }
+                setMatchFound(true);
               }
             } catch (err) {
               console.error("Failed to fetch existing RSVP:", err);
+            }
+          } else {
+            // if we are NOT in edit mode and NO rsvpId is stored, we only set matchFound=true if requireGuestMatch is false
+            if (!e.requireGuestMatch) {
+              setMatchFound(true);
             }
           }
         }
@@ -169,16 +185,39 @@ export default function RSVPPage() {
         setDietary(foundRsvp.dietary ?? '');
         setComments(foundRsvp.comments ?? '');
 
+        setMatchFound(true);
         setSuccess(true);
         setShowLookup(false);
       } else {
         setLookupError("No matching RSVP found. Please check spelling or contact the host.");
+        setShowContactOrganiser(true);
       }
     } catch (err) {
       console.error("Error looking up RSVP:", err);
       setLookupError("An error occurred. Please try again.");
     } finally {
       setLookupLoading(false);
+    }
+  };
+
+  const handleContactOrganiser = async () => {
+    setSendingContact(true);
+    try {
+      const functions = getFunctions();
+      const contactOrganiserCall = httpsCallable(functions, 'contactOrganiser');
+      await contactOrganiserCall({
+        eventId: event.id,
+        guestName: lookupChildName,
+        guestContact: lookupContact,
+        message: contactMessage
+      });
+      toast.success("Message sent to the organiser!");
+      setShowContactOrganiser(false);
+    } catch (e) {
+      console.error("contactOrganiser error:", e);
+      toast.error("Failed to send message. Please try again.");
+    } finally {
+      setSendingContact(false);
     }
   };
 
@@ -300,6 +339,7 @@ export default function RSVPPage() {
     );
   }
 
+
   const themeKey = event.theme?.startsWith('kids-') ? event.theme : `kids-${event.theme || 'generic'}`;
   const askChildAge = event.askChildAge !== false;
   const askAdultCount = event.askAdultCount !== false;
@@ -316,6 +356,26 @@ export default function RSVPPage() {
     title: `RSVP: ${event.name}`,
     date: event.rsvpByDate,
     description: `Time to RSVP for ${event.name}!`,
+    url: pageUrl,
+  } : null;
+
+  const formattedDate = event?.date ? new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric'
+  }) : null;
+
+  const formattedTime = event?.time ? (() => {
+    const [h, m] = event.time.split(':');
+    const hr = parseInt(h, 10);
+    return `${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
+  })() : null;
+
+  const calOpts = event?.date ? {
+    title: event.name,
+    date: event.date,
+    time: event.time,
+    endTime: event.endTime,
+    location: event.location,
+    description: event.description,
     url: pageUrl,
   } : null;
 
@@ -405,78 +465,269 @@ export default function RSVPPage() {
             </div>
           )}
         </div>
-        {/* Already RSVP'd? Lookup section */}
-        {!isEditMode && (
-          <div className="rsvp-lookup-section" style={{ marginBottom: '24px', textAlign: 'center' }}>
-            <button 
-              type="button" 
-              className="rsvp-lookup-toggle-btn"
-              onClick={() => {
-                setShowLookup(v => !v);
-                setLookupError('');
-              }}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--t-accent)',
-                fontFamily: 'var(--t-font-body)',
-                fontSize: '0.92rem',
-                fontWeight: '700',
-                cursor: 'pointer',
-                textDecoration: 'underline',
-                transition: 'opacity 0.2s',
-              }}
-            >
-              {showLookup ? "✕ Close search" : "Already RSVP'd? Find your RSVP here →"}
-            </button>
 
-            {showLookup && (
-              <form onSubmit={handleLookup} className="rsvp-card rsvp-lookup-form" style={{ marginTop: '16px', textAlign: 'left' }}>
-                <h3 style={{ fontFamily: 'var(--t-font-heading)', fontSize: '1.25rem', color: 'var(--t-accent)', margin: '0 0 4px 0' }}>Find Your RSVP</h3>
-                <p style={{ fontFamily: 'var(--t-font-body)', fontSize: '0.82rem', color: 'var(--t-text-light)', margin: '0 0 16px 0', lineHeight: 1.4 }}>
-                  Enter the details you used to RSVP to restore access to the party details portal.
-                </p>
-                
-                <div className="rsvp-field">
-                  <label className="rsvp-label">Child's Name *</label>
-                  <input 
-                    type="text" 
-                    className="rsvp-input" 
-                    placeholder="e.g. Emily" 
-                    value={lookupChildName} 
-                    onChange={e => setLookupChildName(e.target.value)} 
-                    required
-                  />
+        {/* Invitation Card */}
+        <div className="elp-card-invitation" style={{ marginBottom: '32px' }}>
+          <div className="elp-card-border-inner">
+            
+            {/* Header Badge */}
+            <div className="elp-invitation-intro">
+              <span className="elp-invitation-badge">You're Invited!</span>
+            </div>
+
+            {/* Celebration details above illustration */}
+            <div className="elp-hero">
+              <h1 className="elp-title">{event.name}</h1>
+              {event.childName && <p className="elp-subtitle">Celebrating {event.childName}'s special day!</p>}
+            </div>
+
+            {/* Photo OR Illustration */}
+            <div className="elp-illustration-container">
+              {event.photoUrl ? (
+                <div className="elp-photo-wrap">
+                  <img src={event.photoUrl} alt={event.name} className="elp-photo" />
                 </div>
-
-                <div className="rsvp-field">
-                  <label className="rsvp-label">Parent's Email or Phone *</label>
-                  <input 
-                    type="text" 
-                    className="rsvp-input" 
-                    placeholder="e.g. sarah@example.com or 0400000000" 
-                    value={lookupContact} 
-                    onChange={e => setLookupContact(e.target.value)} 
-                    required
-                  />
+              ) : (
+                <div className="elp-illustration-wrap">
+                  <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
                 </div>
+              )}
+            </div>
 
-                {lookupError && <p className="rsvp-error">{lookupError}</p>}
+            <div className="elp-divider">
+              <span className="elp-divider-dot"></span>
+              <span className="elp-divider-line"></span>
+              <span className="elp-divider-dot"></span>
+            </div>
 
-                <button 
-                  type="submit" 
-                  className="rsvp-btn rsvp-btn-accent" 
-                  disabled={lookupLoading}
-                  style={{ width: '100%', marginTop: '8px' }}
-                >
-                  {lookupLoading ? "Searching..." : "🔍 Find RSVP"}
-                </button>
-              </form>
+            {/* Centered Details */}
+            <div className="elp-details-clean">
+              {formattedDate && (
+                <div className="elp-detail-item">
+                  <span className="elp-detail-icon-clean">📅</span>
+                  <div className="elp-detail-content-clean">
+                    <div className="elp-detail-label-clean">Date</div>
+                    <div className="elp-detail-value-clean">{formattedDate}</div>
+                  </div>
+                  {event.date && (
+                    <div className="elp-card-cal-wrap" data-open={calOpen}>
+                      <button 
+                        className="elp-card-cal-btn" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCalOpen(v => !v);
+                        }}
+                        aria-label="Add to calendar"
+                      >
+                        <span>Add to Cal</span>
+                        <svg className="elp-cal-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                      </button>
+                      {calOpen && (
+                        <div className="elp-card-cal-dropdown">
+                          <button className="elp-card-cal-option" onClick={() => { window.open(getGoogleCalendarUrl(calOpts), '_blank'); setCalOpen(false); }}>
+                            Google Calendar
+                          </button>
+                          <button className="elp-card-cal-option" onClick={() => { downloadICS(generateICS(calOpts), `${slug}.ics`); setCalOpen(false); }}>
+                            Apple / Outlook
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              {formattedTime && (
+                <div className="elp-detail-item">
+                  <span className="elp-detail-icon-clean">🕐</span>
+                  <div className="elp-detail-content-clean">
+                    <div className="elp-detail-label-clean">Time</div>
+                    <div className="elp-detail-value-clean">
+                      {formattedTime}
+                      {event.endTime && ` – ${(() => { const [h,m] = event.endTime.split(':'); const hr=parseInt(h,10); return `${hr%12||12}:${m} ${hr>=12?'PM':'AM'}`; })()}`}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {event.location && (
+                <div className="elp-detail-item">
+                  <span className="elp-detail-icon-clean">📍</span>
+                  <div className="elp-detail-content-clean">
+                    <div className="elp-detail-label-clean">Location</div>
+                    <div className="elp-detail-value-clean">{event.location}</div>
+                  </div>
+                </div>
+              )}
+              {event.hostContact && (
+                <div className="elp-detail-item">
+                  <span className="elp-detail-icon-clean">📞</span>
+                  <div className="elp-detail-content-clean">
+                    <div className="elp-detail-label-clean">Contact</div>
+                    <div className="elp-detail-value-clean">{event.hostContact}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Message Description */}
+            {event.description && (
+              <>
+                <div className="elp-divider">
+                  <span className="elp-divider-dot"></span>
+                  <span className="elp-divider-line"></span>
+                  <span className="elp-divider-dot"></span>
+                </div>
+                <div className="elp-desc-clean">
+                  <p>{event.description}</p>
+                </div>
+              </>
             )}
           </div>
+        </div>
+
+        {/* Guest Matching / Lookup section */}
+        {!matchFound && event.requireGuestMatch ? (
+          <div className="rsvp-card rsvp-lookup-form" style={{ marginTop: '16px', textAlign: 'left' }}>
+            <h3 style={{ fontFamily: 'var(--t-font-heading)', fontSize: '1.25rem', color: 'var(--t-accent)', margin: '0 0 4px 0' }}>Find Your Invitation</h3>
+            <p style={{ fontFamily: 'var(--t-font-body)', fontSize: '0.82rem', color: 'var(--t-text-light)', margin: '0 0 16px 0', lineHeight: 1.4 }}>
+              This event requires you to match your name with the guest list to RSVP.
+            </p>
+            
+            <form onSubmit={handleLookup}>
+              <div className="rsvp-field">
+                <label className="rsvp-label">Child's Name *</label>
+                <input 
+                  type="text" 
+                  className="rsvp-input" 
+                  placeholder="e.g. Emily" 
+                  value={lookupChildName} 
+                  onChange={e => setLookupChildName(e.target.value)} 
+                  required
+                />
+              </div>
+
+              <div className="rsvp-field">
+                <label className="rsvp-label">Parent's Email or Phone *</label>
+                <input 
+                  type="text" 
+                  className="rsvp-input" 
+                  placeholder="e.g. sarah@example.com or 0400000000" 
+                  value={lookupContact} 
+                  onChange={e => setLookupContact(e.target.value)} 
+                  required
+                />
+              </div>
+
+              {lookupError && <p className="rsvp-error">{lookupError}</p>}
+
+              <button 
+                type="submit" 
+                className="rsvp-btn rsvp-btn-accent" 
+                disabled={lookupLoading}
+                style={{ width: '100%', marginTop: '8px' }}
+              >
+                {lookupLoading ? "Searching..." : "🔍 Check Guest List"}
+              </button>
+            </form>
+
+            {showContactOrganiser && (
+              <div style={{ marginTop: '24px', padding: '16px', borderTop: '1px solid var(--t-border)' }}>
+                <h4 style={{ margin: '0 0 8px 0', color: 'var(--t-text)' }}>Still can't find your invite?</h4>
+                <p style={{ fontSize: '0.8rem', color: 'var(--t-text-light)', marginBottom: '12px' }}>Send a message directly to the host.</p>
+                <textarea 
+                  className="rsvp-textarea" 
+                  value={contactMessage}
+                  onChange={e => setContactMessage(e.target.value)}
+                  style={{ marginBottom: '12px' }}
+                  rows={3}
+                />
+                <button 
+                  type="button"
+                  className="rsvp-btn"
+                  onClick={handleContactOrganiser}
+                  disabled={sendingContact}
+                  style={{ width: '100%', background: 'var(--t-surface)', border: '2px solid var(--t-accent)', color: 'var(--t-accent)' }}
+                >
+                  {sendingContact ? "Sending..." : "✉️ Contact Organiser"}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          !isEditMode && !event.requireGuestMatch && (
+            <div className="rsvp-lookup-section" style={{ marginBottom: '24px', textAlign: 'center' }}>
+              <button 
+                type="button" 
+                className="rsvp-lookup-toggle-btn"
+                onClick={() => {
+                  setShowLookup(v => !v);
+                  setLookupError('');
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--t-accent)',
+                  fontFamily: 'var(--t-font-body)',
+                  fontSize: '0.92rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  transition: 'opacity 0.2s',
+                }}
+              >
+                {showLookup ? "✕ Close search" : "Already RSVP'd? Find your RSVP here →"}
+              </button>
+
+              {showLookup && (
+                <form onSubmit={handleLookup} className="rsvp-card rsvp-lookup-form" style={{ marginTop: '16px', textAlign: 'left' }}>
+                  <h3 style={{ fontFamily: 'var(--t-font-heading)', fontSize: '1.25rem', color: 'var(--t-accent)', margin: '0 0 4px 0' }}>Find Your RSVP</h3>
+                  <p style={{ fontFamily: 'var(--t-font-body)', fontSize: '0.82rem', color: 'var(--t-text-light)', margin: '0 0 16px 0', lineHeight: 1.4 }}>
+                    Enter the details you used to RSVP to restore access to the party details portal.
+                  </p>
+                  
+                  <div className="rsvp-field">
+                    <label className="rsvp-label">Child's Name *</label>
+                    <input 
+                      type="text" 
+                      className="rsvp-input" 
+                      placeholder="e.g. Emily" 
+                      value={lookupChildName} 
+                      onChange={e => setLookupChildName(e.target.value)} 
+                      required
+                    />
+                  </div>
+
+                  <div className="rsvp-field">
+                    <label className="rsvp-label">Parent's Email or Phone *</label>
+                    <input 
+                      type="text" 
+                      className="rsvp-input" 
+                      placeholder="e.g. sarah@example.com or 0400000000" 
+                      value={lookupContact} 
+                      onChange={e => setLookupContact(e.target.value)} 
+                      required
+                    />
+                  </div>
+
+                  {lookupError && <p className="rsvp-error">{lookupError}</p>}
+
+                  <button 
+                    type="submit" 
+                    className="rsvp-btn rsvp-btn-accent" 
+                    disabled={lookupLoading}
+                    style={{ width: '100%', marginTop: '8px' }}
+                  >
+                    {lookupLoading ? "Searching..." : "🔍 Find RSVP"}
+                  </button>
+                </form>
+              )}
+            </div>
+          )
         )}
 
-        <form className="rsvp-card" onSubmit={handleSubmit} noValidate>
+        {matchFound && (
+          <form className="rsvp-card" onSubmit={handleSubmit} noValidate>
 
           {/* Attending? */}
           <div className="rsvp-field">
@@ -760,6 +1011,7 @@ export default function RSVPPage() {
             {submitting ? 'Sending…' : (isEditMode ? '✅ Update RSVP' : '✉️ Submit RSVP')}
           </button>
         </form>
+        )}
 
         <div className="rsvp-footer">
           <p>Powered by <a href="/" className="rsvp-footer-link">KidsBash</a></p>
