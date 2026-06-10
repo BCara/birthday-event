@@ -11,7 +11,7 @@ import LocationInput from '../../components/LocationInput';
 import '../guest/EventLandingPage.css';
 import './EventManagePage.css';
 import { getDevSafeOrigin } from '../../utils/url';
-import { Cake, Wand2, Gamepad2, Car, Utensils, Gift, Hand, Music, Star, Trash2, Plus, Tent } from 'lucide-react';
+import { Cake, Wand2, Gamepad2, Car, Utensils, Gift, Hand, Music, Star, Trash2, Plus, Tent, X, ChevronDown, ChevronUp } from 'lucide-react';
 
 export const SCHEDULE_ICONS = [
   { id: 'cake', icon: Cake, label: 'Cake' },
@@ -59,6 +59,7 @@ function MiniPreview({
   rsvpByDate,
   location, 
   hostContact,
+  hostName,
   photoUrl,
   description,
   giftRegistryNote,
@@ -166,12 +167,15 @@ function MiniPreview({
                     <div className="elp-detail-value-clean" style={{ fontSize: '0.85rem' }}>{location || 'Party Location'}</div>
                   </div>
                 </div>
-                {hostContact && (
+                {(hostName || hostContact) && (
                   <div className="elp-detail-item">
                     <span className="elp-detail-icon-clean" style={{ fontSize: '1.4rem' }}>📞</span>
                     <div className="elp-detail-content-clean">
                       <div className="elp-detail-label-clean">Contact</div>
-                      <div className="elp-detail-value-clean" style={{ fontSize: '0.85rem' }}>{hostContact}</div>
+                      <div className="elp-detail-value-clean" style={{ fontSize: '0.85rem' }}>
+                        {hostName && <div>{hostName}</div>}
+                        {hostContact && <div>{hostContact}</div>}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -245,6 +249,7 @@ export default function EventManagePage() {
   const [parkingInfo, setParkingInfo] = useState('');
   const [location, setLocation] = useState('');
   const [hostContact, setHostContact] = useState('');
+  const [hostName, setHostName] = useState('');
   const [rsvpEnabled, setRsvpEnabled] = useState(true);
   const [websiteEnabled, setWebsiteEnabled] = useState(true);
   const [memoriesEnabled, setMemoriesEnabled] = useState(false);
@@ -252,6 +257,7 @@ export default function EventManagePage() {
   const [stayOrDropOffMode, setStayOrDropOffMode] = useState('ask'); // 'ask' | 'stay' | 'dropoff'
   const [askChildAge, setAskChildAge] = useState(true);
   const [askAdultCount, setAskAdultCount] = useState(true);
+  const [askDietary, setAskDietary] = useState(true);
   const [kidsEstimate, setKidsEstimate] = useState(10);
   const [adultsEstimate, setAdultsEstimate] = useState(10);
   const [giftRegistryNote, setGiftRegistryNote] = useState('');
@@ -259,6 +265,10 @@ export default function EventManagePage() {
   
   const [photoUrl, setPhotoUrl] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [showEventPageInfo, setShowEventPageInfo] = useState(false);
+  const [guestNameForPrint, setGuestNameForPrint] = useState('');
+  const [printSize, setPrintSize] = useState('A5');
+  const [printBg, setPrintBg] = useState('white');
   const fileInputRef = React.useRef(null);
 
   useEffect(() => {
@@ -285,6 +295,7 @@ export default function EventManagePage() {
       setGeneralInfo(data.generalInfo ?? '');
       setParkingInfo(data.parkingInfo ?? '');
       setHostContact(data.hostContact ?? '');
+      setHostName(data.hostName ?? '');
       setRsvpEnabled(data.rsvpEnabled ?? true);
       setWebsiteEnabled(data.websiteEnabled ?? true);
       setMemoriesEnabled(data.memoriesEnabled ?? false);
@@ -292,6 +303,7 @@ export default function EventManagePage() {
       setStayOrDropOffMode(data.stayOrDropOffMode ?? 'ask');
       setAskChildAge(data.askChildAge ?? true);
       setAskAdultCount(data.askAdultCount ?? true);
+      setAskDietary(data.askDietary ?? true);
       setKidsEstimate(data.kidsEstimate ?? (data.guestEstimate ? Math.floor(data.guestEstimate / 2) : 10));
       setAdultsEstimate(data.adultsEstimate ?? (data.guestEstimate ? Math.floor(data.guestEstimate / 2) : 10)); // Fixed: adultsEstimate should use ceil or keep consistent
       setGiftRegistryNote(data.giftRegistryNote ?? '');
@@ -327,6 +339,7 @@ export default function EventManagePage() {
         generalInfo: generalInfo.trim(),
         parkingInfo: parkingInfo.trim(),
         hostContact: hostContact.trim(),
+        hostName: hostName.trim(),
         rsvpEnabled,
         websiteEnabled,
         memoriesEnabled,
@@ -334,6 +347,7 @@ export default function EventManagePage() {
         stayOrDropOffMode,
         askChildAge,
         askAdultCount,
+        askDietary,
         kidsEstimate: kidsEstimate !== '' ? Number(kidsEstimate) : 10,
         adultsEstimate: adultsEstimate !== '' ? Number(adultsEstimate) : 10,
         giftRegistryNote: giftRegistryNote.trim(),
@@ -426,6 +440,14 @@ export default function EventManagePage() {
     }
   }
 
+  function handlePrintInvite() {
+    let url = `/dashboard/event/${eventId}/print?size=${printSize}&bg=${printBg}`;
+    if (guestNameForPrint.trim()) {
+      url += `&guestName=${encodeURIComponent(guestNameForPrint.trim())}`;
+    }
+    window.open(url, '_blank');
+  }
+
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--kb-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -434,7 +456,7 @@ export default function EventManagePage() {
     );
   }
 
-  const inviteUrl = event?.slug ? `${getDevSafeOrigin()}/${event.slug}` : 'kidsbash.com/r/...';
+  const inviteUrl = event?.slug ? `${getDevSafeOrigin()}/${event.slug}` : 'tinypartyportal.com/r/...';
   const qrCodeUrl = event?.slug 
     ? `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(inviteUrl)}`
     : '/images/qr_code_mockup_1779434680273.png';
@@ -455,6 +477,7 @@ export default function EventManagePage() {
               <div style={styles.themeSubtitle}>
                 {activeTheme?.emoji} <span style={{color: 'var(--kb-mint)'}}>{activeTheme?.label} Theme</span>
                 {location && <span style={{color: 'var(--kb-text-muted)', marginLeft: 12}}>• 📍 {location}</span>}
+                {hostName && <span style={{color: 'var(--kb-text-muted)', marginLeft: 12}}>• 👤 {hostName}</span>}
                 {hostContact && <span style={{color: 'var(--kb-text-muted)', marginLeft: 12}}>• 📞 {hostContact}</span>}
               </div>
             </div>
@@ -521,9 +544,15 @@ export default function EventManagePage() {
                   <input id="em-name" type="text" className="kb-input" value={name} onChange={e => setName(e.target.value)} required placeholder="Robins 3rd Birthday" />
                 </div>
               </div>
-              <div className="kb-field" style={{ marginTop: '16px' }}>
-                <label className="kb-label" htmlFor="em-hostContact">Host Contact Info (shown to guests)</label>
-                <input id="em-hostContact" type="text" className="kb-input" value={hostContact} onChange={e => setHostContact(e.target.value)} placeholder="e.g. Sarah - 0400 000 000" />
+              <div style={styles.row}>
+                <div className="kb-field" style={{ flex: 1 }}>
+                  <label className="kb-label" htmlFor="em-hostName">Host Name (shown to guests)</label>
+                  <input id="em-hostName" type="text" className="kb-input" value={hostName} onChange={e => setHostName(e.target.value)} placeholder="e.g. Sarah" />
+                </div>
+                <div className="kb-field" style={{ flex: 1 }}>
+                  <label className="kb-label" htmlFor="em-hostContact">Host Contact Info (shown to guests)</label>
+                  <input id="em-hostContact" type="text" className="kb-input" value={hostContact} onChange={e => setHostContact(e.target.value)} placeholder="e.g. 0400 000 000" />
+                </div>
               </div>
             </div>
 
@@ -692,123 +721,143 @@ export default function EventManagePage() {
                     <div style={{ borderTop: '1px solid var(--kb-border)', marginTop: 8, paddingTop: 12 }}>
                       <Toggle id="em-askChildAge" checked={askChildAge} onChange={setAskChildAge} label="Ask for guest child's age" />
                       <Toggle id="em-askAdultCount" checked={askAdultCount} onChange={setAskAdultCount} label="Ask for number of adults attending" />
+                      <Toggle id="em-askDietary" checked={askDietary} onChange={setAskDietary} label="Ask for dietary requirements" />
                     </div>
                   </>
                 )}
               </div>
             </div>
 
-            <div className="kb-card" style={styles.card}>
-              <h3 style={styles.cardTitle}><span>✨</span> Event Info (Optional)</h3>
-              
-              <div className="kb-field" style={{ marginBottom: 32 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <label className="kb-label" style={{ marginBottom: 0 }}>Schedule / Timeline</label>
-                  <button type="button" onClick={addScheduleItem} className="kb-btn kb-btn-secondary kb-btn-sm" style={{ padding: '6px 12px', fontSize: 13, gap: 4 }}>
-                    <Plus size={14} /> Add Item
-                  </button>
+            <div className="kb-card" style={{ ...styles.card, transition: 'all 0.3s ease' }}>
+              <div 
+                onClick={() => setShowEventPageInfo(!showEventPageInfo)} 
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+              >
+                <div>
+                  <h3 style={{ ...styles.cardTitle, margin: 0 }}>
+                    <span>🌐</span> Guest Web Page Sections (Optional)
+                  </h3>
+                  <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--kb-text-muted)', fontWeight: 500, lineHeight: 1.4 }}>
+                    Optional details to display on your guest invitation page (Schedule, Parking details, and Gift Registry).
+                  </p>
                 </div>
-                
-                {scheduleItems.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '32px 16px', background: 'var(--kb-surface)', border: '1px dashed var(--kb-border)', borderRadius: 16 }}>
-                    <p style={{ margin: '0 0 12px', color: 'var(--kb-text-muted)', fontSize: 14 }}>No schedule items added yet.</p>
-                    <button type="button" onClick={addScheduleItem} className="kb-btn kb-btn-primary kb-btn-sm">Create Schedule</button>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    {scheduleItems.map((item, index) => (
-                      <div key={item.id} style={{ display: 'flex', gap: 16, background: 'var(--kb-surface)', padding: 16, borderRadius: 16, border: '1px solid var(--kb-border)', position: 'relative', flexWrap: 'wrap' }}>
-                        <button type="button" onClick={() => removeScheduleItem(index)} style={{ position: 'absolute', top: -10, right: -10, width: 28, height: 28, background: '#fff', border: '1px solid var(--kb-border)', borderRadius: '50%', color: 'var(--kb-coral)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', zIndex: 2 }}>
-                          <X size={14} />
-                        </button>
-                        
-                        <div style={{ width: '100%', maxWidth: 100 }}>
-                          <label className="kb-label" style={{ fontSize: 12 }}>Time</label>
-                          <input type="text" className="kb-input" style={{ padding: '8px', fontSize: 14 }} value={item.time} onChange={e => updateScheduleItem(index, 'time', e.target.value)} placeholder="1:00 PM" />
-                        </div>
-                        
-                        <div style={{ width: '100%', maxWidth: 120 }}>
-                          <label className="kb-label" style={{ fontSize: 12 }}>Icon</label>
-                          <select className="kb-select" style={{ padding: '8px', fontSize: 14 }} value={item.iconKey} onChange={e => updateScheduleItem(index, 'iconKey', e.target.value)}>
-                            {SCHEDULE_ICONS.map(icon => (
-                              <option key={icon.id} value={icon.id}>{icon.label}</option>
-                            ))}
-                          </select>
-                        </div>
-                        
-                        <div style={{ flex: 1, minWidth: 200 }}>
-                          <label className="kb-label" style={{ fontSize: 12 }}>Activity Name</label>
-                          <input type="text" className="kb-input" style={{ padding: '8px', fontSize: 14, marginBottom: 8 }} value={item.name} onChange={e => updateScheduleItem(index, 'name', e.target.value)} placeholder="Cake Cutting" />
-                          
-                          <label className="kb-label" style={{ fontSize: 12 }}>Description (Optional)</label>
-                          <textarea className="kb-input" style={{ padding: '8px', fontSize: 13, minHeight: 40, resize: 'vertical' }} value={item.desc} onChange={e => updateScheduleItem(index, 'desc', e.target.value)} placeholder="Gather around for cake!" rows={1} />
-                        </div>
+                <button type="button" style={{ background: 'none', border: 'none', color: 'var(--kb-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 4 }}>
+                  {showEventPageInfo ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </button>
+              </div>
+              
+              {showEventPageInfo && (
+                <div style={{ marginTop: 28, borderTop: '1px solid var(--kb-border)', paddingTop: 28 }}>
+                  <div className="kb-field" style={{ marginBottom: 32 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                      <label className="kb-label" style={{ marginBottom: 0 }}>Schedule / Timeline</label>
+                      <button type="button" onClick={addScheduleItem} className="kb-btn kb-btn-secondary kb-btn-sm" style={{ padding: '6px 12px', fontSize: 13, gap: 4 }}>
+                        <Plus size={14} /> Add Item
+                      </button>
+                    </div>
+                    
+                    {scheduleItems.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '32px 16px', background: 'var(--kb-surface)', border: '1px dashed var(--kb-border)', borderRadius: 16 }}>
+                        <p style={{ margin: '0 0 12px', color: 'var(--kb-text-muted)', fontSize: 14 }}>No schedule items added yet.</p>
+                        <button type="button" onClick={addScheduleItem} className="kb-btn kb-btn-primary kb-btn-sm">Create Schedule</button>
                       </div>
-                    ))}
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        {scheduleItems.map((item, index) => (
+                          <div key={item.id} style={{ display: 'flex', gap: 16, background: 'var(--kb-surface)', padding: 16, borderRadius: 16, border: '1px solid var(--kb-border)', position: 'relative', flexWrap: 'wrap' }}>
+                            <button type="button" onClick={() => removeScheduleItem(index)} style={{ position: 'absolute', top: -10, right: -10, width: 28, height: 28, background: '#fff', border: '1px solid var(--kb-border)', borderRadius: '50%', color: 'var(--kb-coral)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', zIndex: 2 }}>
+                              <X size={14} />
+                            </button>
+                            
+                            <div style={{ width: '100%', maxWidth: 100 }}>
+                              <label className="kb-label" style={{ fontSize: 12 }}>Time</label>
+                              <input type="text" className="kb-input" style={{ padding: '8px', fontSize: 14 }} value={item.time} onChange={e => updateScheduleItem(index, 'time', e.target.value)} placeholder="1:00 PM" />
+                            </div>
+                            
+                            <div style={{ width: '100%', maxWidth: 120 }}>
+                              <label className="kb-label" style={{ fontSize: 12 }}>Icon</label>
+                              <select className="kb-select" style={{ padding: '8px', fontSize: 14 }} value={item.iconKey} onChange={e => updateScheduleItem(index, 'iconKey', e.target.value)}>
+                                {SCHEDULE_ICONS.map(icon => (
+                                  <option key={icon.id} value={icon.id}>{icon.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                            
+                            <div style={{ flex: 1, minWidth: 200 }}>
+                              <label className="kb-label" style={{ fontSize: 12 }}>Activity Name</label>
+                              <input type="text" className="kb-input" style={{ padding: '8px', fontSize: 14, marginBottom: 8 }} value={item.name} onChange={e => updateScheduleItem(index, 'name', e.target.value)} placeholder="Cake Cutting" />
+                              
+                              <label className="kb-label" style={{ fontSize: 12 }}>Description (Optional)</label>
+                              <textarea className="kb-input" style={{ padding: '8px', fontSize: 13, minHeight: 40, resize: 'vertical' }} value={item.desc} onChange={e => updateScheduleItem(index, 'desc', e.target.value)} placeholder="Gather around for cake!" rows={1} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Fallback for old string schedule */}
+                    {schedule && scheduleItems.length === 0 && (
+                      <div style={{ marginTop: 16, padding: 12, background: 'rgba(255, 183, 77, 0.1)', borderRadius: 12, border: '1px solid rgba(255, 183, 77, 0.3)' }}>
+                        <p style={{ margin: 0, fontSize: 13, color: '#d84315' }}>You have an old text-based schedule. It will still show to guests until you delete it and use the new schedule builder above.</p>
+                        <button type="button" onClick={() => setSchedule('')} style={{ marginTop: 8, background: 'transparent', border: 'none', color: '#d84315', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: 13 }}>Delete Old Schedule</button>
+                      </div>
+                    )}
                   </div>
-                )}
-                
-                {/* Fallback for old string schedule */}
-                {schedule && scheduleItems.length === 0 && (
-                  <div style={{ marginTop: 16, padding: 12, background: 'rgba(255, 183, 77, 0.1)', borderRadius: 12, border: '1px solid rgba(255, 183, 77, 0.3)' }}>
-                    <p style={{ margin: 0, fontSize: 13, color: '#d84315' }}>You have an old text-based schedule. It will still show to guests until you delete it and use the new schedule builder above.</p>
-                    <button type="button" onClick={() => setSchedule('')} style={{ marginTop: 8, background: 'transparent', border: 'none', color: '#d84315', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: 13 }}>Delete Old Schedule</button>
+
+                  <div className="kb-field" style={{ borderTop: '1px solid var(--kb-border)', paddingTop: 24 }}>
+                    <label className="kb-label" htmlFor="em-generalInfo">General Information</label>
+                    <textarea
+                      id="em-generalInfo"
+                      className="kb-input"
+                      placeholder="e.g. Please wear enclosed shoes. Dietary requirements can be added in the RSVP."
+                      value={generalInfo}
+                      onChange={e => setGeneralInfo(e.target.value)}
+                      rows={4}
+                      style={styles.textarea}
+                    />
                   </div>
-                )}
-              </div>
 
-              <div className="kb-field" style={{ borderTop: '1px solid var(--kb-border)', paddingTop: 24 }}>
-                <label className="kb-label" htmlFor="em-generalInfo">General Information</label>
-                <textarea
-                  id="em-generalInfo"
-                  className="kb-input"
-                  placeholder="e.g. Please wear enclosed shoes. Dietary requirements can be added in the RSVP."
-                  value={generalInfo}
-                  onChange={e => setGeneralInfo(e.target.value)}
-                  rows={4}
-                  style={styles.textarea}
-                />
-              </div>
-
-              <div className="kb-field">
-                <label className="kb-label" htmlFor="em-parkingInfo">Parking & Transport Info</label>
-                <textarea
-                  id="em-parkingInfo"
-                  className="kb-input"
-                  placeholder="e.g. Street parking available on Main St. or catch bus 42."
-                  value={parkingInfo}
-                  onChange={e => setParkingInfo(e.target.value)}
-                  rows={3}
-                  style={styles.textarea}
-                />
-              </div>
-              
-              <div style={{ borderTop: '1px solid var(--kb-border)', marginTop: 24, paddingTop: 24 }}>
-                <h4 style={{ ...styles.cardTitle, fontSize: '1rem', marginBottom: 16 }}>🎁 Gift Registry</h4>
-                <div className="kb-field">
-                  <label className="kb-label" htmlFor="em-giftNote">Gift Registry Note</label>
-                  <textarea
-                    id="em-giftNote"
-                    className="kb-input"
-                    placeholder="e.g. No gifts necessary, but if you'd like to contribute, we have a wishlist!"
-                    value={giftRegistryNote}
-                    onChange={e => setGiftRegistryNote(e.target.value)}
-                    rows={2}
-                    style={styles.textarea}
-                  />
+                  <div className="kb-field">
+                    <label className="kb-label" htmlFor="em-parkingInfo">Parking & Transport Info</label>
+                    <textarea
+                      id="em-parkingInfo"
+                      className="kb-input"
+                      placeholder="e.g. Street parking available on Main St. or catch bus 42."
+                      value={parkingInfo}
+                      onChange={e => setParkingInfo(e.target.value)}
+                      rows={3}
+                      style={styles.textarea}
+                    />
+                  </div>
+                  
+                  <div style={{ borderTop: '1px solid var(--kb-border)', marginTop: 24, paddingTop: 24 }}>
+                    <h4 style={{ ...styles.cardTitle, fontSize: '1rem', marginBottom: 16 }}>🎁 Gift Registry</h4>
+                    <div className="kb-field">
+                      <label className="kb-label" htmlFor="em-giftNote">Gift Registry Note</label>
+                      <textarea
+                        id="em-giftNote"
+                        className="kb-input"
+                        placeholder="e.g. No gifts necessary, but if you'd like to contribute, we have a wishlist!"
+                        value={giftRegistryNote}
+                        onChange={e => setGiftRegistryNote(e.target.value)}
+                        rows={2}
+                        style={styles.textarea}
+                      />
+                    </div>
+                    <div className="kb-field" style={{ marginBottom: 0 }}>
+                      <label className="kb-label" htmlFor="em-giftLink">Gift Registry Link</label>
+                      <input
+                        id="em-giftLink"
+                        type="url"
+                        className="kb-input"
+                        placeholder="https://www.myer.com.au/wishlist/..."
+                        value={giftRegistryLink}
+                        onChange={e => setGiftRegistryLink(e.target.value)}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="kb-field" style={{ marginBottom: 0 }}>
-                  <label className="kb-label" htmlFor="em-giftLink">Gift Registry Link</label>
-                  <input
-                    id="em-giftLink"
-                    type="url"
-                    className="kb-input"
-                    placeholder="https://www.myer.com.au/wishlist/..."
-                    value={giftRegistryLink}
-                    onChange={e => setGiftRegistryLink(e.target.value)}
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
             <div style={styles.saveRow}>
@@ -839,12 +888,58 @@ export default function EventManagePage() {
                   rsvpByDate={rsvpByDate}
                   location={location}
                   hostContact={hostContact}
+                  hostName={hostName}
                   photoUrl={event?.photoUrl}
                   description={description}
                   giftRegistryNote={giftRegistryNote}
                   giftRegistryLink={giftRegistryLink}
                   rsvpEnabled={rsvpEnabled}
                 />
+              </div>
+              
+              <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--kb-border)' }}>
+                <h4 style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--kb-text)', fontWeight: 600 }}>Printable Version</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <input 
+                      type="text" 
+                      className="kb-input" 
+                      placeholder="Guest Name (Optional)" 
+                      value={guestNameForPrint}
+                      onChange={(e) => setGuestNameForPrint(e.target.value)}
+                      style={{ fontSize: 13, padding: '8px 12px', flex: 1 }}
+                    />
+                    <select 
+                      className="kb-select"
+                      value={printSize}
+                      onChange={(e) => setPrintSize(e.target.value)}
+                      style={{ fontSize: 13, padding: '8px 12px', width: 'auto', marginBottom: 0 }}
+                    >
+                      <option value="A5">A5</option>
+                      <option value="A4">A4</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <span style={{ fontSize: 13, color: 'var(--kb-text-muted)' }}>Background:</span>
+                    <select 
+                      className="kb-select"
+                      value={printBg}
+                      onChange={(e) => setPrintBg(e.target.value)}
+                      style={{ fontSize: 13, padding: '8px 12px', flex: 1, marginBottom: 0 }}
+                    >
+                      <option value="white">White (Ink Saver)</option>
+                      <option value="theme">Themed Colors</option>
+                    </select>
+                  </div>
+                  <button 
+                    type="button" 
+                    className="kb-btn kb-btn-secondary" 
+                    onClick={handlePrintInvite}
+                    style={{ width: '100%', justifyContent: 'center', borderColor: 'var(--kb-purple)', color: 'var(--kb-purple)' }}
+                  >
+                    🖨️ Open Printable Version
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -876,11 +971,6 @@ export default function EventManagePage() {
 
               <div style={styles.shareActions}>
                 <div style={styles.shareSecondaryRow}>
-                  {event?.slug && (
-                    <Link to={`/${event.slug}/live`} target="_blank" className="kb-btn kb-btn-secondary kb-btn-sm" style={{flex: 1, color: 'var(--kb-purple)', padding: '10px'}}>
-                      💬 Open Live Wall
-                    </Link>
-                  )}
                   <button onClick={handleDownloadQR} className="kb-btn kb-btn-secondary kb-btn-sm" style={{flex: 1, color: 'var(--kb-blue)', padding: '10px'}}>
                     ⬇️ Download QR
                   </button>

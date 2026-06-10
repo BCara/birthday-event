@@ -1,5 +1,5 @@
 // src/theme/themes.js
-// KidsBash theme definitions — 5 kids birthday themes with 4 curated color variations each.
+// Tiny Party Portal theme definitions — 5 kids birthday themes with 4 curated color variations each.
 // Each theme provides CSS variables injected via ThemeProvider.
 
 export const THEMES = {

@@ -23,11 +23,11 @@ export function generateICS({ title, date, time, endTime, location, description,
   let fullDesc = description || '';
   if (url) { if (fullDesc) fullDesc += '\\n\\n'; fullDesc += `View event details: ${url}`; }
   const esc = s => (s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
-  const uid = `${Date.now()}-${Math.random().toString(36).slice(2)}@kidsbash.app`;
+  const uid = `${Date.now()}-${Math.random().toString(36).slice(2)}@tinypartyportal.app`;
   const now = new Date();
   const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}T${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
   const lines = [
-    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//KidsBash//Birthday RSVP//EN',
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Tiny Party Portal//Birthday RSVP//EN',
     'CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT',
     `UID:${uid}`,`DTSTAMP:${stamp}`,
     ...(time ? [`DTSTART:${dtStart}`,`DTEND:${dtEnd}`] : [`DTSTART;VALUE=DATE:${dtStart}`,`DTEND;VALUE=DATE:${dtEnd}`]),

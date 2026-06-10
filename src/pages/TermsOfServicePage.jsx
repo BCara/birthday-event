@@ -9,10 +9,10 @@ export default function TermsOfServicePage() {
         <p>Last updated: {new Date().toLocaleDateString()}</p>
         
         <h2>1. Acceptance of Terms</h2>
-        <p>By accessing or using KidsBash, you agree to be bound by these Terms of Service. If you do not agree to all the terms and conditions of this agreement, you may not access or use the website or services.</p>
+        <p>By accessing or using Tiny Party Portal, you agree to be bound by these Terms of Service. If you do not agree to all the terms and conditions of this agreement, you may not access or use the website or services.</p>
         
         <h2>2. Description of Service</h2>
-        <p>KidsBash provides a platform for organizing children's birthday parties, including event creation, RSVP management, and memory sharing. We reserve the right to modify or discontinue, temporarily or permanently, the service with or without notice.</p>
+        <p>Tiny Party Portal provides a platform for organizing children's birthday parties, including event creation, RSVP management, and memory sharing. We reserve the right to modify or discontinue, temporarily or permanently, the service with or without notice.</p>
         
         <h2>3. User Conduct</h2>
         <p>You are solely responsible for all code, video, images, information, data, text, software, music, sound, photographs, graphics, messages or other materials that you upload, post, publish or display via the service. You agree to not use the service to post inappropriate, offensive, or illegal content.</p>

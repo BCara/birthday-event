@@ -1,5 +1,5 @@
 // src/firebase.js
-// KidsBash - Firebase configuration
+// Tiny Party Portal - Firebase configuration
 // Replace these values with your own Firebase project config.
 // Get them from: https://console.firebase.google.com → Your Project → Project Settings → General → Your Apps
 

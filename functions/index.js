@@ -47,8 +47,8 @@ exports.onEventCreated = onDocumentCreated(
         if (!userEmail) return;
 
         const API_KEY = process.env.RESEND_API_KEY;
-        // Use the DigiGuestbook email since the user requested to use their API key for now
-        const FROM = "hello@digiguestbook.com";
+        // Use the Tiny Party Portal email since the user requested to use their API key for now
+        const FROM = "hello@tinypartyportal.com";
 
         if (!API_KEY) {
             logger.error("onEventCreated: RESEND_API_KEY not set");
@@ -122,7 +122,7 @@ exports.onEventCreated = onDocumentCreated(
             }
             
             // Send notification to admin for logging purposes
-            const adminEmail = "hello@digiguestbook.com";
+            const adminEmail = "hello@tinypartyportal.com";
             const adminSubject = `New Event Created: ${eventName}`;
             const adminHtml = `
               <div style="font-family: sans-serif; padding: 20px;">
@@ -199,7 +199,7 @@ exports.onRsvpCreated = onDocumentCreated(
         if (!userEmail) return;
 
         const API_KEY = process.env.RESEND_API_KEY;
-        const FROM = "hello@digiguestbook.com";
+        const FROM = "hello@tinypartyportal.com";
 
         if (!API_KEY) {
             logger.error("onRsvpCreated: RESEND_API_KEY not set");
@@ -272,9 +272,9 @@ exports.onRsvpCreated = onDocumentCreated(
 
         // --- Send Email to Guest (if email provided) ---
         if (data.email) {
-            const portalUrl = eventData.slug ? \`https://digiguestbook.com/\${eventData.slug}?rsvpId=\${event.params.rsvpId}\` : '';
-            const guestSubject = \`RSVP Confirmation: \${eventData.name || 'Birthday Event'}\`;
-            const guestHtml = \`
+            const portalUrl = eventData.slug ? `https://tinypartyportal.com/${eventData.slug}?rsvpId=${event.params.rsvpId}` : '';
+            const guestSubject = `RSVP Confirmation: ${eventData.name || 'Birthday Event'}`;
+            const guestHtml = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -299,13 +299,13 @@ exports.onRsvpCreated = onDocumentCreated(
         <p>Thank you for RSVPing to <strong>${escapeHtml(eventData.name || 'the event')}</strong>.</p>
         <p>You have indicated that you are <strong>${escapeHtml(attendingText)}</strong>.</p>
         
-        \${portalUrl ? \`<p>You can access the event portal anytime to check the schedule, location, and details by clicking the button below:</p>
-        <p style="text-align: center;"><a href="\${portalUrl}" class="btn">View Event Portal</a></p>\` : ''}
+        ${portalUrl ? `<p>You can access the event portal anytime to check the schedule, location, and details by clicking the button below:</p>
+        <p style="text-align: center;"><a href="${portalUrl}" class="btn">View Event Portal</a></p>` : ''}
       </div>
     </div>
   </div>
 </body>
-</html>\`;
+</html>`;
 
             try {
                 await fetch("https://api.resend.com/emails", {
@@ -366,7 +366,7 @@ exports.contactOrganiser = functionsV1
         }
 
         const API_KEY = process.env.RESEND_API_KEY;
-        const FROM = "hello@digiguestbook.com";
+        const FROM = "hello@tinypartyportal.com";
 
         if (!API_KEY) {
             logger.error("contactOrganiser: RESEND_API_KEY not set");
@@ -438,8 +438,8 @@ exports.onUserCreated = functionsV1
     .auth.user()
     .onCreate(async (user) => {
         const API_KEY = process.env.RESEND_API_KEY;
-        const FROM = "hello@digiguestbook.com";
-        const adminEmail = "hello@digiguestbook.com";
+        const FROM = "hello@tinypartyportal.com";
+        const adminEmail = "hello@tinypartyportal.com";
 
         if (!API_KEY) {
             logger.error("onUserCreated: RESEND_API_KEY not set");

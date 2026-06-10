@@ -112,7 +112,7 @@ export default function EventLandingPage() {
   }, [event?.date]);
 
   const pageUrl = useMemo(() => {
-    const base = `${getDevSafeOrigin()}/${slug}`;
+    const base = `${getDevSafeOrigin()}/${slug}/portal`;
     const storedRsvpId = event ? localStorage.getItem(`rsvp_${event.id}`) : null;
     return storedRsvpId ? `${base}?rsvpId=${storedRsvpId}` : base;
   }, [slug, event]);
@@ -643,122 +643,244 @@ export default function EventLandingPage() {
               <div className="elp-p2-footer-msg">
                 💕 We can't wait to celebrate with you! 💕
               </div>
-              <p className="elp-p2-powered">Powered by <a href="/">KidsBash</a></p>
+              <p className="elp-p2-powered">Powered by <a href="/">Tiny Party <span style={{ fontSize: '0.8em' }}>Portal</span></a></p>
             </div>
 
           </div>
         ) : (
           /* =========================================
-             AUTH PORTAL VIEW (Pre-RSVP or New Device)
+             INVITATION VIEW (Pre-RSVP)
              ========================================= */
-          <div className="elp-card-invitation">
-            <div className="elp-card-border-inner">
-              <div className="elp-hero" style={{ paddingTop: '24px' }}>
-                <h1 className="elp-title">Event Portal</h1>
-                <p className="elp-subtitle" style={{ marginTop: '8px' }}>
-                  Please verify your RSVP to view the party details.
-                </p>
-              </div>
+          <>
+            {/* Invitation Card */}
+            <div className="elp-card-invitation">
+              <div className="elp-card-border-inner">
+                
+                {/* Header Badge */}
+                <div className="elp-invitation-intro">
+                  <span className="elp-invitation-badge">You're Invited!</span>
+                </div>
 
-              <div className="elp-divider">
-                <span className="elp-divider-dot"></span>
-                <span className="elp-divider-line"></span>
-                <span className="elp-divider-dot"></span>
-              </div>
+                {/* Celebration details above illustration */}
+                <div className="elp-hero">
+                  <h1 className="elp-title">{event.name}</h1>
+                  {event.childName && <p className="elp-subtitle">Celebrating {event.childName}'s special day!</p>}
+                </div>
 
-              <div className="elp-card-rsvp-wrap" style={{ marginTop: '24px', padding: '0 16px' }}>
-                {event.authType === 'password' ? (
-                  <form 
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      setLookupError('');
-                      if (lookupContact.trim() === event.eventPassword) {
-                        localStorage.setItem(`rsvp_${event.id}`, 'auth_only');
-                        setHasRsvped(true);
-                      } else {
-                        setLookupError('Incorrect password.');
-                      }
-                    }} 
-                    className="elp-lookup-form"
-                    style={{ display: 'block', padding: '24px', border: '1px solid var(--t-border)', borderRadius: '16px', background: 'var(--t-surface)' }}
-                  >
-                    <div className="elp-lookup-field">
-                      <label className="elp-lookup-label">Event Password</label>
-                      <input 
-                        type="password" 
-                        className="elp-lookup-input" 
-                        placeholder="Enter password..." 
-                        value={lookupContact} 
-                        onChange={e => setLookupContact(e.target.value)} 
-                        required
-                      />
+                {/* Photo OR Illustration */}
+                <div className="elp-illustration-container">
+                  {event.photoUrl ? (
+                    <div className="elp-photo-wrap">
+                      <img src={event.photoUrl} alt={event.name} className="elp-photo" />
                     </div>
-                    {lookupError && <p className="elp-lookup-error">{lookupError}</p>}
-                    <button type="submit" className="elp-btn elp-btn-accent elp-lookup-submit">
-                      Unlock Portal
-                    </button>
-                  </form>
-                ) : (
-                  <form 
-                    onSubmit={handleLookup} 
-                    className="elp-lookup-form"
-                    style={{ display: 'block', padding: '24px', border: '1px solid var(--t-border)', borderRadius: '16px', background: 'var(--t-surface)' }}
-                  >
-                    <div className="elp-lookup-field">
-                      <label className="elp-lookup-label">Child's Name *</label>
-                      <input 
-                        type="text" 
-                        className="elp-lookup-input" 
-                        placeholder="e.g. Emily" 
-                        value={lookupChildName} 
-                        onChange={e => setLookupChildName(e.target.value)} 
-                        required
-                      />
+                  ) : (
+                    <div className="elp-illustration-wrap">
+                      <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
                     </div>
+                  )}
+                </div>
 
-                    <div className="elp-lookup-field">
-                      <label className="elp-lookup-label">Parent's Email or Phone *</label>
-                      <input 
-                        type="text" 
-                        className="elp-lookup-input" 
-                        placeholder="e.g. sarah@example.com or 0400000000" 
-                        value={lookupContact} 
-                        onChange={e => setLookupContact(e.target.value)} 
-                        required
-                      />
+                <div className="elp-divider">
+                  <span className="elp-divider-dot"></span>
+                  <span className="elp-divider-line"></span>
+                  <span className="elp-divider-dot"></span>
+                </div>
+
+                {/* Centered Details */}
+                <div className="elp-details-clean">
+                  {formattedDate && (
+                    <div className="elp-detail-item">
+                      <span className="elp-detail-icon-clean">📅</span>
+                      <div className="elp-detail-content-clean">
+                        <div className="elp-detail-label-clean">Date</div>
+                        <div className="elp-detail-value-clean">{formattedDate}</div>
+                      </div>
+                      {event.date && (
+                        <div className="elp-card-cal-wrap" ref={calRef} data-open={calOpen}>
+                          <button 
+                            className="elp-card-cal-btn" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCalOpen(v => !v);
+                            }}
+                            aria-label="Add to calendar"
+                          >
+                            <span>Add to Cal</span>
+                            <svg className="elp-cal-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                          </button>
+                          {calOpen && (
+                            <div className="elp-card-cal-dropdown">
+                              <button className="elp-card-cal-option" onClick={() => { window.open(getGoogleCalendarUrl(calOpts), '_blank'); setCalOpen(false); }}>
+                                Google Calendar
+                              </button>
+                              <button className="elp-card-cal-option" onClick={() => { downloadICS(generateICS(calOpts), `${slug}.ics`); setCalOpen(false); }}>
+                                Apple / Outlook
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
+                  )}
+                  {formattedTime && (
+                    <div className="elp-detail-item">
+                      <span className="elp-detail-icon-clean">🕐</span>
+                      <div className="elp-detail-content-clean">
+                        <div className="elp-detail-label-clean">Time</div>
+                        <div className="elp-detail-value-clean">
+                          {formattedTime}
+                          {event.endTime && ` – ${(() => { const [h,m] = event.endTime.split(':'); const hr=parseInt(h,10); return `${hr%12||12}:${m} ${hr>=12?'PM':'AM'}`; })()}`}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {event.location && (
+                    <div className="elp-detail-item">
+                      <span className="elp-detail-icon-clean">📍</span>
+                      <div className="elp-detail-content-clean">
+                        <div className="elp-detail-label-clean">Location</div>
+                        <div className="elp-detail-value-clean">{event.location}</div>
+                      </div>
+                    </div>
+                  )}
+                  {event.hostContact && (
+                    <div className="elp-detail-item">
+                      <span className="elp-detail-icon-clean">📞</span>
+                      <div className="elp-detail-content-clean">
+                        <div className="elp-detail-label-clean">Contact</div>
+                        <div className="elp-detail-value-clean">{event.hostContact}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-                    {lookupError && <p className="elp-lookup-error">{lookupError}</p>}
-
-                    <button 
-                      type="submit" 
-                      className="elp-btn elp-btn-accent elp-lookup-submit" 
-                      disabled={lookupLoading}
-                    >
-                      {lookupLoading ? "Searching..." : "🔍 Find RSVP"}
-                    </button>
-                  </form>
+                {/* RSVP By Deadline */}
+                {formattedRsvpBy && (
+                  <div className="elp-rsvp-deadline">
+                    <span className="elp-deadline-text">Please RSVP by {formattedRsvpBy}</span>
+                    <div className="elp-deadline-reminder" ref={calRef} data-open={calOpen}>
+                      <button 
+                        className="elp-deadline-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCalOpen(v => !v);
+                        }}
+                      >
+                        ⏰ Set Reminder
+                        <svg className="elp-cal-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ marginLeft: '4px' }}>
+                          <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                      </button>
+                      {calOpen && (
+                        <div className="elp-card-cal-dropdown" style={{ bottom: '100%', top: 'auto', marginBottom: '8px' }}>
+                          <button className="elp-card-cal-option" onClick={() => { window.open(getGoogleCalendarUrl(rsvpCalOpts), '_blank'); setCalOpen(false); }}>
+                            Google Calendar
+                          </button>
+                          <button className="elp-card-cal-option" onClick={() => { downloadICS(generateICS(rsvpCalOpts), `rsvp-${slug}.ics`); setCalOpen(false); }}>
+                            Apple / Outlook
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
 
-                <div style={{ marginTop: '32px', textAlign: 'center' }}>
-                  <p style={{ color: 'var(--t-text)', fontSize: '0.9rem', marginBottom: '12px' }}>
-                    Haven't RSVP'd yet?
-                  </p>
-                  <Link to={`/${slug}/rsvp`} className="elp-btn elp-btn-lg" style={{ background: 'var(--t-surface)', border: '2px solid var(--t-accent)', color: 'var(--t-accent)', width: '100%', display: 'flex', justifyContent: 'center' }}>
-                    View Invitation & RSVP
-                  </Link>
-                </div>
-              </div>
+                {/* Message Description */}
+                {event.description && (
+                  <>
+                    <div className="elp-divider">
+                      <span className="elp-divider-dot"></span>
+                      <span className="elp-divider-line"></span>
+                      <span className="elp-divider-dot"></span>
+                    </div>
+                    <div className="elp-desc-clean">
+                      <p>{event.description}</p>
+                    </div>
+                  </>
+                )}
 
-              {/* Decorative Theme Illustration at Bottom */}
-              <div className="elp-illustration-container" style={{ marginTop: '32px', opacity: 0.8 }}>
-                <div className="elp-illustration-wrap" style={{ maxWidth: '100px' }}>
-                  <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
-                </div>
-              </div>
+                {/* RSVP Now inside the card */}
+                {event.rsvpEnabled && (
+                  <div className="elp-card-rsvp-wrap">
+                    <Link to={`/${slug}/rsvp`} className="elp-btn elp-btn-accent elp-btn-lg elp-card-rsvp-btn" id="rsvp-btn">
+                      ✉️ RSVP Now
+                    </Link>
 
+                    <div className="elp-lookup-toggle-wrap">
+                      <button 
+                        type="button" 
+                        className="elp-lookup-toggle-btn"
+                        onClick={() => {
+                          setShowLookup(v => !v);
+                          setLookupError('');
+                        }}
+                      >
+                        {showLookup ? "✕ Close search" : "Already RSVP'd? Find your RSVP →"}
+                      </button>
+                    </div>
+
+                    {showLookup && (
+                      <form onSubmit={handleLookup} className="elp-lookup-form">
+                        <h3 className="elp-lookup-title">Find Your RSVP</h3>
+                        <p className="elp-lookup-desc">Enter the details you used to RSVP to restore access to the party details portal.</p>
+                        
+                        <div className="elp-lookup-field">
+                          <label className="elp-lookup-label">Child's Name *</label>
+                          <input 
+                            type="text" 
+                            className="elp-lookup-input" 
+                            placeholder="e.g. Emily" 
+                            value={lookupChildName} 
+                            onChange={e => setLookupChildName(e.target.value)} 
+                            required
+                          />
+                        </div>
+
+                        <div className="elp-lookup-field">
+                          <label className="elp-lookup-label">Parent's Email or Phone *</label>
+                          <input 
+                            type="text" 
+                            className="elp-lookup-input" 
+                            placeholder="e.g. sarah@example.com or 0400000000" 
+                            value={lookupContact} 
+                            onChange={e => setLookupContact(e.target.value)} 
+                            required
+                          />
+                        </div>
+
+                        {lookupError && <p className="elp-lookup-error">{lookupError}</p>}
+
+                        <button 
+                          type="submit" 
+                          className="elp-btn elp-btn-accent elp-lookup-submit" 
+                          disabled={lookupLoading}
+                        >
+                          {lookupLoading ? "Searching..." : "🔍 Find RSVP"}
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                )}
+
+                {/* Decorative Theme Illustration at Bottom */}
+                {event.photoUrl && (
+                  <div className="elp-illustration-container" style={{ marginTop: '24px', opacity: 0.8 }}>
+                    <div className="elp-illustration-wrap" style={{ maxWidth: '140px' }}>
+                      <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
+                    </div>
+                  </div>
+                )}
+
+              </div>
             </div>
-          </div>
+
+            {/* Footer */}
+            <div className="elp-footer">
+              <p>Powered by <a href="/">Tiny Party <span style={{ fontSize: '0.8em' }}>Portal</span></a></p>
+            </div>
+          </>
         )}
 
       </div>

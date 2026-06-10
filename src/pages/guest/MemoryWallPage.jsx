@@ -169,7 +169,7 @@ export default function MemoryWallPage() {
 
         {/* Footer */}
         <div className="mwp-page-footer">
-          <p>Powered by <a href="/" className="mwp-page-footer-link">KidsBash</a></p>
+          <p>Powered by <a href="/" className="mwp-page-footer-link">Tiny Party <span style={{ fontSize: '0.8em' }}>Portal</span></a></p>
         </div>
       </div>
     </ThemedPage>

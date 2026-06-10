@@ -1,5 +1,5 @@
 /* ============================================================
-   KidsBash — Global Design System
+   Tiny Party Portal — Global Design System
    ============================================================ */
 
 /* ── Fonts ── */
@@ -23,7 +23,7 @@ body {
   transition: background 0.3s, color 0.3s;
 }
 
-/* ── KidsBash Brand Tokens ── */
+/* ── Tiny Party Portal Brand Tokens ── */
 :root {
   /* Core brand palette */
   --kb-coral:       #FF6B6B;
@@ -254,6 +254,10 @@ body {
   flex-direction: column;
   gap: 6px;
   margin-bottom: 20px;
+}
+
+.kb-field > :not(label) {
+  margin-top: auto;
 }
 
 /* ── Badge ── */

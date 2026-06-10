@@ -70,6 +70,7 @@ export default function CreateEventPage() {
   const [endTime, setEndTime] = useState('');
   const [location, setLocation] = useState('');
   const [hostContact, setHostContact] = useState('');
+  const [hostName, setHostName] = useState('');
   const [description, setDescription] = useState('');
   const [schedule, setSchedule] = useState('');
   const [parkingInfo, setParkingInfo] = useState('');
@@ -78,6 +79,7 @@ export default function CreateEventPage() {
   const [lockDownRSVP, setLockDownRSVP] = useState(false);
   const [askChildAge, setAskChildAge] = useState(true);
   const [askAdultCount, setAskAdultCount] = useState(true);
+  const [askDietary, setAskDietary] = useState(true);
   const [kidsEstimate, setKidsEstimate] = useState(10);
   const [adultsEstimate, setAdultsEstimate] = useState(10);
   const [giftRegistryNote, setGiftRegistryNote] = useState('');
@@ -124,6 +126,7 @@ export default function CreateEventPage() {
         endTime,
         rsvpByDate,
         location: location.trim(),
+        hostName: hostName.trim(),
         hostContact: hostContact.trim(),
         description: description.trim(),
         schedule: schedule.trim(),
@@ -135,6 +138,7 @@ export default function CreateEventPage() {
         stayOrDropOffAllowed: true,
         askChildAge,
         askAdultCount,
+        askDietary,
         kidsEstimate: kidsEstimate !== '' ? Number(kidsEstimate) : 10,
         adultsEstimate: adultsEstimate !== '' ? Number(adultsEstimate) : 10,
         giftRegistryNote: giftRegistryNote.trim(),
@@ -203,16 +207,29 @@ export default function CreateEventPage() {
               </div>
             </div>
 
-            <div className="kb-field">
-              <label className="kb-label" htmlFor="ce-hostContact">Host Contact Info (shown to guests)</label>
-              <input
-                id="ce-hostContact"
-                type="text"
-                className="kb-input"
-                placeholder="e.g. Sarah - 0400 000 000"
-                value={hostContact}
-                onChange={e => setHostContact(e.target.value)}
-              />
+            <div style={styles.row}>
+              <div className="kb-field" style={{ flex: 1 }}>
+                <label className="kb-label" htmlFor="ce-hostName">Host Name (shown to guests)</label>
+                <input
+                  id="ce-hostName"
+                  type="text"
+                  className="kb-input"
+                  placeholder="e.g. Sarah"
+                  value={hostName}
+                  onChange={e => setHostName(e.target.value)}
+                />
+              </div>
+              <div className="kb-field" style={{ flex: 1 }}>
+                <label className="kb-label" htmlFor="ce-hostContact">Host Contact Info (shown to guests)</label>
+                <input
+                  id="ce-hostContact"
+                  type="text"
+                  className="kb-input"
+                  placeholder="e.g. 0400 000 000"
+                  value={hostContact}
+                  onChange={e => setHostContact(e.target.value)}
+                />
+              </div>
             </div>
 
             {/* Theme Picker */}
@@ -465,6 +482,11 @@ export default function CreateEventPage() {
                    {location && (
                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                        <span>📍</span> {location}
+                     </div>
+                   )}
+                   {(hostName || hostContact) && (
+                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                       <span>📞</span> {[hostName, hostContact].filter(Boolean).join(' - ')}
                      </div>
                    )}
                 </div>

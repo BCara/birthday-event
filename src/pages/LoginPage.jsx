@@ -51,7 +51,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div style={styles.logo}>
           <span style={styles.logoEmoji}>🎂</span>
-          <span style={styles.logoText}>KidsBash</span>
+          <span style={styles.logoText}>Tiny Party <span style={{ fontSize: '0.8em' }}>Portal</span></span>
         </div>
 
         <h1 style={styles.title}>Welcome back!</h1>

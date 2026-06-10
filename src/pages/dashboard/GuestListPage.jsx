@@ -222,6 +222,12 @@ export default function GuestListPage() {
   const [newGuestEmail, setNewGuestEmail] = useState('');
   const [newGuestPhone, setNewGuestPhone] = useState('');
 
+  // Estimate Edit States
+  const [isEditingEstimates, setIsEditingEstimates] = useState(false);
+  const [editKidsEst, setEditKidsEst] = useState('');
+  const [editAdultsEst, setEditAdultsEst] = useState('');
+  const [isHoveredEstimates, setIsHoveredEstimates] = useState(false);
+
   const askAdultCount = event?.askAdultCount !== false;
   const showParentAttendance = event?.showParentAttendance !== false;
 
@@ -468,6 +474,27 @@ export default function GuestListPage() {
     }
   };
 
+  const handleStartEditEstimates = () => {
+    setEditKidsEst(event?.kidsEstimate ?? (event?.guestEstimate ? Math.floor(event?.guestEstimate / 2) : 10));
+    setEditAdultsEst(event?.adultsEstimate ?? (event?.guestEstimate ? Math.ceil(event?.guestEstimate / 2) : 10));
+    setIsEditingEstimates(true);
+  };
+
+  const handleSaveEstimates = async (e) => {
+    if (e) e.preventDefault();
+    try {
+      await updateDoc(doc(db, 'events', eventId), {
+        kidsEstimate: Number(editKidsEst),
+        adultsEstimate: Number(editAdultsEst)
+      });
+      toast.success('Estimates updated!');
+      setIsEditingEstimates(false);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to update estimates');
+    }
+  };
+
   return (
     <div style={styles.root}>
       <div style={styles.inner}>
@@ -505,45 +532,134 @@ export default function GuestListPage() {
               <span>📅 {eventDateStr}</span>
               <span>•</span>
               <span>📍 {eventLocation}</span>
-              {event?.hostContact && (
+              {(event?.hostName || event?.hostContact) && (
                 <>
                   <span>•</span>
-                  <span>📞 {event.hostContact}</span>
+                  <span>👤 {[event.hostName, event.hostContact].filter(Boolean).join(' - ')}</span>
                 </>
               )}
               <span>•</span>
               <span style={{...styles.themeTag, background: themeObj.vars['--t-soft-bg'], color: themeObj.vars['--t-primary']}}>{eventTheme}</span>
             </div>
           </div>
-          <div style={{...styles.invitedBox, position: 'relative', zIndex: 1}}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={styles.invitedIconBg}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
+          {isEditingEstimates ? (
+            <div 
+              style={{
+                ...styles.invitedBox, 
+                position: 'relative', 
+                zIndex: 1,
+                borderColor: 'var(--kb-border-hover)'
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={styles.invitedIconBg}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                </div>
+                <div style={{ textAlign: 'left' }}>
+                  <form onSubmit={handleSaveEstimates} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <div>
+                        <input
+                          type="number"
+                          min="0"
+                          required
+                          value={editKidsEst}
+                          onChange={e => setEditKidsEst(e.target.value)}
+                          style={{ width: 65, padding: '4px 8px', borderRadius: 8, border: '1px solid var(--kb-border)', background: 'var(--kb-surface-2)', color: 'var(--kb-text)', fontWeight: 800, fontSize: 16, textAlign: 'center' }}
+                          className="kb-input"
+                          autoFocus
+                        />
+                        <div style={{...styles.invitedLabel, marginTop: 4}}>Kids Est.</div>
+                      </div>
+                      <div>
+                        <input
+                          type="number"
+                          min="0"
+                          required
+                          value={editAdultsEst}
+                          onChange={e => setEditAdultsEst(e.target.value)}
+                          style={{ width: 65, padding: '4px 8px', borderRadius: 8, border: '1px solid var(--kb-border)', background: 'var(--kb-surface-2)', color: 'var(--kb-text)', fontWeight: 800, fontSize: 16, textAlign: 'center' }}
+                          className="kb-input"
+                        />
+                        <div style={{...styles.invitedLabel, marginTop: 4}}>Adults Est.</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+                      <button 
+                        type="button" 
+                        onClick={() => setIsEditingEstimates(false)} 
+                        style={{ background: 'var(--kb-surface-2)', border: '1px solid var(--kb-border)', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer', fontWeight: 600, color: 'var(--kb-text)' }}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        type="submit" 
+                        style={{ background: 'var(--kb-mint)', border: 'none', borderRadius: 8, padding: '4px 12px', fontSize: 12, cursor: 'pointer', fontWeight: 600, color: 'white' }}
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ display: 'flex', gap: 16 }}>
-                    <div>
-                      <div style={{...styles.invitedValue, fontSize: 24}}>{event?.kidsEstimate ?? (event?.guestEstimate ? Math.floor(event?.guestEstimate / 2) : 10)}</div>
-                      <div style={styles.invitedLabel}>Kids Est.</div>
+            </div>
+          ) : (
+            <div 
+              onClick={handleStartEditEstimates}
+              onMouseEnter={() => setIsHoveredEstimates(true)}
+              onMouseLeave={() => setIsHoveredEstimates(false)}
+              style={{
+                ...styles.invitedBox, 
+                position: 'relative', 
+                zIndex: 1,
+                cursor: 'pointer',
+                borderColor: isHoveredEstimates ? 'var(--kb-mint)' : 'var(--kb-border)',
+                transform: isHoveredEstimates ? 'translateY(-2px)' : 'none',
+                boxShadow: isHoveredEstimates ? 'var(--kb-shadow-md)' : 'var(--kb-shadow-sm)',
+                transition: 'all 0.2s ease-in-out'
+              }}
+              title="Click to edit estimates"
+            >
+              {isHoveredEstimates && (
+                <div style={{ position: 'absolute', top: 6, right: 6, fontSize: 12, opacity: 0.6 }}>
+                  ✏️
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={styles.invitedIconBg}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                </div>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', gap: 16 }}>
+                      <div>
+                        <div style={{...styles.invitedValue, fontSize: 24}}>{event?.kidsEstimate ?? (event?.guestEstimate ? Math.floor(event?.guestEstimate / 2) : 10)}</div>
+                        <div style={styles.invitedLabel}>Kids Est.</div>
+                      </div>
+                      <div>
+                        <div style={{...styles.invitedValue, fontSize: 24}}>{event?.adultsEstimate ?? (event?.guestEstimate ? Math.ceil(event?.guestEstimate / 2) : 10)}</div>
+                        <div style={styles.invitedLabel}>Adults Est.</div>
+                      </div>
                     </div>
-                    <div>
-                      <div style={{...styles.invitedValue, fontSize: 24}}>{event?.adultsEstimate ?? (event?.guestEstimate ? Math.ceil(event?.guestEstimate / 2) : 10)}</div>
-                      <div style={styles.invitedLabel}>Adults Est.</div>
+                    <div style={{ fontSize: 13, color: 'var(--kb-text)', fontWeight: 700, background: 'var(--kb-surface-2)', padding: '4px 10px', borderRadius: 100, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginTop: 4 }}>
+                      Total: {(event?.kidsEstimate ?? (event?.guestEstimate ? Math.floor(event?.guestEstimate / 2) : 10)) + (event?.adultsEstimate ?? (event?.guestEstimate ? Math.ceil(event?.guestEstimate / 2) : 10))}
                     </div>
-                  </div>
-                  <div style={{ fontSize: 13, color: 'var(--kb-text)', fontWeight: 700, background: 'var(--kb-surface-2)', padding: '4px 10px', borderRadius: 100, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginTop: 4 }}>
-                    Total: {(event?.kidsEstimate ?? (event?.guestEstimate ? Math.floor(event?.guestEstimate / 2) : 10)) + (event?.adultsEstimate ?? (event?.guestEstimate ? Math.ceil(event?.guestEstimate / 2) : 10))}
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Metric Cards */}

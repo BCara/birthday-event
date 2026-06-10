@@ -163,7 +163,7 @@ export default function LiveDisplayPage() {
           
           <div className="ldp-sidebar-bottom">
             <p className="ldp-sidebar-footer">
-              Powered by <a href="/" className="ldp-footer-link">KidsBash</a>
+              Powered by <a href="/" className="ldp-footer-link">Tiny Party <span style={{ fontSize: '0.8em' }}>Portal</span></a>
             </p>
           </div>
         </aside>

@@ -5,5 +5,8 @@ service firebase.storage {
       // Anyone can upload photos/videos for a memory wall, as guests are unauthenticated
       allow read, write: if true;
     }
+    match /event-photos/{eventId}/{fileName} {
+      allow read, write: if true;
+    }
   }
 }

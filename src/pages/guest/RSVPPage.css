@@ -115,10 +115,10 @@
 }
 .rsvp-toggle {
   flex: 1;
-  padding: 16px 20px;
+  padding: 18px 22px;
   background: var(--t-soft-bg);
-  border: 2px solid transparent;
-  border-radius: 16px;
+  border: none;
+  border-radius: 20px;
   font-family: var(--t-font-body);
   font-size: 0.95rem;
   font-weight: 700;
@@ -182,7 +182,60 @@
   padding: 18px 32px !important;
   border-radius: 18px !important;
   margin-top: 12px;
+  border: none !important;
+  outline: none !important;
   box-shadow: 0 10px 30px rgba(var(--t-accent-rgb, 0, 0, 0), 0.2) !important;
+}
+
+.rsvp-wizard-nav-container {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.rsvp-wizard-next-btn {
+  flex: 2;
+  font-size: 1.1rem !important;
+  padding: 16px 24px !important;
+  border-radius: 18px !important;
+  font-weight: 600 !important;
+  border: 1.5px solid color-mix(in srgb, var(--t-accent) 40%, transparent) !important;
+  background: color-mix(in srgb, var(--t-accent) 8%, transparent) !important;
+  color: var(--t-accent) !important;
+  outline: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.rsvp-wizard-next-btn:hover {
+  transform: translateY(-2px);
+  background: color-mix(in srgb, var(--t-accent) 15%, transparent) !important;
+}
+
+.rsvp-wizard-back-btn {
+  flex: 1;
+  background: var(--t-soft-bg) !important;
+  border: 1.5px solid var(--t-input-border) !important;
+  color: var(--t-text) !important;
+  font-size: 1.05rem !important;
+  padding: 16px 20px !important;
+  border-radius: 18px !important;
+  font-weight: 700 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.rsvp-wizard-back-btn:hover {
+  background: var(--t-input-bg) !important;
+  border-color: var(--t-text-light) !important;
+  transform: translateX(-2px);
 }
 
 
@@ -225,6 +278,13 @@
 .rsvp-footer-link { color: var(--t-accent); text-decoration: none; font-weight: 700; }
 
 /* Animations */
+.animate-fade-in {
+  animation: rsvp-wizard-fade-in 0.25s ease-out forwards;
+}
+@keyframes rsvp-wizard-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 @keyframes rsvp-fade-up {
   from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -285,7 +345,7 @@
   }
   .rsvp-textarea { min-height: 60px; }
   .rsvp-toggle-group { flex-direction: row; gap: 6px; }
-  .rsvp-toggle { flex: 1; padding: 9px 8px; font-size: 0.78rem; border-radius: 8px; }
+  .rsvp-toggle { flex: 1; padding: 11px 10px; font-size: 0.78rem; border-radius: 14px; }
   .rsvp-btn { padding: 11px 18px; font-size: 0.9rem; border-radius: 10px; }
   .rsvp-submit-btn {
     font-size: 0.95rem !important;
@@ -329,6 +389,148 @@
   /* Row fields stay side-by-side on mobile */
   .rsvp-row {
     gap: 8px;
+  }
+}
+
+/* Card Header Styles */
+.rsvp-card-header {
+  margin-bottom: 24px;
+}
+.rsvp-card-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+}
+.rsvp-card-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--t-font-body);
+  font-weight: 700;
+  color: var(--t-text-light);
+  text-decoration: none;
+  background: var(--t-soft-bg);
+  padding: 6px 12px;
+  border-radius: 100px;
+  transition: all 0.2s;
+  border: 1px solid var(--t-card-border);
+}
+.rsvp-card-back:hover {
+  background: var(--t-toggle-bg-hover);
+  color: var(--t-text);
+  transform: translateX(-2px);
+}
+.rsvp-card-host {
+  color: var(--t-text-light);
+  font-family: var(--t-font-body);
+  font-weight: 600;
+}
+.rsvp-card-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.rsvp-card-illus-wrap {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+}
+.rsvp-card-title-group {
+  flex: 1;
+}
+.rsvp-card-title {
+  font-family: var(--t-font-heading);
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--t-text);
+  margin: 0 0 2px;
+  line-height: 1.1;
+}
+.rsvp-card-subtitle {
+  font-family: var(--t-font-body);
+  font-size: 0.95rem;
+  color: var(--t-text-light);
+  margin: 0;
+  font-weight: 600;
+}
+.rsvp-card-reminder-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--t-soft-bg);
+  border: 1px solid var(--t-card-border);
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  gap: 8px;
+}
+.rsvp-card-deadline {
+  font-family: var(--t-font-body);
+  font-size: 0.85rem;
+  color: var(--t-text);
+}
+.rsvp-card-deadline strong {
+  color: var(--t-accent);
+}
+.rsvp-card-reminder-btn {
+  background: transparent;
+  border: 1px solid var(--t-accent);
+  color: var(--t-accent);
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.rsvp-card-reminder-btn:hover {
+  background: var(--t-accent);
+  color: var(--t-btn-text);
+}
+.rsvp-card-header-divider {
+  height: 1.5px;
+  background: var(--t-card-border);
+  margin-top: 16px;
+  opacity: 0.5;
+}
+
+/* On mobile, adjust header layout inside card */
+@media (max-width: 767px) {
+  .rsvp-card-header {
+    margin-bottom: 10px;
+  }
+  .rsvp-card-header-top {
+    margin-bottom: 8px;
+  }
+  .rsvp-card-back {
+    padding: 4px 10px;
+    font-size: 0.78rem;
+  }
+  .rsvp-card-host {
+    font-size: 0.78rem;
+  }
+  .rsvp-card-hero {
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .rsvp-card-illus-wrap {
+    display: none;
+  }
+  .rsvp-card-title {
+    font-size: 1.3rem;
+  }
+  .rsvp-card-subtitle {
+    font-size: 0.82rem;
+  }
+  .rsvp-card-reminder-bar {
+    display: none;
+  }
+  .rsvp-card-header-divider {
+    display: none;
   }
 }
 

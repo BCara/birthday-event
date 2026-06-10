@@ -37,7 +37,7 @@ export default function MainLayout() {
         <div className="ml-header-inner">
           <Link to="/" className="ml-logo">
             <span className="ml-logo-emoji">🎂</span>
-            <span className="ml-logo-text">KidsBash</span>
+            <span className="ml-logo-text">Tiny Party <span style={{ fontSize: '0.8em' }}>Portal</span></span>
           </Link>
 
           <nav className={`ml-nav ${menuOpen ? 'ml-nav-open' : ''}`} aria-label="Main navigation">
@@ -92,7 +92,7 @@ export default function MainLayout() {
             <div className="ml-footer-col ml-footer-brand-col">
               <Link to="/" className="ml-logo" style={{ marginBottom: '16px', display: 'inline-flex' }}>
                 <span className="ml-logo-emoji">🎂</span>
-                <span className="ml-logo-text">KidsBash</span>
+                <span className="ml-logo-text">Tiny Party <span style={{ fontSize: '0.8em' }}>Portal</span></span>
               </Link>
               <p className="ml-footer-tagline">Making every birthday unforgettable.</p>
             </div>
@@ -122,7 +122,7 @@ export default function MainLayout() {
             </div>
           </div>
           <div className="ml-footer-bottom">
-            <p className="ml-footer-copy">© {new Date().getFullYear()} KidsBash. All rights reserved.</p>
+            <p className="ml-footer-copy">© {new Date().getFullYear()} Tiny Party Portal. All rights reserved.</p>
           </div>
         </div>
       </footer>

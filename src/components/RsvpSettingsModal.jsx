@@ -244,6 +244,7 @@ export default function RsvpSettingsModal({ event, onClose, onSave }) {
   const [lockDownRSVP, setLockDownRSVP] = useState(event?.lockDownRSVP === true);
   const [askChildAge, setAskChildAge] = useState(event?.askChildAge !== false);
   const [askAdultCount, setAskAdultCount] = useState(event?.askAdultCount !== false);
+  const [askDietary, setAskDietary] = useState(event?.askDietary !== false);
   const [kidsEstimate, setKidsEstimate] = useState(event?.kidsEstimate ?? (event?.guestEstimate ? Math.floor(event?.guestEstimate / 2) : 10));
   const [adultsEstimate, setAdultsEstimate] = useState(event?.adultsEstimate ?? (event?.guestEstimate ? Math.ceil(event?.guestEstimate / 2) : 10));
   const [rsvpByDate, setRsvpByDate] = useState(event?.rsvpByDate || '');
@@ -258,6 +259,7 @@ export default function RsvpSettingsModal({ event, onClose, onSave }) {
       lockDownRSVP,
       askChildAge,
       askAdultCount,
+      askDietary,
       kidsEstimate: kidsEstimate ? parseInt(kidsEstimate, 10) : 0,
       adultsEstimate: adultsEstimate ? parseInt(adultsEstimate, 10) : 0,
       rsvpByDate,
@@ -345,6 +347,7 @@ export default function RsvpSettingsModal({ event, onClose, onSave }) {
               <Toggle id="show-parent-attendance-modal" checked={showParentAttendance} onChange={setShowParentAttendance} label="Ask about parent attendance" />
               <Toggle id="ask-age-modal" checked={askChildAge} onChange={setAskChildAge} label="Ask for guest child's age" />
               <Toggle id="ask-adults-modal" checked={askAdultCount} onChange={setAskAdultCount} label="Ask for number of adults attending" />
+              <Toggle id="ask-dietary-modal" checked={askDietary} onChange={setAskDietary} label="Ask for dietary requirements" />
 
               <h3 style={{ fontSize: '1.1rem', margin: '16px 0 -8px 0' }}>Security</h3>
               <Toggle id="lock-rsvp-modal" checked={lockDownRSVP} onChange={setLockDownRSVP} label="Lock RSVP list (Require approval for guests not on your list)" />

@@ -61,7 +61,11 @@ function EventCard({ event }) {
       <div style={cardStyles.details}>
         <p style={cardStyles.detail}>📅 {formatDate(event.date)}</p>
         {event.location && <p style={cardStyles.detail}>📍 {event.location}</p>}
-        {event.hostContact && <p style={cardStyles.detail}>📞 {event.hostContact}</p>}
+        {(event.hostName || event.hostContact) && (
+          <p style={cardStyles.detail}>
+            📞 {[event.hostName, event.hostContact].filter(Boolean).join(' - ')}
+          </p>
+        )}
       </div>
 
       <div style={cardStyles.badges}>

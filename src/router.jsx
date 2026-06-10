@@ -35,6 +35,7 @@ const EventManagePage = React.lazy(() => import('./pages/dashboard/EventManagePa
 const GuestListPage   = React.lazy(() => import('./pages/dashboard/GuestListPage'));
 const MemoriesPage    = React.lazy(() => import('./pages/dashboard/MemoriesPage'));
 const BillingPage     = React.lazy(() => import('./pages/dashboard/BillingPage'));
+const PrintableInvitePage = React.lazy(() => import('./pages/dashboard/PrintableInvitePage'));
 
 // ── Guest-facing pages (no nav — full-screen themed) ──
 const EventLandingPage = React.lazy(() => import('./pages/guest/EventLandingPage'));
@@ -67,6 +68,7 @@ const router = createBrowserRouter([
           { path: '/dashboard/billing',                  element: <Lazy><BillingPage /></Lazy> },
           { path: '/dashboard/create',                   element: <Lazy><CreateEventPage /></Lazy> },
           { path: '/dashboard/event/:eventId',           element: <Lazy><EventManagePage /></Lazy> },
+          { path: '/dashboard/event/:eventId/print',     element: <Lazy><PrintableInvitePage /></Lazy> },
           { path: '/dashboard/event/:eventId/rsvps',     element: <Lazy><GuestListPage /></Lazy> },
         ],
       },
@@ -80,6 +82,8 @@ const router = createBrowserRouter([
     element: <GuestLayout />,
     children: [
       { path: '/:slug',         element: <Lazy><EventLandingPage /></Lazy> },
+      { path: '/:slug/invite',  element: <Lazy><RSVPPage /></Lazy> },
+      { path: '/:slug/portal',  element: <Lazy><EventLandingPage /></Lazy> },
       { path: '/:slug/rsvp',    element: <Lazy><RSVPPage /></Lazy> },
       { path: '/:slug/memories',element: <Lazy><MemoryWallPage /></Lazy> },
       { path: '/:slug/memories/new', element: <Lazy><LeaveMemoryPage /></Lazy> },

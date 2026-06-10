@@ -31,13 +31,13 @@ function SkeletonRSVP() {
   );
 }
 
-export default function RSVPPage() {
+export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = false, forceEditMode = false }) {
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
-  const isEditMode = searchParams.get('edit') === 'true';
+  const isEditMode = forceEditMode || searchParams.get('edit') === 'true';
 
-  const [event, setEvent] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [event, setEvent] = useState(propEvent || null);
+  const [loading, setLoading] = useState(!propEvent);
 
   const [isAttending, setIsAttending] = useState(true);
   const [parentName, setParentName] = useState('');
@@ -54,6 +54,44 @@ export default function RSVPPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+
+  const validateStep = (step) => {
+    setError('');
+    if (step === 2) {
+      if (!childName.trim()) {
+        setError("Please enter your child's name.");
+        return false;
+      }
+    }
+    if (step === 3) {
+      if (!parentName.trim()) {
+        setError("Please enter your name.");
+        return false;
+      }
+      if (!email.trim() && !phone.trim()) {
+        setError("Please provide either an email address or a phone number.");
+        return false;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (email.trim() && !emailRegex.test(email.trim())) {
+        setError('Please enter a valid email address.');
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleNextStep = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => prev + 1);
+    }
+  };
+
+  const handlePrevStep = () => {
+    setError('');
+    setCurrentStep(prev => Math.max(1, prev - 1));
+  };
 
   const [showLookup, setShowLookup] = useState(false);
   const [lookupChildName, setLookupChildName] = useState('');
@@ -68,71 +106,136 @@ export default function RSVPPage() {
   const [calOpen, setCalOpen] = useState(false);
 
   useEffect(() => {
-    console.log("Fetching event for RSVP, slug:", slug);
-    fetchEventBySlug(slug)
-      .then(async (e) => {
-        console.log("Fetched event for RSVP:", e);
-        setEvent(e);
-        
-        if (e) {
-          // Set default stay/drop-off based on mode
-          if (e.stayOrDropOffMode === 'stay') {
-            setStayOrDropOff('staying');
-            setAdultsCount(1);
-          } else if (e.stayOrDropOffMode === 'dropoff') {
-            setStayOrDropOff('dropoff');
-            setAdultsCount(0);
-          }
+    if (propEvent) {
+      setEvent(propEvent);
+      
+      // Set default stay/drop-off based on mode
+      if (propEvent.stayOrDropOffMode === 'stay') {
+        setStayOrDropOff('staying');
+        setAdultsCount(1);
+      } else if (propEvent.stayOrDropOffMode === 'dropoff') {
+        setStayOrDropOff('dropoff');
+        setAdultsCount(0);
+      }
 
-          const urlRsvpId = searchParams.get('rsvpId');
-          const storedRsvpId = localStorage.getItem('rsvp_' + e.id);
-          const rsvpId = urlRsvpId || storedRsvpId;
+      const urlRsvpId = searchParams.get('rsvpId');
+      const storedRsvpId = localStorage.getItem('rsvp_' + propEvent.id);
+      const rsvpId = urlRsvpId || storedRsvpId;
 
-          if (rsvpId) {
-            // If we have an ID from URL, persist it
-            if (urlRsvpId) {
-              localStorage.setItem('rsvp_' + e.id, urlRsvpId);
+      if (rsvpId) {
+        if (urlRsvpId) {
+          localStorage.setItem('rsvp_' + propEvent.id, urlRsvpId);
+        }
+        getDoc(doc(db, 'rsvps', rsvpId)).then(rsvpSnap => {
+          if (rsvpSnap.exists()) {
+            const data = rsvpSnap.data();
+            setIsAttending(data.isAttending ?? true);
+            setParentName(data.parentName ?? '');
+            setEmail(data.email ?? '');
+            setPhone(data.phone ?? '');
+            setChildName(data.childName ?? '');
+            setChildAge(data.childAge ?? '');
+            setAdultsCount(data.adultsCount ?? 1);
+            setSiblings(data.siblings ?? []);
+            setDietary(data.dietary ?? '');
+            setComments(data.comments ?? '');
+            if (!isEditMode) {
+              setSuccess(true);
             }
-
-            // Try to fetch existing RSVP data
-            try {
-              const rsvpSnap = await getDoc(doc(db, 'rsvps', rsvpId));
-              if (rsvpSnap.exists()) {
-                const data = rsvpSnap.data();
-                setIsAttending(data.isAttending ?? true);
-                setParentName(data.parentName ?? '');
-                setEmail(data.email ?? '');
-                setPhone(data.phone ?? '');
-                setChildName(data.childName ?? '');
-                setChildAge(data.childAge ?? '');
-                setAdultsCount(data.adultsCount ?? 1);
-                setSiblings(data.siblings ?? []);
-                setDietary(data.dietary ?? '');
-                setComments(data.comments ?? '');
-
-                // Only show success screen if NOT in edit mode
-                if (!isEditMode) {
-                  setSuccess(true);
-                }
-                setMatchFound(true);
-              }
-            } catch (err) {
-              console.error("Failed to fetch existing RSVP:", err);
-            }
+            setMatchFound(true);
           } else {
-            // if we are NOT in edit mode and NO rsvpId is stored, we only set matchFound=true if requireGuestMatch is false
-            if (!e.requireGuestMatch) {
+            localStorage.removeItem('rsvp_' + propEvent.id);
+            if (!propEvent.requireGuestMatch) {
               setMatchFound(true);
             }
           }
+        }).catch(err => {
+          console.error(err);
+          if (!propEvent.requireGuestMatch) {
+            setMatchFound(true);
+          }
+        });
+      } else {
+        if (!propEvent.requireGuestMatch) {
+          setMatchFound(true);
         }
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("fetchEventBySlug failed in RSVPPage:", err);
-        setLoading(false);
-      });
-  }, [slug, isEditMode, searchParams]);
+      }
+      setLoading(false);
+    } else {
+      console.log("Fetching event for RSVP, slug:", slug);
+      fetchEventBySlug(slug)
+        .then(async (e) => {
+          console.log("Fetched event for RSVP:", e);
+          setEvent(e);
+          
+          if (e) {
+            // Set default stay/drop-off based on mode
+            if (e.stayOrDropOffMode === 'stay') {
+              setStayOrDropOff('staying');
+              setAdultsCount(1);
+            } else if (e.stayOrDropOffMode === 'dropoff') {
+              setStayOrDropOff('dropoff');
+              setAdultsCount(0);
+            }
+
+            const urlRsvpId = searchParams.get('rsvpId');
+            const storedRsvpId = localStorage.getItem('rsvp_' + e.id);
+            const rsvpId = urlRsvpId || storedRsvpId;
+
+            if (rsvpId) {
+              // If we have an ID from URL, persist it
+              if (urlRsvpId) {
+                localStorage.setItem('rsvp_' + e.id, urlRsvpId);
+              }
+
+              // Try to fetch existing RSVP data
+              try {
+                const rsvpSnap = await getDoc(doc(db, 'rsvps', rsvpId));
+                if (rsvpSnap.exists()) {
+                  const data = rsvpSnap.data();
+                  setIsAttending(data.isAttending ?? true);
+                  setParentName(data.parentName ?? '');
+                  setEmail(data.email ?? '');
+                  setPhone(data.phone ?? '');
+                  setChildName(data.childName ?? '');
+                  setChildAge(data.childAge ?? '');
+                  setAdultsCount(data.adultsCount ?? 1);
+                  setSiblings(data.siblings ?? []);
+                  setDietary(data.dietary ?? '');
+                  setComments(data.comments ?? '');
+
+                  // Only show success screen if NOT in edit mode
+                  if (!isEditMode) {
+                    setSuccess(true);
+                  }
+                  setMatchFound(true);
+                } else {
+                  localStorage.removeItem('rsvp_' + e.id);
+                  if (!e.requireGuestMatch) {
+                    setMatchFound(true);
+                  }
+                }
+              } catch (err) {
+                console.error("Failed to fetch existing RSVP:", err);
+                if (!e.requireGuestMatch) {
+                  setMatchFound(true);
+                }
+              }
+            } else {
+              // if we are NOT in edit mode and NO rsvpId is stored, we only set matchFound=true if requireGuestMatch is false
+              if (!e.requireGuestMatch) {
+                setMatchFound(true);
+              }
+            }
+          }
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error("fetchEventBySlug failed in RSVPPage:", err);
+          setLoading(false);
+        });
+    }
+  }, [slug, isEditMode, searchParams, propEvent]);
 
   const handleLookup = async (e) => {
     e.preventDefault();
@@ -288,8 +391,8 @@ export default function RSVPPage() {
         intendedAttending: isAttending,
         stayOrDropOff: isAttending ? stayOrDropOff : null,
         adultsCount: isAttending ? (askAdultCount ? (adultsCount !== null ? Number(adultsCount) : null) : (stayOrDropOff === 'staying' ? 1 : 0)) : 0,
-        siblings: isAttending ? siblings : [],
-        dietary: isAttending ? dietary.trim() : '',
+        siblings: isAttending ? siblings.map(s => ({ ...s, dietary: askDietary ? (s.dietary ?? '') : '' })) : [],
+        dietary: (isAttending && askDietary) ? dietary.trim() : '',
         comments: comments.trim(),
         createdAt: serverTimestamp(),
       };
@@ -315,6 +418,9 @@ export default function RSVPPage() {
       }
 
       setSuccess(true);
+      if (onRsvpSuccess) {
+        onRsvpSuccess(rsvpId, requiresApproval ? 'needs_approval' : (isAttending ? 'yes' : 'no'));
+      }
     } catch (err) {
       console.error(err);
       setError('Something went wrong. Please try again.');
@@ -343,6 +449,7 @@ export default function RSVPPage() {
   const themeKey = event.theme?.startsWith('kids-') ? event.theme : `kids-${event.theme || 'generic'}`;
   const askChildAge = event.askChildAge !== false;
   const askAdultCount = event.askAdultCount !== false;
+  const askDietary = event.askDietary !== false;
   const siblingsAllowed = true;
   const stayOrDropOffAllowed = event.showParentAttendance !== false && (event.stayOrDropOffMode === 'ask' || !event.stayOrDropOffMode);
 
@@ -350,7 +457,7 @@ export default function RSVPPage() {
     month: 'long', day: 'numeric'
   }) : null;
 
-  const pageUrl = `${getDevSafeOrigin()}/${slug}`;
+  const pageUrl = `${getDevSafeOrigin()}/${slug}/portal`;
 
   const rsvpCalOpts = event?.rsvpByDate ? {
     title: `RSVP: ${event.name}`,
@@ -383,212 +490,105 @@ export default function RSVPPage() {
     const savedStatus = localStorage.getItem('rsvp_status_' + event.id);
     const isNeedsApproval = savedStatus === 'needs_approval';
 
-    return (
-      <ThemedPage themeKey={themeKey} themeColor={event.themeColor} themeMode={event.themeMode}>
-        <div className="rsvp-center">
-          <div className="rsvp-card rsvp-success-card">
-            <div style={{ width: '100%', maxWidth: '120px', margin: '0 auto 16px' }}>
-              <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
+    const successCard = (
+      <div className="rsvp-center" style={embedded ? { minHeight: 'auto', padding: '16px 0' } : {}}>
+        <div className="rsvp-card rsvp-success-card">
+          <div style={{ width: '100%', maxWidth: '120px', margin: '0 auto 16px' }}>
+            <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
+          </div>
+          <div className="rsvp-success-emoji" style={{ marginTop: '-40px', position: 'relative', zIndex: 1 }}>{isNeedsApproval ? '⏳' : '🎉'}</div>
+          <h1 className="rsvp-success-title">{isNeedsApproval ? 'Request Submitted' : "You're all set!"}</h1>
+          <p className="rsvp-success-msg">
+            {isNeedsApproval
+              ? "Your RSVP has been submitted and is pending the host's approval. We'll let you know once it's confirmed!"
+              : (savedStatus === 'yes'
+                ? `We can't wait to see you at ${event.name}!`
+                : "Thanks for letting us know — we'll miss you!")
+            }
+          </p>
+          {savedStatus === 'yes' && (
+            <div className="rsvp-success-tip">
+              <span className="rsvp-success-tip-icon">📌</span>
+              <span className="rsvp-success-tip-text">
+                <strong>Save this link!</strong> Return to this page on the day of the party for directions, time, and to leave a message for the birthday star.
+              </span>
             </div>
-            <div className="rsvp-success-emoji" style={{ marginTop: '-40px', position: 'relative', zIndex: 1 }}>{isNeedsApproval ? '⏳' : '🎉'}</div>
-            <h1 className="rsvp-success-title">{isNeedsApproval ? 'Request Submitted' : "You're all set!"}</h1>
-            <p className="rsvp-success-msg">
-              {isNeedsApproval
-                ? "Your RSVP has been submitted and is pending the host's approval. We'll let you know once it's confirmed!"
-                : (savedStatus === 'yes'
-                  ? `We can't wait to see you at ${event.name}!`
-                  : "Thanks for letting us know — we'll miss you!")
-              }
-            </p>
-            {savedStatus === 'yes' && (
-              <div className="rsvp-success-tip">
-                <span className="rsvp-success-tip-icon">📌</span>
-                <span className="rsvp-success-tip-text">
-                  <strong>Save this link!</strong> Return to this page on the day of the party for directions, time, and to leave a message for the birthday star.
-                </span>
-              </div>
-            )}
-            <div className="rsvp-success-actions">
-              <Link to={`/${slug}`} className="rsvp-btn rsvp-btn-outline">
-                ← View Event Details
-              </Link>
-            </div>
+          )}
+          <div className="rsvp-success-actions">
+            <Link to={`/${slug}/portal`} className="rsvp-btn rsvp-btn-outline" onClick={() => {
+              if (onRsvpSuccess) onRsvpSuccess();
+            }}>
+              ← View Event Details
+            </Link>
           </div>
         </div>
+      </div>
+    );
+
+    if (embedded) return successCard;
+
+    return (
+      <ThemedPage themeKey={themeKey} themeColor={event.themeColor} themeMode={event.themeMode}>
+        {successCard}
       </ThemedPage>
     );
   }
 
-  return (
-    <ThemedPage themeKey={themeKey} themeColor={event.themeColor} themeMode={event.themeMode}>
-      <div className="rsvp-container">
-
-        {/* Header */}
-        <div className="rsvp-header">
-          <Link to={`/${slug}`} className="rsvp-back">← Back</Link>
-          <div className="rsvp-illus-wrap" style={{ width: '100%', maxWidth: '80px', margin: '0 auto 8px' }}>
-            <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
-          </div>
-          <h1 className="rsvp-page-title">{isEditMode ? 'Update RSVP' : 'RSVP'}</h1>
-          <p className="rsvp-page-sub">for {event.name}</p>
-          {event.hostContact && (
-            <p className="rsvp-page-host-contact" style={{ margin: '8px 0 0 0', fontSize: '0.9rem', color: 'var(--t-text-light)' }}>
-              Questions? Contact {event.hostContact}
-            </p>
-          )}
-          {formattedRsvpBy && (
-            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-              <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--t-accent)', fontWeight: 'bold' }}>
-                Please respond by {formattedRsvpBy}
-              </p>
-              <button 
-                type="button"
-                onClick={() => {
-                  window.open(getGoogleCalendarUrl(rsvpCalOpts), '_blank');
-                }}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid var(--t-accent)',
-                  color: 'var(--t-accent)',
-                  padding: '4px 12px',
-                  borderRadius: '100px',
-                  fontSize: '0.8rem',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                ⏰ Set Reminder
-              </button>
-            </div>
-          )}
+  const renderCardHeader = () => (
+    <div className="rsvp-card-header">
+      <div className="rsvp-card-header-top">
+        {isEditMode ? (
+          <Link to={`/${slug}/portal`} className="rsvp-card-back">
+            <span className="rsvp-back-arrow">←</span> Back to Portal
+          </Link>
+        ) : (
+          <div /> // Empty div to keep flexbox alignment if needed
+        )}
+        {(event.hostName || event.hostContact) && (
+          <span className="rsvp-card-host">
+            Host: {[event.hostName, event.hostContact].filter(Boolean).join(' - ')}
+          </span>
+        )}
+      </div>
+      
+      <div className="rsvp-card-hero">
+        <div className="rsvp-card-illus-wrap">
+          <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
         </div>
-
-        {/* Invitation Card */}
-        <div className="elp-card-invitation" style={{ marginBottom: '32px' }}>
-          <div className="elp-card-border-inner">
-            
-            {/* Header Badge */}
-            <div className="elp-invitation-intro">
-              <span className="elp-invitation-badge">You're Invited!</span>
-            </div>
-
-            {/* Celebration details above illustration */}
-            <div className="elp-hero">
-              <h1 className="elp-title">{event.name}</h1>
-              {event.childName && <p className="elp-subtitle">Celebrating {event.childName}'s special day!</p>}
-            </div>
-
-            {/* Photo OR Illustration */}
-            <div className="elp-illustration-container">
-              {event.photoUrl ? (
-                <div className="elp-photo-wrap">
-                  <img src={event.photoUrl} alt={event.name} className="elp-photo" />
-                </div>
-              ) : (
-                <div className="elp-illustration-wrap">
-                  <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
-                </div>
-              )}
-            </div>
-
-            <div className="elp-divider">
-              <span className="elp-divider-dot"></span>
-              <span className="elp-divider-line"></span>
-              <span className="elp-divider-dot"></span>
-            </div>
-
-            {/* Centered Details */}
-            <div className="elp-details-clean">
-              {formattedDate && (
-                <div className="elp-detail-item">
-                  <span className="elp-detail-icon-clean">📅</span>
-                  <div className="elp-detail-content-clean">
-                    <div className="elp-detail-label-clean">Date</div>
-                    <div className="elp-detail-value-clean">{formattedDate}</div>
-                  </div>
-                  {event.date && (
-                    <div className="elp-card-cal-wrap" data-open={calOpen}>
-                      <button 
-                        className="elp-card-cal-btn" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCalOpen(v => !v);
-                        }}
-                        aria-label="Add to calendar"
-                      >
-                        <span>Add to Cal</span>
-                        <svg className="elp-cal-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <path d="M6 9l6 6 6-6"/>
-                        </svg>
-                      </button>
-                      {calOpen && (
-                        <div className="elp-card-cal-dropdown">
-                          <button className="elp-card-cal-option" onClick={() => { window.open(getGoogleCalendarUrl(calOpts), '_blank'); setCalOpen(false); }}>
-                            Google Calendar
-                          </button>
-                          <button className="elp-card-cal-option" onClick={() => { downloadICS(generateICS(calOpts), `${slug}.ics`); setCalOpen(false); }}>
-                            Apple / Outlook
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-              {formattedTime && (
-                <div className="elp-detail-item">
-                  <span className="elp-detail-icon-clean">🕐</span>
-                  <div className="elp-detail-content-clean">
-                    <div className="elp-detail-label-clean">Time</div>
-                    <div className="elp-detail-value-clean">
-                      {formattedTime}
-                      {event.endTime && ` – ${(() => { const [h,m] = event.endTime.split(':'); const hr=parseInt(h,10); return `${hr%12||12}:${m} ${hr>=12?'PM':'AM'}`; })()}`}
-                    </div>
-                  </div>
-                </div>
-              )}
-              {event.location && (
-                <div className="elp-detail-item">
-                  <span className="elp-detail-icon-clean">📍</span>
-                  <div className="elp-detail-content-clean">
-                    <div className="elp-detail-label-clean">Location</div>
-                    <div className="elp-detail-value-clean">{event.location}</div>
-                  </div>
-                </div>
-              )}
-              {event.hostContact && (
-                <div className="elp-detail-item">
-                  <span className="elp-detail-icon-clean">📞</span>
-                  <div className="elp-detail-content-clean">
-                    <div className="elp-detail-label-clean">Contact</div>
-                    <div className="elp-detail-value-clean">{event.hostContact}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Message Description */}
-            {event.description && (
-              <>
-                <div className="elp-divider">
-                  <span className="elp-divider-dot"></span>
-                  <span className="elp-divider-line"></span>
-                  <span className="elp-divider-dot"></span>
-                </div>
-                <div className="elp-desc-clean">
-                  <p>{event.description}</p>
-                </div>
-              </>
-            )}
-          </div>
+        <div className="rsvp-card-title-group">
+          <h1 className="rsvp-card-title">{isEditMode ? 'Update RSVP' : 'RSVP'}</h1>
+          <p className="rsvp-card-subtitle">for {event.name}</p>
         </div>
+      </div>
+
+      {formattedRsvpBy && (
+        <div className="rsvp-card-reminder-bar">
+          <span className="rsvp-card-deadline">
+            Please respond by <strong>{formattedRsvpBy}</strong>
+          </span>
+          <button 
+            type="button"
+            className="rsvp-card-reminder-btn"
+            onClick={() => {
+              window.open(getGoogleCalendarUrl(rsvpCalOpts), '_blank');
+            }}
+          >
+            ⏰ Set Reminder
+          </button>
+        </div>
+      )}
+      
+      <div className="rsvp-card-header-divider" />
+    </div>
+  );
+
+  const containerContent = (
+    <div className="rsvp-container" style={embedded ? { padding: '20px 0', maxWidth: '100%' } : {}}>
 
         {/* Guest Matching / Lookup section */}
         {!matchFound && event.requireGuestMatch ? (
           <div className="rsvp-card rsvp-lookup-form" style={{ marginTop: '16px', textAlign: 'left' }}>
+            {renderCardHeader()}
             <h3 style={{ fontFamily: 'var(--t-font-heading)', fontSize: '1.25rem', color: 'var(--t-accent)', margin: '0 0 4px 0' }}>Find Your Invitation</h3>
             <p style={{ fontFamily: 'var(--t-font-body)', fontSize: '0.82rem', color: 'var(--t-text-light)', margin: '0 0 16px 0', lineHeight: 1.4 }}>
               This event requires you to match your name with the guest list to RSVP.
@@ -657,13 +657,9 @@ export default function RSVPPage() {
         ) : (
           !isEditMode && !event.requireGuestMatch && (
             <div className="rsvp-lookup-section" style={{ marginBottom: '24px', textAlign: 'center' }}>
-              <button 
-                type="button" 
+              <Link 
+                to={`/${slug}/portal`}
                 className="rsvp-lookup-toggle-btn"
-                onClick={() => {
-                  setShowLookup(v => !v);
-                  setLookupError('');
-                }}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -674,349 +670,445 @@ export default function RSVPPage() {
                   cursor: 'pointer',
                   textDecoration: 'underline',
                   transition: 'opacity 0.2s',
+                  display: 'inline-block'
                 }}
               >
-                {showLookup ? "✕ Close search" : "Already RSVP'd? Find your RSVP here →"}
-              </button>
-
-              {showLookup && (
-                <form onSubmit={handleLookup} className="rsvp-card rsvp-lookup-form" style={{ marginTop: '16px', textAlign: 'left' }}>
-                  <h3 style={{ fontFamily: 'var(--t-font-heading)', fontSize: '1.25rem', color: 'var(--t-accent)', margin: '0 0 4px 0' }}>Find Your RSVP</h3>
-                  <p style={{ fontFamily: 'var(--t-font-body)', fontSize: '0.82rem', color: 'var(--t-text-light)', margin: '0 0 16px 0', lineHeight: 1.4 }}>
-                    Enter the details you used to RSVP to restore access to the party details portal.
-                  </p>
-                  
-                  <div className="rsvp-field">
-                    <label className="rsvp-label">Child's Name *</label>
-                    <input 
-                      type="text" 
-                      className="rsvp-input" 
-                      placeholder="e.g. Emily" 
-                      value={lookupChildName} 
-                      onChange={e => setLookupChildName(e.target.value)} 
-                      required
-                    />
-                  </div>
-
-                  <div className="rsvp-field">
-                    <label className="rsvp-label">Parent's Email or Phone *</label>
-                    <input 
-                      type="text" 
-                      className="rsvp-input" 
-                      placeholder="e.g. sarah@example.com or 0400000000" 
-                      value={lookupContact} 
-                      onChange={e => setLookupContact(e.target.value)} 
-                      required
-                    />
-                  </div>
-
-                  {lookupError && <p className="rsvp-error">{lookupError}</p>}
-
-                  <button 
-                    type="submit" 
-                    className="rsvp-btn rsvp-btn-accent" 
-                    disabled={lookupLoading}
-                    style={{ width: '100%', marginTop: '8px' }}
-                  >
-                    {lookupLoading ? "Searching..." : "🔍 Find RSVP"}
-                  </button>
-                </form>
-              )}
+                Already RSVP'd? Find your RSVP here →
+              </Link>
             </div>
           )
         )}
 
         {matchFound && (
           <form className="rsvp-card" onSubmit={handleSubmit} noValidate>
+            {renderCardHeader()}
 
-          {/* Attending? */}
-          <div className="rsvp-field">
-            <label className="rsvp-label">Are you attending?</label>
-            <div className="rsvp-toggle-group">
-              <button
-                type="button"
-                className={`rsvp-toggle ${isAttending ? 'rsvp-toggle-active' : ''}`}
-                onClick={() => setIsAttending(true)}
-              >
-                🎉 Yes, we'll be there!
-              </button>
-              <button
-                type="button"
-                className={`rsvp-toggle ${!isAttending ? 'rsvp-toggle-active' : ''}`}
-                onClick={() => setIsAttending(false)}
-              >
-                😢 Sorry, can't make it
-              </button>
+            {/* Premium Wizard Progress Bar */}
+            <div className="rsvp-wizard-progress" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', position: 'relative' }}>
+              {[
+                { num: 1, label: 'Attendance' },
+                { num: 2, label: 'Child' },
+                { num: 3, label: 'Parent' },
+                { num: 4, label: isAttending ? 'Details' : 'Message' }
+              ].map((s, idx) => {
+                const isActive = currentStep === s.num;
+                const isCompleted = currentStep > s.num;
+                return (
+                  <React.Fragment key={s.num}>
+                    <div 
+                      className={`rsvp-step-indicator ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
+                      onClick={() => {
+                        if (s.num < currentStep) setCurrentStep(s.num);
+                      }}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        zIndex: 2,
+                        cursor: s.num < currentStep ? 'pointer' : 'default',
+                        flex: 1
+                      }}
+                    >
+                      <div 
+                        className="rsvp-step-dot"
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          background: isCompleted ? 'var(--t-accent)' : (isActive ? 'var(--t-btn-bg, var(--t-accent))' : 'var(--t-soft-bg)'),
+                          color: isCompleted || isActive ? 'var(--t-btn-text, #fff)' : 'var(--t-text-light)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.75rem',
+                          fontWeight: 'bold',
+                          transition: 'all 0.3s ease',
+                          border: isActive ? '2px solid var(--t-accent)' : '2px solid transparent'
+                        }}
+                      >
+                        {isCompleted ? '✓' : s.num}
+                      </div>
+                      <span 
+                        className="rsvp-step-text"
+                        style={{
+                          fontSize: '0.7rem',
+                          fontWeight: isActive ? '800' : '600',
+                          color: isActive ? 'var(--t-accent)' : 'var(--t-text-light)',
+                          marginTop: '4px',
+                          textAlign: 'center',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {s.label}
+                      </span>
+                    </div>
+                    {idx < 3 && (
+                      <div 
+                        className="rsvp-step-line"
+                        style={{
+                          height: '2px',
+                          flex: 1,
+                          background: currentStep > s.num ? 'var(--t-accent)' : 'var(--t-soft-bg)',
+                          marginTop: '-16px',
+                          zIndex: 1,
+                          marginRight: '-12px',
+                          marginLeft: '-12px',
+                          transition: 'background 0.3s ease'
+                        }}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
-          </div>
 
-          {/* Child Name & Age */}
-          <div className="rsvp-row">
-            <div className="rsvp-field" style={{ flex: (askChildAge && isAttending) ? 3 : 1 }}>
-              <label className="rsvp-label" htmlFor="rsvp-child-name">Child's Name *</label>
-              <input
-                id="rsvp-child-name"
-                className="rsvp-input"
-                type="text"
-                placeholder="e.g. Emily"
-                value={childName}
-                onChange={e => setChildName(e.target.value)}
-                required
-              />
-            </div>
-            {askChildAge && isAttending && (
-              <div className="rsvp-field" style={{ flex: 1 }}>
-                <label className="rsvp-label" htmlFor="rsvp-child-age">Age</label>
-                <input
-                  id="rsvp-child-age"
-                  className="rsvp-input"
-                  type="number"
-                  min="0"
-                  max="18"
-                  placeholder="e.g. 5"
-                  value={childAge}
-                  onChange={e => setChildAge(e.target.value)}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Siblings / Additional Children (Moved up) */}
-          {siblingsAllowed && isAttending && (
-            <div className="rsvp-field rsvp-siblings-section" style={{ marginTop: '-4px', marginBottom: '16px' }}>
-              {siblings.map((sib, i) => (
-                <div key={i} className="rsvp-sibling-card">
-                  <div className="rsvp-sibling-header">
-                    <span className="rsvp-sibling-num">Child {i + 2}</span>
+            {/* STEP 1: Attendance */}
+            {currentStep === 1 && (
+              <div className="rsvp-step-content animate-fade-in">
+                <div className="rsvp-field">
+                  <label className="rsvp-label" style={{ textAlign: 'center', fontSize: '0.9rem', marginBottom: '16px' }}>Are you attending?</label>
+                  <div className="rsvp-toggle-group" style={{ flexDirection: 'column', gap: '12px' }}>
                     <button
                       type="button"
-                      className="rsvp-remove-btn"
-                      onClick={() => removeSibling(i)}
-                      aria-label="Remove child"
+                      className={`rsvp-toggle ${isAttending ? 'rsvp-toggle-active' : ''}`}
+                      onClick={() => {
+                        setIsAttending(true);
+                        setCurrentStep(2);
+                      }}
+                      style={{ padding: '20px', fontSize: '1.05rem' }}
                     >
-                      ✕
+                      🎉 Yes, we'll be there!
+                    </button>
+                    <button
+                      type="button"
+                      className={`rsvp-toggle ${!isAttending ? 'rsvp-toggle-active' : ''}`}
+                      onClick={() => {
+                        setIsAttending(false);
+                        setCurrentStep(2);
+                      }}
+                      style={{ padding: '20px', fontSize: '1.05rem' }}
+                    >
+                      😢 Sorry, can't make it
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2: Child Information */}
+            {currentStep === 2 && (
+              <div className="rsvp-step-content animate-fade-in">
+                <div className="rsvp-row">
+                  <div className="rsvp-field" style={{ flex: (askChildAge && isAttending) ? 3 : 1 }}>
+                    <label className="rsvp-label" htmlFor="rsvp-child-name">Child's Name *</label>
+                    <input
+                      id="rsvp-child-name"
+                      className="rsvp-input"
+                      type="text"
+                      placeholder="e.g. Emily"
+                      value={childName}
+                      onChange={e => setChildName(e.target.value)}
+                      required
+                      autoFocus
+                    />
+                  </div>
+                  {askChildAge && isAttending && (
+                    <div className="rsvp-field" style={{ flex: 1 }}>
+                      <label className="rsvp-label" htmlFor="rsvp-child-age">Age</label>
+                      <input
+                        id="rsvp-child-age"
+                        className="rsvp-input"
+                        type="number"
+                        min="0"
+                        max="18"
+                        placeholder="e.g. 5"
+                        value={childAge}
+                        onChange={e => setChildAge(e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {siblingsAllowed && isAttending && (
+                  <div className="rsvp-field rsvp-siblings-section" style={{ marginTop: '-4px', marginBottom: '16px' }}>
+                    {siblings.map((sib, i) => (
+                      <div key={i} className="rsvp-sibling-card">
+                        <div className="rsvp-sibling-header">
+                          <span className="rsvp-sibling-num">Child {i + 2}</span>
+                          <button
+                            type="button"
+                            className="rsvp-remove-btn"
+                            onClick={() => removeSibling(i)}
+                            aria-label="Remove child"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <input
+                          className="rsvp-input rsvp-input-sm"
+                          type="text"
+                          placeholder="Name"
+                          value={sib.name}
+                          onChange={e => updateSibling(i, 'name', e.target.value)}
+                        />
+                        <input
+                          className="rsvp-input rsvp-input-sm"
+                          type="number"
+                          min="0"
+                          max="18"
+                          placeholder="Age"
+                          value={sib.age}
+                          onChange={e => updateSibling(i, 'age', e.target.value)}
+                        />
+                        {askDietary && (
+                          <input
+                            className="rsvp-input rsvp-input-sm"
+                            type="text"
+                            placeholder="Dietary needs / Allergies"
+                            value={sib.dietary}
+                            onChange={e => updateSibling(i, 'dietary', e.target.value)}
+                          />
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" className="rsvp-add-sibling-btn" onClick={addSibling} style={{ marginTop: siblings.length > 0 ? '8px' : '0' }}>
+                      + Add another child
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* STEP 3: Parent Information */}
+            {currentStep === 3 && (
+              <div className="rsvp-step-content animate-fade-in">
+                <div className="rsvp-field">
+                  <label className="rsvp-label" htmlFor="rsvp-parent-name">Your Name *</label>
                   <input
-                    className="rsvp-input rsvp-input-sm"
+                    id="rsvp-parent-name"
+                    className="rsvp-input"
                     type="text"
-                    placeholder="Name"
-                    value={sib.name}
-                    onChange={e => updateSibling(i, 'name', e.target.value)}
-                  />
-                  <input
-                    className="rsvp-input rsvp-input-sm"
-                    type="number"
-                    min="0"
-                    max="18"
-                    placeholder="Age"
-                    value={sib.age}
-                    onChange={e => updateSibling(i, 'age', e.target.value)}
-                  />
-                  <input
-                    className="rsvp-input rsvp-input-sm"
-                    type="text"
-                    placeholder="Dietary needs / Allergies"
-                    value={sib.dietary}
-                    onChange={e => updateSibling(i, 'dietary', e.target.value)}
+                    placeholder="e.g. Sarah Johnson"
+                    value={parentName}
+                    onChange={e => setParentName(e.target.value)}
+                    required
+                    autoFocus
                   />
                 </div>
-              ))}
-              <button type="button" className="rsvp-add-sibling-btn" onClick={addSibling} style={{ marginTop: siblings.length > 0 ? '8px' : '0' }}>
-                + Add another child
-              </button>
-            </div>
-          )}
 
-          {/* Parent Name */}
-          <div className="rsvp-field">
-            <label className="rsvp-label" htmlFor="rsvp-parent-name">Your Name *</label>
-            <input
-              id="rsvp-parent-name"
-              className="rsvp-input"
-              type="text"
-              placeholder="e.g. Sarah Johnson"
-              value={parentName}
-              onChange={e => setParentName(e.target.value)}
-              required
-            />
-          </div>
-
-          {/* Contact Info */}
-          <div className="rsvp-row">
-            <div className="rsvp-field" style={{ flex: 1 }}>
-              <label className="rsvp-label" htmlFor="rsvp-email">Email Address</label>
-              <input
-                id="rsvp-email"
-                className="rsvp-input"
-                type="email"
-                placeholder="e.g. sarah@example.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="rsvp-field" style={{ flex: 1 }}>
-              <label className="rsvp-label" htmlFor="rsvp-phone">Phone Number</label>
-              <input
-                id="rsvp-phone"
-                className="rsvp-input"
-                type="tel"
-                placeholder="e.g. 0400 000 000"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-              />
-            </div>
-          </div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--t-text-light)', marginTop: '-8px', marginBottom: '16px' }}>
-            * Please provide at least one contact method.
-          </p>
-
-
-
-          {/* Stay or Drop-off */}
-          {stayOrDropOffAllowed && isAttending && (
-            <div className="rsvp-field">
-              <label className="rsvp-label">Are you staying or dropping off?</label>
-              <div className="rsvp-toggle-group">
-                <button
-                  type="button"
-                  className={`rsvp-toggle ${stayOrDropOff === 'staying' ? 'rsvp-toggle-active' : ''}`}
-                  onClick={() => {
-                    setStayOrDropOff('staying');
-                    if (adultsCount === 0) setAdultsCount(1);
-                  }}
-                >
-                  🏠 Staying
-                </button>
-                <button
-                  type="button"
-                  className={`rsvp-toggle ${stayOrDropOff === 'dropoff' ? 'rsvp-toggle-active' : ''}`}
-                  onClick={() => {
-                    setStayOrDropOff('dropoff');
-                    setAdultsCount(0);
-                  }}
-                >
-                  🚗 Drop-off
-                </button>
+                <div className="rsvp-row">
+                  <div className="rsvp-field" style={{ flex: 1 }}>
+                    <label className="rsvp-label" htmlFor="rsvp-email">Email Address</label>
+                    <input
+                      id="rsvp-email"
+                      className="rsvp-input"
+                      type="email"
+                      placeholder="e.g. sarah@example.com"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="rsvp-field" style={{ flex: 1 }}>
+                    <label className="rsvp-label" htmlFor="rsvp-phone">Phone Number</label>
+                    <input
+                      id="rsvp-phone"
+                      className="rsvp-input"
+                      type="tel"
+                      placeholder="e.g. 0400 000 000"
+                      value={phone}
+                      onChange={e => setPhone(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <p style={{ fontSize: '0.8rem', color: 'var(--t-text-light)', marginTop: '-8px', marginBottom: '16px' }}>
+                  * Please provide at least one contact method.
+                </p>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Adults Count Stepper */}
-          {askAdultCount && isAttending && stayOrDropOff === 'staying' && (
-            <div className="rsvp-field">
-              <label className="rsvp-label">Number of Adults Attending</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px', opacity: adultsCount === null ? 0.6 : 1 }}>
-                <button
-                  type="button"
-                  disabled={adultsCount === null}
-                  onClick={() => setAdultsCount(prev => Math.max(0, prev - 1))}
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    border: '1.5px solid var(--t-input-border)',
-                    background: 'var(--t-input-bg)',
-                    color: 'var(--t-text)',
-                    fontSize: '1.2rem',
-                    fontWeight: 'bold',
-                    cursor: adultsCount === null ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.15s',
-                    outline: 'none'
-                  }}
-                >
-                  −
-                </button>
-                <span style={{ fontSize: '1.15rem', fontWeight: 'bold', minWidth: '36px', textAlign: 'center', color: 'var(--t-text)' }}>
-                  {adultsCount === null ? '?' : adultsCount}
-                </span>
-                <button
-                  type="button"
-                  disabled={adultsCount === null}
-                  onClick={() => setAdultsCount(prev => Math.min(10, prev + 1))}
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    border: '1.5px solid var(--t-input-border)',
-                    background: 'var(--t-input-bg)',
-                    color: 'var(--t-text)',
-                    fontSize: '1.2rem',
-                    fontWeight: 'bold',
-                    cursor: adultsCount === null ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.15s',
-                    outline: 'none'
-                  }}
-                >
-                  +
-                </button>
-                <span style={{ fontSize: '0.88rem', color: 'var(--t-text-light)', marginLeft: '8px' }}>
-                  {adultsCount === null ? 'Unsure' : (adultsCount === 1 ? 'Adult' : 'Adults') + ' staying'}
-                </span>
+            {/* STEP 4: Logistics & Comments */}
+            {currentStep === 4 && (
+              <div className="rsvp-step-content animate-fade-in">
+                {isAttending ? (
+                  <>
+                    {/* Stay or Drop-off */}
+                    {stayOrDropOffAllowed && (
+                      <div className="rsvp-field">
+                        <label className="rsvp-label">Are you staying or dropping off?</label>
+                        <div className="rsvp-toggle-group">
+                          <button
+                            type="button"
+                            className={`rsvp-toggle ${stayOrDropOff === 'staying' ? 'rsvp-toggle-active' : ''}`}
+                            onClick={() => {
+                              setStayOrDropOff('staying');
+                              if (adultsCount === 0) setAdultsCount(1);
+                            }}
+                          >
+                            🏠 Staying
+                          </button>
+                          <button
+                            type="button"
+                            className={`rsvp-toggle ${stayOrDropOff === 'dropoff' ? 'rsvp-toggle-active' : ''}`}
+                            onClick={() => {
+                              setStayOrDropOff('dropoff');
+                              setAdultsCount(0);
+                            }}
+                          >
+                            🚗 Drop-off
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Adults Count Stepper */}
+                    {askAdultCount && stayOrDropOff === 'staying' && (
+                      <div className="rsvp-field">
+                        <label className="rsvp-label">Number of Adults Attending</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px', opacity: adultsCount === null ? 0.6 : 1 }}>
+                          <button
+                            type="button"
+                            disabled={adultsCount === null}
+                            onClick={() => setAdultsCount(prev => Math.max(0, prev - 1))}
+                            style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '50%',
+                              border: '1.5px solid var(--t-input-border)',
+                              background: 'var(--t-input-bg)',
+                              color: 'var(--t-text)',
+                              fontSize: '1.2rem',
+                              fontWeight: 'bold',
+                              cursor: adultsCount === null ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'all 0.15s',
+                              outline: 'none'
+                            }}
+                          >
+                            −
+                          </button>
+                          <span style={{ fontSize: '1.15rem', fontWeight: 'bold', minWidth: '36px', textAlign: 'center', color: 'var(--t-text)' }}>
+                            {adultsCount === null ? '?' : adultsCount}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={adultsCount === null}
+                            onClick={() => setAdultsCount(prev => Math.min(10, prev + 1))}
+                            style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '50%',
+                              border: '1.5px solid var(--t-input-border)',
+                              background: 'var(--t-input-bg)',
+                              color: 'var(--t-text)',
+                              fontSize: '1.2rem',
+                              fontWeight: 'bold',
+                              cursor: adultsCount === null ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'all 0.15s',
+                              outline: 'none'
+                            }}
+                          >
+                            +
+                          </button>
+                          <span style={{ fontSize: '0.88rem', color: 'var(--t-text-light)', marginLeft: '8px' }}>
+                            {adultsCount === null ? 'Unsure' : (adultsCount === 1 ? 'Adult' : 'Adults') + ' staying'}
+                          </span>
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px', cursor: 'pointer', fontSize: '0.88rem', color: 'var(--t-text-light)' }}>
+                          <input
+                            type="checkbox"
+                            checked={adultsCount === null}
+                            onChange={e => setAdultsCount(e.target.checked ? null : 1)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px', borderRadius: '4px' }}
+                          />
+                          <span>Unsure how many adults yet</span>
+                        </label>
+                      </div>
+                    )}
+
+                    {/* Dietary */}
+                    {askDietary && (
+                      <div className="rsvp-field">
+                        <label className="rsvp-label" htmlFor="rsvp-dietary">Allergies or dietary requirements</label>
+                        <textarea
+                          id="rsvp-dietary"
+                          className="rsvp-textarea"
+                          placeholder="Any food allergies or dietary needs we should know about?"
+                          value={dietary}
+                          onChange={e => setDietary(e.target.value)}
+                          rows={2}
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : null}
+
+                {/* Comments */}
+                <div className="rsvp-field">
+                  <label className="rsvp-label" htmlFor="rsvp-comments">Comments / Notes</label>
+                  <textarea
+                    id="rsvp-comments"
+                    className="rsvp-textarea"
+                    placeholder={isAttending ? "Any other notes or comments for the host?" : "Leave a message for the host..."}
+                    value={comments}
+                    onChange={e => setComments(e.target.value)}
+                    rows={2}
+                  />
+                </div>
               </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px', cursor: 'pointer', fontSize: '0.88rem', color: 'var(--t-text-light)' }}>
-                <input
-                  type="checkbox"
-                  checked={adultsCount === null}
-                  onChange={e => setAdultsCount(e.target.checked ? null : 1)}
-                  style={{ cursor: 'pointer', width: '16px', height: '16px', borderRadius: '4px' }}
-                />
-                <span>Unsure how many adults yet</span>
-              </label>
+            )}
+
+            {error && <p className="rsvp-error" style={{ marginTop: '12px' }}>{error}</p>}
+
+            {/* Navigation buttons */}
+            <div className="rsvp-wizard-nav-container">
+              {currentStep > 1 && (
+                <button 
+                  type="button" 
+                  className="rsvp-btn rsvp-wizard-back-btn" 
+                  onClick={handlePrevStep}
+                >
+                  ← Back
+                </button>
+              )}
+              {currentStep > 1 && currentStep < 4 ? (
+                <button
+                  type="button"
+                  className="rsvp-btn rsvp-wizard-next-btn"
+                  onClick={handleNextStep}
+                >
+                  Continue →
+                </button>
+              ) : currentStep === 4 ? (
+                <button
+                  type="submit"
+                  className="rsvp-btn rsvp-btn-accent rsvp-submit-btn"
+                  disabled={submitting}
+                  id="rsvp-submit"
+                  style={{ flex: 2, margin: 0 }}
+                >
+                  {submitting ? 'Sending…' : (isEditMode ? '✅ Update RSVP' : '✉️ Submit RSVP')}
+                </button>
+              ) : null}
             </div>
-          )}
-
-          {/* Dietary */}
-          {isAttending && (
-            <div className="rsvp-field">
-              <label className="rsvp-label" htmlFor="rsvp-dietary">Allergies or dietary requirements</label>
-              <textarea
-                id="rsvp-dietary"
-                className="rsvp-textarea"
-                placeholder="Any food allergies or dietary needs we should know about?"
-                value={dietary}
-                onChange={e => setDietary(e.target.value)}
-                rows={3}
-              />
-            </div>
-          )}
-
-          {/* Comments */}
-          <div className="rsvp-field">
-            <label className="rsvp-label" htmlFor="rsvp-comments">Comments / Notes</label>
-            <textarea
-              id="rsvp-comments"
-              className="rsvp-textarea"
-              placeholder={isAttending ? "Any other notes or comments for the host?" : "Leave a message for the host..."}
-              value={comments}
-              onChange={e => setComments(e.target.value)}
-              rows={3}
-            />
-          </div>
-
-          {error && <p className="rsvp-error">{error}</p>}
-
-          <button
-            type="submit"
-            className="rsvp-btn rsvp-btn-accent rsvp-submit-btn"
-            disabled={submitting}
-            id="rsvp-submit"
-          >
-            {submitting ? 'Sending…' : (isEditMode ? '✅ Update RSVP' : '✉️ Submit RSVP')}
-          </button>
-        </form>
+          </form>
         )}
 
         <div className="rsvp-footer">
-          <p>Powered by <a href="/" className="rsvp-footer-link">KidsBash</a></p>
+          <p>Powered by <a href="/" className="rsvp-footer-link">Tiny Party <span style={{ fontSize: '0.8em' }}>Portal</span></a></p>
         </div>
       </div>
+  );
+
+  if (embedded) return containerContent;
+
+  return (
+    <ThemedPage themeKey={themeKey} themeColor={event.themeColor} themeMode={event.themeMode}>
+      {containerContent}
     </ThemedPage>
   );
 }

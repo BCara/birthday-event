@@ -1,0 +1,268 @@
+/* PrintableInvitePage.css */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Inter:wght@400;500;600&display=swap');
+
+.printable-invite-root {
+  min-height: 100vh;
+  background-color: #e5e5e5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #111;
+}
+
+/* Base card sizing to simulate paper aspect ratios on screen */
+.printable-invite-card {
+  background: #fff;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* A5 size simulation */
+.size-a5 .printable-invite-card {
+  width: 148mm;
+  height: 210mm;
+  padding: 10mm; /* Outer margin for the inner border */
+}
+
+/* A4 size simulation */
+.size-a4 .printable-invite-card {
+  width: 210mm;
+  height: 297mm;
+  padding: 15mm;
+}
+
+/* Inner content wrapper */
+.printable-card-inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 8mm;
+  box-sizing: border-box;
+  text-align: center;
+  position: relative;
+}
+
+/* If background is themed, adjust text colors for better contrast */
+.bg-theme .printable-title {
+  color: var(--t-accent);
+}
+
+.bg-theme .printable-badge,
+.bg-theme .printable-subtitle,
+.bg-theme .printable-guest-name,
+.bg-theme .printable-detail-row span,
+.bg-theme .printable-description,
+.bg-theme .printable-qr-text strong,
+.bg-theme .printable-qr-text span {
+  color: var(--t-text);
+}
+
+.bg-theme .printable-guest-name {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.bg-theme .printable-detail-row strong {
+  color: var(--t-accent);
+}
+
+.bg-theme .printable-url {
+  color: var(--t-accent);
+}
+
+.bg-theme .printable-qr-wrap {
+  border-color: rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.printable-invite-header {
+  margin-top: 10mm;
+  margin-bottom: 5mm;
+}
+
+.printable-badge {
+  display: inline-block;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #666;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 6px;
+}
+
+.printable-illustration-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 5mm;
+  flex-shrink: 0;
+}
+
+.printable-photo {
+  width: 30mm;
+  height: 30mm;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid #eee;
+}
+
+.printable-illustration-wrap svg {
+  height: 30mm;
+  width: auto;
+}
+
+.printable-hero {
+  margin-bottom: 6mm;
+}
+
+.printable-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0 0 4mm 0;
+  color: var(--kb-purple, #9b5de5);
+}
+
+.size-a4 .printable-title {
+  font-size: 3rem;
+}
+
+.printable-subtitle {
+  font-size: 1.1rem;
+  color: #555;
+  margin: 0;
+  font-style: italic;
+}
+
+.printable-guest-name {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 6mm;
+  color: #333;
+  background: #f9f9f9;
+  display: inline-block;
+  padding: 4px 16px;
+  border-radius: 20px;
+}
+
+.printable-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3mm;
+  margin: 0 auto 6mm auto;
+  max-width: 80%;
+  text-align: center;
+}
+
+.printable-detail-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.printable-detail-row strong {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--kb-mint, #00f5d4);
+  margin-bottom: 2px;
+}
+
+.printable-detail-row span {
+  font-size: 1rem;
+  color: #222;
+  font-weight: 500;
+}
+
+.printable-description {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #444;
+  margin: 0 auto;
+  max-width: 90%;
+  font-style: italic;
+  flex-grow: 1;
+}
+
+.printable-footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
+  padding-bottom: 5mm;
+}
+
+.printable-qr-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border: 1px dashed #ccc;
+  border-radius: 8px;
+}
+
+.printable-qr {
+  width: 25mm;
+  height: 25mm;
+  display: block;
+}
+
+.size-a4 .printable-qr {
+  width: 35mm;
+  height: 35mm;
+}
+
+.printable-qr-text {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.printable-qr-text strong {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #111;
+  margin-bottom: 2px;
+}
+
+.printable-qr-text span {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.printable-url {
+  font-weight: 600;
+  color: var(--kb-purple, #9b5de5);
+  margin-top: 2px;
+}
+
+/* Print Specific Rules */
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .printable-invite-root {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .printable-invite-card {
+    box-shadow: none;
+    /* Reset dimensions to let @page handle it perfectly */
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0;
+  }
+}
