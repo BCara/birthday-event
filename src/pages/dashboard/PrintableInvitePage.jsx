@@ -5,6 +5,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import ThemeIllustration from '../../theme/ThemeIllustration';
 import { getTheme } from '../../theme/themes';
 import { getDevSafeOrigin } from '../../utils/url';
+import html2canvas from 'html2canvas';
 import './PrintableInvitePage.css';
 
 export default function PrintableInvitePage() {
@@ -17,6 +18,7 @@ export default function PrintableInvitePage() {
   
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const cardRef = React.useRef(null);
 
   useEffect(() => {
     async function loadEvent() {
@@ -34,15 +36,26 @@ export default function PrintableInvitePage() {
     loadEvent();
   }, [eventId]);
 
-  useEffect(() => {
-    if (!loading && event) {
-      // Small delay to ensure images/fonts are rendered before printing
-      const timer = setTimeout(() => {
-        window.print();
-      }, 500);
-      return () => clearTimeout(timer);
+  function handlePrint() {
+    window.print();
+  }
+
+  async function handleDownload() {
+    if (!cardRef.current) return;
+    try {
+      const canvas = await html2canvas(cardRef.current, { scale: 2, useCORS: true });
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `${(event.name || 'invitation').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Failed to download image', err);
+      alert('Failed to download image. Try printing to PDF instead.');
     }
-  }, [loading, event]);
+  }
 
   if (loading) {
     return (
@@ -90,7 +103,9 @@ export default function PrintableInvitePage() {
     background: `${patternUrl}, linear-gradient(160deg, var(--t-bg-from) 0%, var(--t-bg-to) 100%)`,
     backgroundAttachment: 'local',
     color: 'var(--t-text)'
-  } : {};
+  } : {
+    ...cssVars,
+  };
 
   return (
     <div className={`printable-invite-root size-${paperSize.toLowerCase()} bg-${bgParam}`}>
@@ -104,14 +119,27 @@ export default function PrintableInvitePage() {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
+          .printable-actions {
+            display: none !important;
+          }
         }
       `}</style>
+
+      <div className="printable-actions">
+        <button onClick={handlePrint} className="printable-btn">🖨️ Print</button>
+        <button onClick={handleDownload} className="printable-btn">⬇️ Download as Image</button>
+      </div>
       
-      <div className="printable-invite-card" style={cardStyle}>
+      <div className="printable-invite-card" style={cardStyle} ref={cardRef}>
         <div className="printable-card-inner">
           
           <div className="printable-invite-header">
-            <span className="printable-badge">You're Invited!</span>
+            <span className="printable-badge">YOU'RE INVITED!</span>
+            {guestName && (
+              <div className="printable-guest-name">
+                For: {guestName}
+              </div>
+            )}
           </div>
 
           <div className="printable-illustration-wrap">
@@ -123,56 +151,55 @@ export default function PrintableInvitePage() {
           </div>
 
           <div className="printable-hero">
-            <h1 className="printable-title">{event.name || 'Birthday Party'}</h1>
+            <h1 className="printable-title-huge">{event.childName || event.name || 'Birthday Party'}</h1>
             {event.childName && (
-              <p className="printable-subtitle">Celebrating {event.childName}'s special day</p>
+              <h2 className="printable-title-sub">{event.name}</h2>
             )}
+            
+            <p className="printable-subtitle">
+              {event.description || 'Join us for a magical celebration!'}
+            </p>
           </div>
 
-          {guestName && (
-            <div className="printable-guest-name">
-              For: {guestName}
+          <div className="printable-details-grid">
+            <div className="pd-row">
+              <span className="pd-icon">📅</span>
+              <div className="pd-sep"></div>
+              <div className="pd-text">{formattedDate}</div>
             </div>
-          )}
+            
+            <div className="pd-row">
+              <span className="pd-icon">🕒</span>
+              <div className="pd-sep"></div>
+              <div className="pd-text">{timeString}</div>
+            </div>
 
-          <div className="printable-details">
-            <div className="printable-detail-row">
-              <strong>When</strong>
-              <span>{formattedDate} • {timeString}</span>
+            <div className="pd-row">
+              <span className="pd-icon">📍</span>
+              <div className="pd-sep"></div>
+              <div className="pd-text">{event.location || 'Location TBD'}</div>
             </div>
-            <div className="printable-detail-row">
-              <strong>Where</strong>
-              <span>{event.location || 'Location TBD'}</span>
-            </div>
-            {(event.hostName || event.hostContact) && (
-              <div className="printable-detail-row">
-                <strong>tinypartyportal.com/{event.slug}</strong>
-                <span>
-                  {event.hostName && event.hostName}
-                  {event.hostName && event.hostContact && ' • '}
-                  {event.hostContact && event.hostContact}
-                </span>
+          </div>
+
+          {event.rsvpEnabled !== false && (
+            <div className="printable-qr-box">
+              <img src={qrCodeUrl} alt="RSVP QR Code" className="printable-qr-img" />
+              <div className="printable-qr-info">
+                <strong>SCAN TO RSVP</strong>
+                {event.rsvpByDate && (
+                  <span className="qr-date">By {new Date(event.rsvpByDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</span>
+                )}
               </div>
-            )}
-          </div>
-
-          {event.description && (
-            <div className="printable-description">
-              <p>{event.description}</p>
             </div>
           )}
 
           <div className="printable-footer">
-            <div className="printable-qr-wrap">
-              <img src={qrCodeUrl} alt="RSVP QR Code" className="printable-qr" />
-              <div className="printable-qr-text">
-                <strong>Scan to RSVP</strong>
-                {event.rsvpByDate && (
-                  <span>by {new Date(event.rsvpByDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                )}
-                <span className="printable-url">{inviteUrl.replace(/^https?:\/\//, '')}</span>
-              </div>
-            </div>
+            <p>
+              {event.hostName && event.hostName}
+              {event.hostName && event.hostContact && ' • '}
+              {event.hostContact && event.hostContact}
+            </p>
+            <p className="printable-footer-url">{inviteUrl.replace(/^https?:\/\//, '')}</p>
           </div>
 
         </div>

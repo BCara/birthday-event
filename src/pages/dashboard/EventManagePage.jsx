@@ -58,6 +58,7 @@ function MiniPreview({
   endTime, 
   rsvpByDate,
   location, 
+  address,
   hostContact,
   hostName,
   photoUrl,
@@ -164,7 +165,10 @@ function MiniPreview({
                   <span className="elp-detail-icon-clean" style={{ fontSize: '1.4rem' }}>📍</span>
                   <div className="elp-detail-content-clean">
                     <div className="elp-detail-label-clean">Location</div>
-                    <div className="elp-detail-value-clean" style={{ fontSize: '0.85rem' }}>{location || 'Party Location'}</div>
+                    <div className="elp-detail-value-clean" style={{ fontSize: '0.85rem' }}>
+                      <div style={{ fontWeight: 700 }}>{location || 'Party Location'}</div>
+                      {address && <div style={{ opacity: 0.8, marginTop: '2px' }}>{address}</div>}
+                    </div>
                   </div>
                 </div>
                 {(hostName || hostContact) && (
@@ -248,6 +252,7 @@ export default function EventManagePage() {
   const [generalInfo, setGeneralInfo] = useState('');
   const [parkingInfo, setParkingInfo] = useState('');
   const [location, setLocation] = useState('');
+  const [address, setAddress] = useState('');
   const [hostContact, setHostContact] = useState('');
   const [hostName, setHostName] = useState('');
   const [rsvpEnabled, setRsvpEnabled] = useState(true);
@@ -289,6 +294,7 @@ export default function EventManagePage() {
       setEndTime(data.endTime ?? '');
       setRsvpByDate(data.rsvpByDate ?? '');
       setLocation(data.location ?? '');
+      setAddress(data.address ?? '');
       setDescription(data.description ?? '');
       setSchedule(data.schedule ?? '');
       setScheduleItems(data.scheduleItems ?? []);
@@ -333,6 +339,7 @@ export default function EventManagePage() {
         endTime,
         rsvpByDate,
         location: location.trim(),
+        address: address.trim(),
         description: description.trim(),
         schedule: schedule.trim(),
         scheduleItems,
@@ -536,12 +543,12 @@ export default function EventManagePage() {
 
               <div style={styles.row}>
                 <div className="kb-field" style={{ flex: 1 }}>
-                  <label className="kb-label" htmlFor="em-childName">Child's Name</label>
-                  <input id="em-childName" type="text" className="kb-input" value={childName} onChange={e => setChildName(e.target.value)} placeholder="Robin" />
+                  <label className="kb-label" htmlFor="em-childName">Birthday Star (e.g. Robin's)</label>
+                  <input id="em-childName" type="text" className="kb-input" value={childName} onChange={e => setChildName(e.target.value)} placeholder="Robin's" />
                 </div>
                 <div className="kb-field" style={{ flex: 1 }}>
-                  <label className="kb-label" htmlFor="em-name">Party Name</label>
-                  <input id="em-name" type="text" className="kb-input" value={name} onChange={e => setName(e.target.value)} required placeholder="Robins 3rd Birthday" />
+                  <label className="kb-label" htmlFor="em-name">Subtitle / Occasion</label>
+                  <input id="em-name" type="text" className="kb-input" value={name} onChange={e => setName(e.target.value)} required placeholder="3rd Birthday" />
                 </div>
               </div>
               <div style={styles.row}>
@@ -646,11 +653,18 @@ export default function EventManagePage() {
 
             <div className="kb-card" style={{ ...styles.card, overflow: 'visible' }}>
               <h3 style={styles.cardTitle}><span>📍</span> Event Location</h3>
-              <div style={{display: 'flex', gap: 16, alignItems: 'flex-end'}}>
-                <div className="kb-field" style={{ flex: 1, marginBottom: 0 }}>
-                  <LocationInput id="em-location" value={location} onChange={setLocation} placeholder="Myuna Farm" />
+              <div style={{display: 'flex', gap: 16, alignItems: 'flex-start'}}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div className="kb-field" style={{ marginBottom: 0 }}>
+                    <label className="kb-label" htmlFor="em-location">Event/Venue Name</label>
+                    <input id="em-location" type="text" className="kb-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. SuperZu Playcentre" />
+                  </div>
+                  <div className="kb-field" style={{ marginBottom: 0 }}>
+                    <label className="kb-label" htmlFor="em-address">Address</label>
+                    <LocationInput id="em-address" value={address} onChange={setAddress} placeholder="Search or enter address..." />
+                  </div>
                 </div>
-                <img src="/images/park_trees_icon_1779434614720.png" alt="Trees" style={{height: 68}} />
+                <img src="/images/park_trees_icon_1779434614720.png" alt="Trees" style={{height: 68, marginTop: 24}} />
               </div>
             </div>
 
@@ -887,6 +901,7 @@ export default function EventManagePage() {
                   endTime={endTime} 
                   rsvpByDate={rsvpByDate}
                   location={location}
+                  address={address}
                   hostContact={hostContact}
                   hostName={hostName}
                   photoUrl={event?.photoUrl}
@@ -913,7 +928,7 @@ export default function EventManagePage() {
                       className="kb-select"
                       value={printSize}
                       onChange={(e) => setPrintSize(e.target.value)}
-                      style={{ fontSize: 13, padding: '8px 12px', width: 'auto', marginBottom: 0 }}
+                      style={{ fontSize: 13, padding: '8px 32px 8px 12px', width: 'auto', marginBottom: 0 }}
                     >
                       <option value="A5">A5</option>
                       <option value="A4">A4</option>

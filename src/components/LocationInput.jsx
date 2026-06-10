@@ -1,28 +1,63 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function LocationInput({ id, value, onChange, placeholder, style }) {
   const [suggestions, setSuggestions] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [googleLoaded, setGoogleLoaded] = useState(false);
   const [autocompleteService, setAutocompleteService] = useState(null);
+  const [useGooglePlaces, setUseGooglePlaces] = useState(false);
   
   const wrapperRef = useRef(null);
+  const justSelectedRef = useRef(false);
+
+  // Format helper for Photon API
+  const getPhotonSuggestionDetails = (feature) => {
+    const { properties } = feature;
+    const mainName = properties.name || '';
+    const addressParts = [];
+
+    const streetAddress = [properties.housenumber, properties.street].filter(Boolean).join(' ');
+    if (streetAddress && streetAddress !== mainName) {
+      addressParts.push(streetAddress);
+    }
+
+    const city = properties.city || properties.town || properties.suburb || properties.village;
+    if (city && city !== mainName) {
+      addressParts.push(city);
+    }
+
+    if (properties.state && properties.state !== mainName) {
+      addressParts.push(properties.state);
+    }
+
+    if (properties.country && properties.country !== mainName) {
+      addressParts.push(properties.country);
+    }
+
+    return {
+      mainName,
+      secondaryText: addressParts.join(', '),
+      fullName: [mainName, ...addressParts].filter(Boolean).join(', ')
+    };
+  };
 
   // Load Google Maps Script dynamically if not present
   useEffect(() => {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      setUseGooglePlaces(false);
+      return;
+    }
+
+    setUseGooglePlaces(true);
     const existingScript = document.getElementById('google-maps-script');
     if (existingScript || window.google) {
       setGoogleLoaded(true);
       if (window.google?.maps?.places) {
         setAutocompleteService(new window.google.maps.places.AutocompleteService());
       }
-      return;
-    }
-    
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    if (!apiKey) {
-      console.warn("LocationInput: VITE_GOOGLE_MAPS_API_KEY is missing in .env. Search will be disabled.");
       return;
     }
 
@@ -43,27 +78,74 @@ export default function LocationInput({ id, value, onChange, placeholder, style 
 
   // Fetch predictions when value changes
   useEffect(() => {
-    if (!autocompleteService || !value || value.trim().length < 2) {
+    if (!value || value.trim().length < 2) {
       setSuggestions([]);
       return;
     }
 
-    // Debounce the fetch slightly
-    const timer = setTimeout(() => {
-      autocompleteService.getPlacePredictions(
-        { input: value },
-        (predictions, status) => {
-          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-            setSuggestions(predictions);
+    if (justSelectedRef.current) {
+      justSelectedRef.current = false;
+      return;
+    }
+
+    // Google Maps API Path
+    if (useGooglePlaces) {
+      if (!autocompleteService) return;
+      setIsLoading(true);
+      const timer = setTimeout(() => {
+        autocompleteService.getPlacePredictions(
+          { input: value },
+          (predictions, status) => {
+            setIsLoading(false);
+            if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+              setSuggestions(predictions.map(p => ({
+                id: p.place_id,
+                mainName: p.structured_formatting.main_text,
+                secondaryText: p.structured_formatting.secondary_text,
+                fullName: p.description,
+                source: 'google'
+              })));
+            } else {
+              setSuggestions([]);
+            }
+          }
+        );
+      }, 300);
+      return () => clearTimeout(timer);
+    } 
+    // Photon API Fallback Path
+    else {
+      setIsLoading(true);
+      const timer = setTimeout(async () => {
+        try {
+          const response = await fetch(
+            `https://photon.komoot.io/api/?q=${encodeURIComponent(value)}&limit=5`
+          );
+          if (!response.ok) throw new Error('API request failed');
+          const data = await response.json();
+          if (data && data.features) {
+            setSuggestions(data.features.map(f => {
+              const details = getPhotonSuggestionDetails(f);
+              return {
+                id: f.properties?.osm_id || Math.random().toString(),
+                mainName: details.mainName,
+                secondaryText: details.secondaryText,
+                fullName: details.fullName,
+                source: 'photon'
+              };
+            }));
           } else {
             setSuggestions([]);
           }
+        } catch (err) {
+          console.error('Error fetching location suggestions:', err);
+        } finally {
+          setIsLoading(false);
         }
-      );
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [value, autocompleteService]);
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [value, autocompleteService, useGooglePlaces]);
 
   // Click outside handler
   useEffect(() => {
@@ -78,6 +160,7 @@ export default function LocationInput({ id, value, onChange, placeholder, style 
 
   const handleInputChange = (e) => {
     const val = e.target.value;
+    justSelectedRef.current = false;
     onChange(val);
     setIsOpen(true);
     setHighlightedIndex(-1);
@@ -103,8 +186,8 @@ export default function LocationInput({ id, value, onChange, placeholder, style 
   };
 
   const selectSuggestion = (suggestion) => {
-    const fullName = suggestion.description;
-    onChange(fullName);
+    justSelectedRef.current = true;
+    onChange(suggestion.fullName);
     setSuggestions([]);
     setIsOpen(false);
     setHighlightedIndex(-1);
@@ -124,10 +207,10 @@ export default function LocationInput({ id, value, onChange, placeholder, style 
           onFocus={() => setIsOpen(true)}
           autoComplete="off"
           style={styles.input}
-          disabled={!googleLoaded && import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
+          disabled={useGooglePlaces && !googleLoaded}
         />
-        {/* Simple loader if script is still loading */}
-        {!googleLoaded && import.meta.env.VITE_GOOGLE_MAPS_API_KEY && (
+        {isLoading && <div style={styles.loader} />}
+        {useGooglePlaces && !googleLoaded && (
           <div style={styles.loader} />
         )}
       </div>
@@ -135,11 +218,10 @@ export default function LocationInput({ id, value, onChange, placeholder, style 
       {isOpen && suggestions.length > 0 && (
         <div style={styles.dropdown}>
           {suggestions.map((suggestion, index) => {
-            const { main_text, secondary_text } = suggestion.structured_formatting;
             const isHighlighted = index === highlightedIndex;
             return (
               <div
-                key={suggestion.place_id}
+                key={suggestion.id}
                 onClick={() => selectSuggestion(suggestion)}
                 onMouseEnter={() => setHighlightedIndex(index)}
                 style={{
@@ -149,8 +231,8 @@ export default function LocationInput({ id, value, onChange, placeholder, style 
               >
                 <span style={styles.pinIcon}>📍</span>
                 <div style={styles.textContainer}>
-                  <div style={styles.mainName}>{main_text}</div>
-                  {secondary_text && <div style={styles.secondaryText}>{secondary_text}</div>}
+                  <div style={styles.mainName}>{suggestion.mainName}</div>
+                  {suggestion.secondaryText && <div style={styles.secondaryText}>{suggestion.secondaryText}</div>}
                 </div>
               </div>
             );

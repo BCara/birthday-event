@@ -47,25 +47,33 @@ export default function EventLandingPage() {
   const [memoryDismissed, setMemoryDismissed] = useState(false);
   const [hasRsvped, setHasRsvped] = useState(false);
   const [rsvpStatus, setRsvpStatus] = useState(null); // 'yes' | 'no'
-  const calRef = useRef(null);
 
   const [showLookup, setShowLookup] = useState(false);
   const [lookupChildName, setLookupChildName] = useState('');
   const [lookupContact, setLookupContact] = useState('');
   const [lookupError, setLookupError] = useState('');
   const [lookupLoading, setLookupLoading] = useState(false);
+  
+  const [portalCalOpen, setPortalCalOpen] = useState(false);
+  const portalCalRef = useRef(null);
+
+  const [inviteCalOpen, setInviteCalOpen] = useState(false);
+  const inviteCalRef = useRef(null);
+
+  const [rsvpCalOpen, setRsvpCalOpen] = useState(false);
+  const rsvpCalRef = useRef(null);
 
   useEffect(() => {
-    function handleClickOutside(e) {
-      if (calRef.current && !calRef.current.contains(e.target)) {
-        setCalOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside);
+    const handleClickOutside = (e) => {
+      if (portalCalRef.current && !portalCalRef.current.contains(e.target)) setPortalCalOpen(false);
+      if (inviteCalRef.current && !inviteCalRef.current.contains(e.target)) setInviteCalOpen(false);
+      if (rsvpCalRef.current && !rsvpCalRef.current.contains(e.target)) setRsvpCalOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
   }, []);
 
@@ -294,13 +302,13 @@ export default function EventLandingPage() {
 
               {/* Details Block */}
               <div className="elp-p2-header-details">
-                <div className="elp-p2-header-details-row">
+                <div className="elp-p2-header-details-row" style={{ flexWrap: 'wrap', justifyContent: 'center' }}>
                   {formattedDate && (
                     <div className="elp-p2-h-detail">
                       <span className="elp-p2-h-icon">📅</span> {formattedDate}
                     </div>
                   )}
-                  <div className="elp-p2-h-divider">|</div>
+                  {formattedDate && (formattedTime || event.location) && <div className="elp-p2-h-divider">|</div>}
                   {formattedTime && (
                     <div className="elp-p2-h-detail">
                       <span className="elp-p2-h-icon">🕒</span> {formattedTime} – {(() => { 
@@ -311,10 +319,16 @@ export default function EventLandingPage() {
                       })()}
                     </div>
                   )}
+                  {formattedTime && event.location && <div className="elp-p2-h-divider">|</div>}
+                  {event.location && (
+                    <div className="elp-p2-h-detail elp-p2-h-location">
+                      <span className="elp-p2-h-icon">📍</span> {event.location}
+                    </div>
+                  )}
                 </div>
-                {event.location && (
-                  <div className="elp-p2-h-detail elp-p2-h-location">
-                    <span className="elp-p2-h-icon">📍</span> {event.location}
+                {event.hostContact && (
+                  <div className="elp-p2-h-detail" style={{ marginTop: '8px', justifyContent: 'center', width: '100%' }}>
+                    <span className="elp-p2-h-icon">📞</span> Contact Host: {event.hostContact}
                   </div>
                 )}
               </div>
@@ -461,20 +475,20 @@ export default function EventLandingPage() {
                           return `${hr%12||12}:${m} ${hr>=12?'PM':'AM'}`; 
                         })()}
                       </div>
-                      <div className="elp-card-cal-wrap" ref={calRef} data-open={calOpen} style={{ marginTop: '12px' }}>
-                        <button className="elp-p2-btn-maps" onClick={() => setCalOpen(!calOpen)}>
+                      <div className="elp-card-cal-wrap" ref={portalCalRef} data-open={portalCalOpen} style={{ marginTop: '12px' }}>
+                        <button className="elp-p2-btn-maps" onClick={() => setPortalCalOpen(!portalCalOpen)}>
                           📅 ADD TO CALENDAR
                           <svg className="elp-cal-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 4 }}><path d="m6 9 6 6 6-6"/></svg>
                         </button>
-                        {calOpen && calOpts && (
+                        {portalCalOpen && calOpts && (
                           <div className="elp-card-cal-dropdown" style={{ left: 0, transform: 'none' }}>
-                            <a href={getGoogleCalendarUrl(calOpts)} target="_blank" rel="noreferrer" className="elp-card-cal-option" style={{ textDecoration: 'none' }} onClick={() => setCalOpen(false)}>
+                            <a href={getGoogleCalendarUrl(calOpts)} target="_blank" rel="noreferrer" className="elp-card-cal-option" style={{ textDecoration: 'none' }} onClick={() => setPortalCalOpen(false)}>
                               Google Calendar
                             </a>
-                            <button className="elp-card-cal-option" onClick={() => { downloadICS(calOpts); setCalOpen(false); }}>
+                            <button className="elp-card-cal-option" onClick={() => { downloadICS(generateICS(calOpts), `${slug}.ics`); setPortalCalOpen(false); }}>
                               Apple Calendar
                             </button>
-                            <button className="elp-card-cal-option" onClick={() => { downloadICS(calOpts); setCalOpen(false); }}>
+                            <button className="elp-card-cal-option" onClick={() => { downloadICS(generateICS(calOpts), `${slug}.ics`); setPortalCalOpen(false); }}>
                               Outlook
                             </button>
                           </div>
@@ -640,8 +654,8 @@ export default function EventLandingPage() {
 
             {/* 3. Footer */}
             <div className="elp-p2-footer">
-              <div className="elp-p2-footer-msg">
-                💕 We can't wait to celebrate with you! 💕
+              <div className="elp-p2-footer-msg" style={{ whiteSpace: 'pre-wrap' }}>
+                💕 {event.description || "We can't wait to celebrate with you!"} 💕
               </div>
               <p className="elp-p2-powered">Powered by <a href="/">Tiny Party <span style={{ fontSize: '0.8em' }}>Portal</span></a></p>
             </div>
@@ -661,23 +675,32 @@ export default function EventLandingPage() {
                   <span className="elp-invitation-badge">You're Invited!</span>
                 </div>
 
-                {/* Celebration details above illustration */}
-                <div className="elp-hero">
-                  <h1 className="elp-title">{event.name}</h1>
-                  {event.childName && <p className="elp-subtitle">Celebrating {event.childName}'s special day!</p>}
-                </div>
-
                 {/* Photo OR Illustration */}
-                <div className="elp-illustration-container">
+                <div className="elp-illustration-container" style={{ margin: '-8px auto -12px', zIndex: 1, position: 'relative' }}>
                   {event.photoUrl ? (
                     <div className="elp-photo-wrap">
                       <img src={event.photoUrl} alt={event.name} className="elp-photo" />
                     </div>
                   ) : (
-                    <div className="elp-illustration-wrap">
+                    <div className="elp-illustration-wrap" style={{ maxWidth: '240px', margin: '0 auto', transform: 'scale(1.15)' }}>
                       <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
                     </div>
                   )}
+                </div>
+
+                {/* Celebration details above illustration */}
+                <div className="elp-hero" style={{ zIndex: 2, position: 'relative', marginTop: 0, paddingTop: 0 }}>
+                  <h1 className="elp-title">
+                    {event.childName ? (
+                      <>
+                        <span style={{ color: 'var(--t-accent)' }}>{event.childName}{event.childName.toLowerCase().endsWith('s') || event.childName.includes("'") ? '' : "'s"}</span><br />
+                        <span style={{ color: 'var(--t-text)', fontSize: '0.8em', display: 'block', marginTop: '4px' }}>{event.name}</span>
+                      </>
+                    ) : (
+                      <span style={{ color: 'var(--t-accent)' }}>{event.name}</span>
+                    )}
+                  </h1>
+                  <p className="elp-subtitle" style={{ marginTop: '12px' }}>✨ Join us for a magical {event.theme?.replace('kids-', '') || 'unicorn'} celebration! ✨</p>
                 </div>
 
                 <div className="elp-divider">
@@ -687,21 +710,22 @@ export default function EventLandingPage() {
                 </div>
 
                 {/* Centered Details */}
-                <div className="elp-details-clean">
-                  {formattedDate && (
-                    <div className="elp-detail-item">
-                      <span className="elp-detail-icon-clean">📅</span>
-                      <div className="elp-detail-content-clean">
-                        <div className="elp-detail-label-clean">Date</div>
-                        <div className="elp-detail-value-clean">{formattedDate}</div>
+                <div className="elp-details-clean" style={{ gap: '24px' }}>
+                  {(formattedDate || formattedTime) && (
+                    <div className="elp-detail-item elp-detail-datetime" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <div className="elp-detail-content-clean" style={{ textAlign: 'center' }}>
+                        <div className="elp-detail-value-clean">
+                          {formattedDate && <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--t-text)' }}>📅 {formattedDate}</div>}
+                          {formattedTime && <div style={{ fontWeight: 600, fontSize: '1.05rem', opacity: 0.9, marginTop: '4px', color: 'var(--t-text)' }}>🕛 {formattedTime}{event.endTime && ` – ${(() => { const [h,m] = event.endTime.split(':'); const hr=parseInt(h,10); return `${hr%12||12}:${m} ${hr>=12?'PM':'AM'}`; })()}`}</div>}
+                        </div>
                       </div>
                       {event.date && (
-                        <div className="elp-card-cal-wrap" ref={calRef} data-open={calOpen}>
+                        <div className="elp-card-cal-wrap" ref={inviteCalRef} data-open={inviteCalOpen} style={{ marginTop: '8px' }}>
                           <button 
                             className="elp-card-cal-btn" 
                             onClick={(e) => {
                               e.stopPropagation();
-                              setCalOpen(v => !v);
+                              setInviteCalOpen(v => !v);
                             }}
                             aria-label="Add to calendar"
                           >
@@ -710,12 +734,12 @@ export default function EventLandingPage() {
                               <path d="M6 9l6 6 6-6"/>
                             </svg>
                           </button>
-                          {calOpen && (
+                          {inviteCalOpen && (
                             <div className="elp-card-cal-dropdown">
-                              <button className="elp-card-cal-option" onClick={() => { window.open(getGoogleCalendarUrl(calOpts), '_blank'); setCalOpen(false); }}>
+                              <button className="elp-card-cal-option" onClick={() => { window.open(getGoogleCalendarUrl(calOpts), '_blank'); setInviteCalOpen(false); }}>
                                 Google Calendar
                               </button>
-                              <button className="elp-card-cal-option" onClick={() => { downloadICS(generateICS(calOpts), `${slug}.ics`); setCalOpen(false); }}>
+                              <button className="elp-card-cal-option" onClick={() => { downloadICS(generateICS(calOpts), `${slug}.ics`); setInviteCalOpen(false); }}>
                                 Apple / Outlook
                               </button>
                             </div>
@@ -724,48 +748,62 @@ export default function EventLandingPage() {
                       )}
                     </div>
                   )}
-                  {formattedTime && (
-                    <div className="elp-detail-item">
-                      <span className="elp-detail-icon-clean">🕐</span>
-                      <div className="elp-detail-content-clean">
-                        <div className="elp-detail-label-clean">Time</div>
-                        <div className="elp-detail-value-clean">
-                          {formattedTime}
-                          {event.endTime && ` – ${(() => { const [h,m] = event.endTime.split(':'); const hr=parseInt(h,10); return `${hr%12||12}:${m} ${hr>=12?'PM':'AM'}`; })()}`}
-                        </div>
-                      </div>
-                    </div>
-                  )}
                   {event.location && (
-                    <div className="elp-detail-item">
-                      <span className="elp-detail-icon-clean">📍</span>
-                      <div className="elp-detail-content-clean">
-                        <div className="elp-detail-label-clean">Location</div>
-                        <div className="elp-detail-value-clean">{event.location}</div>
-                      </div>
-                    </div>
-                  )}
-                  {event.hostContact && (
-                    <div className="elp-detail-item">
-                      <span className="elp-detail-icon-clean">📞</span>
-                      <div className="elp-detail-content-clean">
-                        <div className="elp-detail-label-clean">Contact</div>
-                        <div className="elp-detail-value-clean">{event.hostContact}</div>
+                    <div className="elp-detail-item elp-detail-location" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address || event.location)}`, '_blank')} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <div className="elp-detail-content-clean" style={{ textAlign: 'center' }}>
+                        <div className="elp-detail-value-clean">
+                          <div style={{ fontWeight: 700, fontSize: '1.05rem', textDecoration: 'underline', textUnderlineOffset: '2px', color: 'var(--t-text)' }}>📍 {event.location}</div>
+                          {event.address && <div style={{ fontSize: '0.95rem', opacity: 0.8, marginTop: '4px', color: 'var(--t-text)' }}>{event.address.split(',').pop().trim()}</div>}
+                        </div>
                       </div>
                     </div>
                   )}
                 </div>
 
+                {/* Countdown Layout (Moved Here) */}
+                {!isPostEvent && event.date && (
+                  <div className="elp-countdown-wrap" style={{ textAlign: 'center', margin: '24px 0 16px', zIndex: 3, position: 'relative' }}>
+                    <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--t-text-light)', marginBottom: '8px', fontWeight: 800 }}>🎉 Party starts in</div>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                      {(() => {
+                        const now = new Date();
+                        const eventDate = new Date(`${event.date}T${event.time || '12:00'}:00`);
+                        const diff = eventDate - now;
+                        if (diff <= 0) return <div>It's party time!</div>;
+                        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                        const m = Math.floor((diff / 1000 / 60) % 60);
+                        return (
+                          <>
+                            <div className="elp-countdown-item" style={{ background: '#fff', borderRadius: '12px', padding: '8px', minWidth: '55px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid color-mix(in srgb, var(--t-accent) 20%, transparent)' }}>
+                              <strong style={{ display: 'block', fontSize: '1.3rem', color: 'var(--t-accent)', fontFamily: 'var(--t-font-heading)', lineHeight: 1 }}>{d.toString().padStart(2, '0')}</strong>
+                              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--t-text-light)', marginTop: '2px', display: 'block' }}>DAYS</span>
+                            </div>
+                            <div className="elp-countdown-item" style={{ background: '#fff', borderRadius: '12px', padding: '8px', minWidth: '55px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid color-mix(in srgb, var(--t-accent) 20%, transparent)' }}>
+                              <strong style={{ display: 'block', fontSize: '1.3rem', color: 'var(--t-accent)', fontFamily: 'var(--t-font-heading)', lineHeight: 1 }}>{h.toString().padStart(2, '0')}</strong>
+                              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--t-text-light)', marginTop: '2px', display: 'block' }}>HOURS</span>
+                            </div>
+                            <div className="elp-countdown-item" style={{ background: '#fff', borderRadius: '12px', padding: '8px', minWidth: '55px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid color-mix(in srgb, var(--t-accent) 20%, transparent)' }}>
+                              <strong style={{ display: 'block', fontSize: '1.3rem', color: 'var(--t-accent)', fontFamily: 'var(--t-font-heading)', lineHeight: 1 }}>{m.toString().padStart(2, '0')}</strong>
+                              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--t-text-light)', marginTop: '2px', display: 'block' }}>MINS</span>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
+
                 {/* RSVP By Deadline */}
                 {formattedRsvpBy && (
                   <div className="elp-rsvp-deadline">
                     <span className="elp-deadline-text">Please RSVP by {formattedRsvpBy}</span>
-                    <div className="elp-deadline-reminder" ref={calRef} data-open={calOpen}>
+                    <div className="elp-deadline-reminder" ref={rsvpCalRef} data-open={rsvpCalOpen}>
                       <button 
                         className="elp-deadline-btn"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setCalOpen(v => !v);
+                          setRsvpCalOpen(v => !v);
                         }}
                       >
                         ⏰ Set Reminder
@@ -773,12 +811,12 @@ export default function EventLandingPage() {
                           <path d="M6 9l6 6 6-6"/>
                         </svg>
                       </button>
-                      {calOpen && (
+                      {rsvpCalOpen && (
                         <div className="elp-card-cal-dropdown" style={{ bottom: '100%', top: 'auto', marginBottom: '8px' }}>
-                          <button className="elp-card-cal-option" onClick={() => { window.open(getGoogleCalendarUrl(rsvpCalOpts), '_blank'); setCalOpen(false); }}>
+                          <button className="elp-card-cal-option" onClick={() => { window.open(getGoogleCalendarUrl(rsvpCalOpts), '_blank'); setRsvpCalOpen(false); }}>
                             Google Calendar
                           </button>
-                          <button className="elp-card-cal-option" onClick={() => { downloadICS(generateICS(rsvpCalOpts), `rsvp-${slug}.ics`); setCalOpen(false); }}>
+                          <button className="elp-card-cal-option" onClick={() => { downloadICS(generateICS(rsvpCalOpts), `rsvp-${slug}.ics`); setRsvpCalOpen(false); }}>
                             Apple / Outlook
                           </button>
                         </div>
@@ -787,26 +825,53 @@ export default function EventLandingPage() {
                   </div>
                 )}
 
-                {/* Message Description */}
-                {event.description && (
-                  <>
-                    <div className="elp-divider">
-                      <span className="elp-divider-dot"></span>
-                      <span className="elp-divider-line"></span>
-                      <span className="elp-divider-dot"></span>
-                    </div>
-                    <div className="elp-desc-clean">
-                      <p>{event.description}</p>
-                    </div>
-                  </>
-                )}
-
                 {/* RSVP Now inside the card */}
                 {event.rsvpEnabled && (
                   <div className="elp-card-rsvp-wrap">
-                    <Link to={`/${slug}/rsvp`} className="elp-btn elp-btn-accent elp-btn-lg elp-card-rsvp-btn" id="rsvp-btn">
-                      ✉️ RSVP Now
+                    {event.description && (
+                      <div className="elp-personal-note" style={{ textAlign: 'center', marginBottom: '20px', fontFamily: 'var(--t-font-heading)', fontSize: '1.25rem', color: 'var(--t-accent)', lineHeight: 1.3, whiteSpace: 'pre-wrap' }}>
+                        {event.description}
+                      </div>
+                    )}
+
+                    <Link to={`/${slug}/rsvp`} className="elp-btn elp-btn-accent elp-btn-lg elp-card-rsvp-btn" id="rsvp-btn" style={{ borderRadius: '50px', fontSize: '1.3rem', padding: '20px 24px', boxShadow: '0 12px 32px color-mix(in srgb, var(--t-accent) 40%, transparent)', width: '100%', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '24px' }}>
+                      🦄 RSVP NOW
                     </Link>
+
+                    {/* Contact (Moved Here) */}
+                    {event.hostContact && (
+                      <div className="elp-detail-item elp-detail-contact" style={{ margin: '0 auto', textAlign: 'center', padding: '16px', background: 'color-mix(in srgb, var(--t-accent) 5%, transparent)', borderRadius: '16px' }}>
+                        <div className="elp-detail-content-clean">
+                          <div className="elp-detail-label-clean" style={{ fontSize: '0.9rem', marginBottom: '12px', color: 'var(--t-text)', fontWeight: 600, textTransform: 'none', letterSpacing: 'normal' }}>Questions?</div>
+                          <div className="elp-detail-value-clean">
+                            {(() => {
+                              const contact = event.hostContact;
+                              if (!contact) return null;
+                              const isEmail = contact.includes('@');
+                              const phoneDigits = contact.replace(/\D/g, '');
+                              let href = '';
+                              if (isEmail) {
+                                href = `mailto:${contact.trim()}`;
+                              } else if (phoneDigits.length >= 8) {
+                                href = `sms:${phoneDigits}`;
+                              }
+                              
+                              if (href) {
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>📞 {event.hostName ? `${event.hostName} – ` : ''}{contact}</span>
+                                    <a href={href} className="elp-btn elp-btn-accent" style={{ textDecoration: 'none', borderRadius: '50px', padding: '10px 24px', fontSize: '1rem', background: '#fff', color: 'var(--t-accent)', border: '2px solid var(--t-accent)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginTop: '4px' }}>
+                                      💬 Contact {event.hostName || 'Cara'}
+                                    </a>
+                                  </div>
+                                );
+                              }
+                              return <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>📞 {event.hostName ? `${event.hostName} – ` : ''}{contact}</span>;
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="elp-lookup-toggle-wrap">
                       <button 

@@ -11,14 +11,10 @@ export default function MainLayout() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('kb-theme') || 'light';
-  });
-
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('kb-theme', theme);
-  }, [theme]);
+    document.documentElement.setAttribute('data-theme', 'light');
+    localStorage.setItem('kb-theme', 'light');
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -41,13 +37,6 @@ export default function MainLayout() {
           </Link>
 
           <nav className={`ml-nav ${menuOpen ? 'ml-nav-open' : ''}`} aria-label="Main navigation">
-            <button 
-              className="ml-theme-toggle" 
-              onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
-              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-            >
-              {theme === 'light' ? '🌙' : '☀️'}
-            </button>
             {user ? (
               <>
                 <NavLink to="/dashboard" className={({ isActive }) => `ml-nav-link ${isActive ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>My Events</NavLink>

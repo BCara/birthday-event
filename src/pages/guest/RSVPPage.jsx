@@ -51,6 +51,9 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
   const [dietary, setDietary] = useState('');
   const [comments, setComments] = useState('');
 
+  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [showPhoneInput, setShowPhoneInput] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -133,6 +136,8 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
             setParentName(data.parentName ?? '');
             setEmail(data.email ?? '');
             setPhone(data.phone ?? '');
+            if (data.email) setShowEmailInput(true);
+            if (data.phone) setShowPhoneInput(true);
             setChildName(data.childName ?? '');
             setChildAge(data.childAge ?? '');
             setAdultsCount(data.adultsCount ?? 1);
@@ -197,6 +202,8 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
                   setParentName(data.parentName ?? '');
                   setEmail(data.email ?? '');
                   setPhone(data.phone ?? '');
+                  if (data.email) setShowEmailInput(true);
+                  if (data.phone) setShowPhoneInput(true);
                   setChildName(data.childName ?? '');
                   setChildAge(data.childAge ?? '');
                   setAdultsCount(data.adultsCount ?? 1);
@@ -281,6 +288,8 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
         setParentName(foundRsvp.parentName ?? '');
         setEmail(foundRsvp.email ?? '');
         setPhone(foundRsvp.phone ?? '');
+        if (foundRsvp.email) setShowEmailInput(true);
+        if (foundRsvp.phone) setShowPhoneInput(true);
         setChildName(foundRsvp.childName ?? '');
         setChildAge(foundRsvp.childAge ?? '');
         setAdultsCount(foundRsvp.adultsCount ?? 1);
@@ -490,14 +499,28 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
     const savedStatus = localStorage.getItem('rsvp_status_' + event.id);
     const isNeedsApproval = savedStatus === 'needs_approval';
 
+    const childNameStr = event?.childName ? event.childName.trim() : '';
+    let occasionText = event?.name || 'the event';
+    if (childNameStr) {
+      if (childNameStr.endsWith("'s") || childNameStr.endsWith("'")) {
+        occasionText = `${childNameStr} ${event?.name}`;
+      } else if (childNameStr.toLowerCase().endsWith('s')) {
+        occasionText = `${childNameStr}' ${event?.name}`;
+      } else {
+        occasionText = `${childNameStr}'s ${event?.name}`;
+      }
+    }
+
     const successCard = (
       <div className="rsvp-center" style={embedded ? { minHeight: 'auto', padding: '16px 0' } : {}}>
         <div className="rsvp-card rsvp-success-card">
           <div style={{ width: '100%', maxWidth: '120px', margin: '0 auto 16px' }}>
             <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
           </div>
-          <div className="rsvp-success-emoji" style={{ marginTop: '-40px', position: 'relative', zIndex: 1 }}>{isNeedsApproval ? '⏳' : '🎉'}</div>
-          <h1 className="rsvp-success-title">{isNeedsApproval ? 'Request Submitted' : "You're all set!"}</h1>
+          {isNeedsApproval && (
+            <div className="rsvp-success-emoji" style={{ marginTop: '-40px', position: 'relative', zIndex: 1 }}>⏳</div>
+          )}
+          <h1 className="rsvp-success-title">{isNeedsApproval ? 'Request Submitted' : `You're all set for ${occasionText}!`}</h1>
           <p className="rsvp-success-msg">
             {isNeedsApproval
               ? "Your RSVP has been submitted and is pending the host's approval. We'll let you know once it's confirmed!"
@@ -510,7 +533,7 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
             <div className="rsvp-success-tip">
               <span className="rsvp-success-tip-icon">📌</span>
               <span className="rsvp-success-tip-text">
-                <strong>Save this link!</strong> Return to this page on the day of the party for directions, time, and to leave a message for the birthday star.
+                <strong>Head to the Event Portal!</strong> Bookmark the <Link to={`/${slug}/portal`} style={{color: 'inherit', textDecoration: 'underline'}}>portal link</Link> for directions, time, and to leave a message for the birthday star.
               </span>
             </div>
           )}
@@ -896,33 +919,85 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
                   />
                 </div>
 
-                <div className="rsvp-row">
-                  <div className="rsvp-field" style={{ flex: 1 }}>
-                    <label className="rsvp-label" htmlFor="rsvp-email">Email Address</label>
-                    <input
-                      id="rsvp-email"
-                      className="rsvp-input"
-                      type="email"
-                      placeholder="e.g. sarah@example.com"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                    />
+                {!showEmailInput && !showPhoneInput ? (
+                  <div className="rsvp-field">
+                    <label className="rsvp-label">Contact Method *</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        type="button" 
+                        className="rsvp-btn" 
+                        style={{ flex: 1, background: 'var(--t-surface)', border: '2px solid var(--t-input-border)', color: 'var(--t-text)' }}
+                        onClick={() => setShowEmailInput(true)}
+                      >
+                        ✉️ Email
+                      </button>
+                      <button 
+                        type="button" 
+                        className="rsvp-btn" 
+                        style={{ flex: 1, background: 'var(--t-surface)', border: '2px solid var(--t-input-border)', color: 'var(--t-text)' }}
+                        onClick={() => setShowPhoneInput(true)}
+                      >
+                        📱 Phone
+                      </button>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--t-text-light)', marginTop: '8px', marginBottom: '16px' }}>
+                      Please select how you'd like us to contact you.
+                    </p>
                   </div>
-                  <div className="rsvp-field" style={{ flex: 1 }}>
-                    <label className="rsvp-label" htmlFor="rsvp-phone">Phone Number</label>
-                    <input
-                      id="rsvp-phone"
-                      className="rsvp-input"
-                      type="tel"
-                      placeholder="e.g. 0400 000 000"
-                      value={phone}
-                      onChange={e => setPhone(e.target.value)}
-                    />
+                ) : (
+                  <div className="rsvp-row">
+                    {showEmailInput && (
+                      <div className="rsvp-field" style={{ flex: 1, position: 'relative' }}>
+                        <label className="rsvp-label" htmlFor="rsvp-email">Email Address</label>
+                        {!showPhoneInput && (
+                          <button 
+                            type="button" 
+                            onClick={() => { setShowEmailInput(false); setShowPhoneInput(true); setEmail(''); }}
+                            style={{ position: 'absolute', right: 0, top: 0, background: 'none', border: 'none', fontSize: '0.8rem', color: 'var(--t-accent)', cursor: 'pointer', textDecoration: 'underline' }}
+                          >
+                            Use phone instead
+                          </button>
+                        )}
+                        <input
+                          id="rsvp-email"
+                          className="rsvp-input"
+                          type="email"
+                          placeholder="e.g. sarah@example.com"
+                          value={email}
+                          onChange={e => setEmail(e.target.value)}
+                        />
+                      </div>
+                    )}
+                    {showPhoneInput && (
+                      <div className="rsvp-field" style={{ flex: 1, position: 'relative' }}>
+                        <label className="rsvp-label" htmlFor="rsvp-phone">Phone Number</label>
+                        {!showEmailInput && (
+                          <button 
+                            type="button" 
+                            onClick={() => { setShowPhoneInput(false); setShowEmailInput(true); setPhone(''); }}
+                            style={{ position: 'absolute', right: 0, top: 0, background: 'none', border: 'none', fontSize: '0.8rem', color: 'var(--t-accent)', cursor: 'pointer', textDecoration: 'underline' }}
+                          >
+                            Use email instead
+                          </button>
+                        )}
+                        <input
+                          id="rsvp-phone"
+                          className="rsvp-input"
+                          type="tel"
+                          placeholder="e.g. 0400 000 000"
+                          value={phone}
+                          onChange={e => setPhone(e.target.value)}
+                        />
+                      </div>
+                    )}
                   </div>
-                </div>
-                <p style={{ fontSize: '0.8rem', color: 'var(--t-text-light)', marginTop: '-8px', marginBottom: '16px' }}>
-                  * Please provide at least one contact method.
-                </p>
+                )}
+                
+                {(showEmailInput || showPhoneInput) && (
+                  <p style={{ fontSize: '0.8rem', color: 'var(--t-text-light)', marginTop: '-8px', marginBottom: '16px' }}>
+                    * We'll use this to send you any updates about the party.
+                  </p>
+                )}
               </div>
             )}
 

@@ -9,22 +9,7 @@ export default function ThemedPage({ themeKey, themeColor, themeMode = 'system',
   const theme = getTheme(themeKey, themeColor);
 
   // Determine active mode (light/dark)
-  const [activeMode, setActiveMode] = React.useState(() => {
-    if (themeMode !== 'system') return themeMode;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
-
-  React.useEffect(() => {
-    if (themeMode !== 'system') {
-      setActiveMode(themeMode);
-      return;
-    }
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
-    const listener = (e) => setActiveMode(e.matches ? 'dark' : 'light');
-    setActiveMode(media.matches ? 'dark' : 'light');
-    media.addEventListener('change', listener);
-    return () => media.removeEventListener('change', listener);
-  }, [themeMode]);
+  const activeMode = 'light';
 
   // Inject Google Fonts for heading/body
   useEffect(() => {

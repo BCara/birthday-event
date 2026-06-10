@@ -69,6 +69,7 @@ export default function CreateEventPage() {
   const [time, setTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [location, setLocation] = useState('');
+  const [address, setAddress] = useState('');
   const [hostContact, setHostContact] = useState('');
   const [hostName, setHostName] = useState('');
   const [description, setDescription] = useState('');
@@ -126,6 +127,7 @@ export default function CreateEventPage() {
         endTime,
         rsvpByDate,
         location: location.trim(),
+        address: address.trim(),
         hostName: hostName.trim(),
         hostContact: hostContact.trim(),
         description: description.trim(),
@@ -314,14 +316,27 @@ export default function CreateEventPage() {
 
             {/* Location */}
             <SectionTitle>Location</SectionTitle>
-            <div className="kb-field">
-              <label className="kb-label" htmlFor="ce-location">Where is it?</label>
-              <LocationInput
-                id="ce-location"
-                value={location}
-                onChange={setLocation}
-                placeholder="Search or enter address..."
-              />
+            <div style={styles.row}>
+              <div className="kb-field" style={{ flex: 1, marginBottom: 0 }}>
+                <label className="kb-label" htmlFor="ce-location">Event/Venue Name</label>
+                <input
+                  id="ce-location"
+                  type="text"
+                  className="kb-input"
+                  value={location}
+                  onChange={e => setLocation(e.target.value)}
+                  placeholder="e.g. SuperZu Playcentre"
+                />
+              </div>
+              <div className="kb-field" style={{ flex: 1, marginBottom: 0 }}>
+                <label className="kb-label" htmlFor="ce-address">Address</label>
+                <LocationInput
+                  id="ce-address"
+                  value={address}
+                  onChange={setAddress}
+                  placeholder="Search or enter address..."
+                />
+              </div>
             </div>
 
             {/* Additional Sections */}
@@ -481,7 +496,11 @@ export default function CreateEventPage() {
                    )}
                    {location && (
                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                       <span>📍</span> {location}
+                       <span>📍</span>
+                       <div>
+                         <div style={{ fontWeight: 'bold' }}>{location}</div>
+                         {address && <div style={{ opacity: 0.8, fontSize: '0.9em' }}>{address}</div>}
+                       </div>
                      </div>
                    )}
                    {(hostName || hostContact) && (

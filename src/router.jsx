@@ -68,12 +68,19 @@ const router = createBrowserRouter([
           { path: '/dashboard/billing',                  element: <Lazy><BillingPage /></Lazy> },
           { path: '/dashboard/create',                   element: <Lazy><CreateEventPage /></Lazy> },
           { path: '/dashboard/event/:eventId',           element: <Lazy><EventManagePage /></Lazy> },
-          { path: '/dashboard/event/:eventId/print',     element: <Lazy><PrintableInvitePage /></Lazy> },
           { path: '/dashboard/event/:eventId/rsvps',     element: <Lazy><GuestListPage /></Lazy> },
         ],
       },
 
       { path: '*', element: <Lazy><NotFound /></Lazy> },
+    ],
+  },
+
+  // ── Print layouts (auth-gated, no nav) ──
+  {
+    element: <RequireAuth />,
+    children: [
+      { path: '/dashboard/event/:eventId/print', element: <Lazy><PrintableInvitePage /></Lazy> },
     ],
   },
 

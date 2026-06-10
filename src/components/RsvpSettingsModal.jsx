@@ -96,6 +96,7 @@ function MiniPreview({
   endTime, 
   rsvpByDate,
   location, 
+  address,
   photoUrl,
   description,
   giftRegistryNote,
@@ -195,7 +196,10 @@ function MiniPreview({
                   <span className="elp-detail-icon-clean" style={{ fontSize: '1.4rem' }}>📍</span>
                   <div className="elp-detail-content-clean">
                     <div className="elp-detail-label-clean">Location</div>
-                    <div className="elp-detail-value-clean" style={{ fontSize: '0.85rem' }}>{location || 'Party Location'}</div>
+                    <div className="elp-detail-value-clean" style={{ fontSize: '0.85rem' }}>
+                      <div style={{ fontWeight: 700 }}>{location || 'Party Location'}</div>
+                      {address && <div style={{ opacity: 0.8, marginTop: '2px' }}>{address}</div>}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -407,6 +411,7 @@ export default function RsvpSettingsModal({ event, onClose, onSave }) {
             endTime={event?.endTime}
             rsvpByDate={rsvpByDate}
             location={event?.location}
+            address={event?.address}
             photoUrl={event?.photoUrl}
             description={event?.description}
             rsvpEnabled={rsvpEnabled}
