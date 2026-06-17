@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tiny Party Portal — SEO &amp; Discoverability Roadmap</title>
+<style>
+  :root {
+    --bg: #fef8f4;
+    --card: #ffffff;
+    --text: #2a2333;
+    --muted: #6b6475;
+    --border: #efe6df;
+    --accent: #ff6b6b;
+    --accent2: #ffb84d;
+    --p1-bg: #fdecec; --p1-bd: #f5b5b5; --p1-tx: #a3261f;
+    --p2-bg: #fff4e5; --p2-bd: #ffd29a; --p2-tx: #9a5a00;
+    --p3-bg: #eef4ff; --p3-bd: #b9d1ff; --p3-tx: #2b54a8;
+    --done-bg: #eef7f0; --done-bd: #b9e2c4; --done-tx: #1f7a3d;
+    --fix: #1f7a3d; --part: #9a5a00; --todo: #6b6475;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161318; --card: #211c26; --text: #efe9f0; --muted: #a59caf; --border: #332b39;
+      --p1-bg:#3a1f1d; --p1-bd:#6e2f2a; --p1-tx:#ff9a90;
+      --p2-bg:#3a2c16; --p2-bd:#6e5320; --p2-tx:#ffc36b;
+      --p3-bg:#1c273e; --p3-bd:#33507f; --p3-tx:#9cc0ff;
+      --done-bg:#1b2e22; --done-bd:#2f5a3d; --done-tx:#8fe0a6;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6; padding: 32px 16px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  header.page {
+    background: linear-gradient(135deg, #ff6b6b, #ffb84d); color: #fff;
+    border-radius: 18px; padding: 28px 32px; margin-bottom: 8px;
+  }
+  header.page h1 { margin: 0 0 6px; font-size: 26px; }
+  header.page p { margin: 0; opacity: .95; font-size: 14px; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 28px;
+    font-size: 12.5px;
+  }
+  .legend span { background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; }
+  .intro { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin: 18px 0 26px; font-size: 14.5px; }
+  .intro p { margin: 8px 0; }
+  section.group { margin-bottom: 34px; }
+  h2.grouph {
+    font-size: 13px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 14px; padding-left: 4px;
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; margin-bottom: 12px;
+  }
+  .card h3 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .card p { margin: 8px 0; font-size: 14.5px; }
+  .card ul, .card ol { margin: 8px 0; padding-left: 20px; font-size: 14.5px; }
+  .card li { margin: 5px 0; }
+  code { background: rgba(125,125,125,.14); padding: 1px 6px; border-radius: 5px; font-size: 13px;
+         font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  pre {
+    background: #1a1320; color: #ffe9e0; border-radius: 10px; padding: 14px 16px;
+    overflow-x: auto; font-size: 13px; font-family: ui-monospace, Menlo, Consolas, monospace; line-height: 1.55;
+  }
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; letter-spacing: .03em; }
+  .badge.p1 { background: var(--p1-bg); border: 1px solid var(--p1-bd); color: var(--p1-tx); }
+  .badge.p2 { background: var(--p2-bg); border: 1px solid var(--p2-bd); color: var(--p2-tx); }
+  .badge.p3 { background: var(--p3-bg); border: 1px solid var(--p3-bd); color: var(--p3-tx); }
+  .badge.done { background: var(--done-bg); border: 1px solid var(--done-bd); color: var(--done-tx); }
+  .effort { font-size: 11.5px; color: var(--muted); margin-left: auto; font-weight: 600; }
+  .who { display: inline-block; font-size: 11px; font-weight: 700; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 8px; }
+  .note { background: var(--p3-bg); border: 1px solid var(--p3-bd); color: var(--p3-tx);
+          border-radius: 10px; padding: 12px 16px; font-size: 14px; margin: 10px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 10px 0; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 30px; }
+  a { color: var(--accent); }
+  .check { color: var(--fix); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page">
+    <h1>🔍 SEO &amp; Discoverability Roadmap</h1>
+    <p>Tiny Party Portal · How to get found by parents planning a party · 13 June 2026</p>
+  </header>
+
+  <div class="legend">
+    <span><strong>P1</strong> = do first / highest impact</span>
+    <span><strong>P2</strong> = strong follow-up</span>
+    <span><strong>P3</strong> = later / ceiling-raiser</span>
+    <span><span class="who">YOU</span> = needs your account or a decision</span>
+  </div>
+
+  <div class="intro">
+    <p>The on-page technical SEO is largely done (see the green section below). The bigger
+    levers for a brand-new product like this are <strong>content</strong> (getting found by
+    people who don't know you exist), <strong>measurement</strong> (so you know what works),
+    and the <strong>referral loop</strong> already baked into every shared invite.</p>
+    <p>This document lists what was shipped, the few items that need <em>your</em> login or a
+    decision, and a growth roadmap with effort/impact for each item.</p>
+  </div>
+
+  <!-- ───────────── DONE ───────────── -->
+  <section class="group">
+    <h2 class="grouph">✅ Shipped in code (live on next deploy)</h2>
+
+    <div class="card">
+      <h3><span class="badge done">DONE</span> Structured data &amp; meta</h3>
+      <ul>
+        <li>JSON-LD <code>Organization</code>, <code>WebSite</code> and <code>SoftwareApplication</code> schema in <code>index.html</code>.</li>
+        <li>Fallback Open Graph + Twitter card tags so links preview correctly before React hydrates.</li>
+        <li><code>lang="en-AU"</code> and <code>theme-color</code>.</li>
+        <li>Per-page titles, descriptions, canonical URLs via the <code>&lt;SEO&gt;</code> component; private guest/dashboard pages set <code>noindex</code>.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3><span class="badge done">DONE</span> Open Graph image</h3>
+      <p>Branded 1200×630 <code>public/og-image.jpg</code> generated — the card shown when a link is shared on WhatsApp, iMessage, Facebook, etc.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="badge done">DONE</span> FAQ section + FAQPage schema</h3>
+      <p>A visible FAQ section on the homepage with matching <code>FAQPage</code> JSON-LD. Can earn an expandable rich result in Google. (Schema mirrors visible content, per Google policy.)</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="badge done">DONE</span> Analytics scaffolding (GA4)</h3>
+      <p>Firebase Analytics wired into <code>src/firebase.js</code> with a safe <code>trackEvent()</code> helper and SPA page-view tracking on every route change. <strong>Dormant until you add the measurement ID</strong> — see P1 below.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="badge done">DONE</span> Referral UTM tags</h3>
+      <p>The "Powered by Tiny Party Portal" links on guest pages now carry <code>utm_source=invite&amp;utm_medium=referral&amp;utm_campaign=powered_by</code>, so analytics can attribute signups that come from shared invites.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="badge done">DONE</span> Performance: font loading</h3>
+      <p>Removed a duplicate render-blocking <code>@import</code> in <code>index.css</code>; trimmed Google Fonts to only the weights actually used (dropped Merriweather italics + weight 900, and Fredoka which themes load on demand). Faster first paint = better Core Web Vitals.</p>
+    </div>
+  </section>
+
+  <!-- ───────────── NEEDS YOU ───────────── -->
+  <section class="group">
+    <h2 class="grouph">🔑 Needs your account or a decision</h2>
+
+    <div class="card">
+      <h3><span class="badge done">DONE</span> Google Search Console verified <span class="who">YOU</span></h3>
+      <p>Verified via the <strong>Domain property</strong> method (DNS record) — covers the whole domain, all subdomains and both protocols. No HTML meta tag needed (the placeholder has been removed from <code>index.html</code>).</p>
+      <p><strong>One remaining step:</strong> in Search Console → <em>Sitemaps</em>, submit <code>https://tinypartyportal.com/sitemap.xml</code> so Google knows which pages to crawl.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="badge p1">P1</span> Add the GA4 measurement ID <span class="who">YOU</span><span class="effort">~10 min</span></h3>
+      <p>The analytics code is ready and inert until this is set. You can't improve what you can't measure.</p>
+      <ol>
+        <li>In <a href="https://analytics.google.com">Google Analytics</a>, create a GA4 property + a <em>Web</em> data stream for <code>tinypartyportal.com</code>. Copy the Measurement ID (<code>G-XXXXXXXXXX</code>).</li>
+        <li>Add it to your <code>.env</code> (and your hosting/CI env):
+          <pre>VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX</pre></li>
+        <li>Rebuild &amp; deploy. Page views (including invite views) and the referral UTMs will start flowing automatically.</li>
+      </ol>
+      <div class="note">Tip: in GA4, mark a "signup" conversion event so you can see how many invite-referred visitors actually create an account.</div>
+    </div>
+  </section>
+
+  <!-- ───────────── GROWTH ───────────── -->
+  <section class="group">
+    <h2 class="grouph">🚀 Growth roadmap (the real traffic levers)</h2>
+
+    <div class="card">
+      <h3><span class="badge p1">P1</span> Start a content / blog engine<span class="effort">ongoing · highest ROI</span></h3>
+      <p>On-page SEO gets you found for "Tiny Party Portal". <strong>Content gets you found by people who've never heard of you</strong> — the parents searching for party ideas <em>are</em> your customers. This is how Evite, Paperless Post and Punchbowl all grew.</p>
+      <p>Target long-tail, low-competition queries, each ending in a "create your invite free →" call to action. Starter list:</p>
+      <table>
+        <tr><th>Article</th><th>Target search</th></tr>
+        <tr><td>Dinosaur birthday party ideas for kids</td><td>"dinosaur party ideas"</td></tr>
+        <tr><td>Unicorn party: themes, food &amp; games</td><td>"unicorn birthday party"</td></tr>
+        <tr><td>Kids' birthday invitation wording (with examples)</td><td>"birthday invitation wording"</td></tr>
+        <tr><td>RSVP wording for a children's party</td><td>"rsvp wording kids party"</td></tr>
+        <tr><td>How to plan a 5th birthday party (checklist)</td><td>"5th birthday party ideas"</td></tr>
+        <tr><td>Drop-off vs stay-and-play parties: a parent's guide</td><td>"drop off birthday party"</td></tr>
+      </table>
+      <p><strong>Implementation note:</strong> a blog needs crawlable URLs. The cleanest path is to pair this with prerendering (P2 below) or host the blog as static MDX/markdown pages. I can scaffold a <code>/blog</code> route + article template when you're ready.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="badge p2">P2</span> Add prerendering / static HTML for marketing pages<span class="effort">~half day</span></h3>
+      <p>The site is a client-rendered SPA. Google <em>can</em> render JS, but static HTML indexes faster and more reliably — and it's a prerequisite for the blog ranking well. The shared-event links already use the <code>eventShareMeta</code> Cloud Function for this; the marketing pages don't.</p>
+      <p>Options, easiest first:</p>
+      <ul>
+        <li><strong>Prerender at build time</strong> (e.g. <code>vite-plugin-prerender</code> / <code>puppeteer</code>) for the handful of public routes (<code>/</code>, <code>/contact</code>, <code>/privacy</code>, <code>/terms</code>, future <code>/blog/*</code>). Lowest disruption.</li>
+        <li><strong>Migrate marketing pages to a meta-framework</strong> (Astro for content, or Next.js) — bigger lift, best long-term if content becomes central.</li>
+      </ul>
+      <p>I can implement the build-time prerender option without touching the app/dashboard code.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="badge p2">P2</span> Sharpen the referral loop<span class="effort">~1 hr</span></h3>
+      <p>UTMs are now in place. Next: every invite is seen by 10–30 parents who are your exact target. Worth testing a warmer call to action than a quiet "Powered by" — e.g. a small "Plan your own party free →" chip on guest pages. A/B it via GA4 once analytics is live. <em>(This is a product/brand call, so left for your decision rather than changed unilaterally.)</em></p>
+    </div>
+
+    <div class="card">
+      <h3><span class="badge p2">P2</span> Off-site presence &amp; backlinks <span class="who">YOU</span><span class="effort">ongoing</span></h3>
+      <ul>
+        <li><strong>Product Hunt launch</strong> — a burst of traffic plus a permanent, high-authority backlink.</li>
+        <li><strong>Australian parenting communities</strong> — mum Facebook groups, parenting forums, local "what's on for kids" directories. Relevant backlinks remain a core ranking signal.</li>
+        <li><strong>SaaS / app directories</strong> — AlternativeTo, Capterra, "best birthday invitation app" roundup articles.</li>
+        <li><strong>Google Business Profile</strong> if you ever want local/AU visibility.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3><span class="badge p3">P3</span> Bundle code-splitting<span class="effort">~2 hr</span></h3>
+      <p>The build warns about chunks over 500&nbsp;KB — the main bundle (~737&nbsp;KB) and <code>PrintableInvitePage</code> (~406&nbsp;KB, from <code>html2canvas</code>/<code>jspdf</code>). Large JS slows mobile load, which feeds Core Web Vitals (a ranking factor). The print/PDF libraries especially should be dynamically imported so only the print page pays for them.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="badge p3">P3</span> Richer schema once you have proof<span class="effort">~1 hr each</span></h3>
+      <ul>
+        <li><code>AggregateRating</code> / <code>Review</code> schema once you collect testimonials — earns star ratings in search results.</li>
+        <li><code>BreadcrumbList</code> schema once the blog/site has depth.</li>
+        <li>Per-article <code>Article</code> schema on blog posts.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ───────────── SUGGESTED ORDER ───────────── -->
+  <section class="group">
+    <h2 class="grouph">📅 Suggested sequence</h2>
+    <div class="card compact">
+      <ol>
+        <li><strong>This week:</strong> Search Console + GA4 measurement ID (P1 — both quick, both yours).</li>
+        <li><strong>Next:</strong> stand up prerendering (P2) so content can rank, then publish the first 3–4 blog articles (P1, the compounding engine).</li>
+        <li><strong>Quick win alongside:</strong> Product Hunt launch + a few directory/community backlinks (P2).</li>
+        <li><strong>Later:</strong> code-splitting (P3), referral-CTA experiment (P2), richer schema (P3) once you have reviews.</li>
+      </ol>
+    </div>
+  </section>
+
+  <footer>
+    Generated for Tiny Party Portal · 13 June 2026 · Items marked <span class="who">YOU</span> need your account/decision; the rest I can implement on request.
+  </footer>
+
+</div>
+</body>
+</html>

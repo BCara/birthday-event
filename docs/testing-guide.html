@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tiny Party Portal — Functional Testing Guide</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #1a1a2e;
+    background: #f8f9fc;
+  }
+
+  /* ── Layout ── */
+  .page-wrap { max-width: 960px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* ── Cover ── */
+  .cover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 16px;
+    padding: 48px 40px;
+    margin-bottom: 48px;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .cover h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 8px; }
+  .cover .subtitle { font-size: 1.1rem; opacity: 0.85; margin-bottom: 24px; }
+  .cover-meta { display: flex; gap: 32px; flex-wrap: wrap; }
+  .cover-meta div { font-size: 0.9rem; opacity: 0.9; }
+  .cover-meta strong { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; margin-bottom: 2px; }
+
+  /* ── Table of Contents ── */
+  .toc {
+    background: white;
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 40px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .toc h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; color: #667eea; margin-bottom: 16px; }
+  .toc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px; }
+  .toc a {
+    display: flex; align-items: center; gap: 8px;
+    color: #444; text-decoration: none; font-size: 0.9rem;
+    padding: 5px 8px; border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .toc a:hover { background: #f0f0ff; color: #667eea; }
+  .toc-num {
+    background: #667eea; color: white; border-radius: 4px;
+    width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+  }
+
+  /* ── Section headings ── */
+  .section-header {
+    display: flex; align-items: center; gap: 14px;
+    margin: 52px 0 20px;
+  }
+  .section-num {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white; border-radius: 10px;
+    width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; font-weight: 800; flex-shrink: 0;
+    print-color-adjust: exact; -webkit-print-color-adjust: exact;
+  }
+  .section-header h2 { font-size: 1.5rem; font-weight: 700; }
+
+  /* ── Cards ── */
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .card h3 {
+    font-size: 1rem; font-weight: 700; margin-bottom: 16px;
+    padding-bottom: 10px; border-bottom: 2px solid #f0f0f0;
+    color: #333;
+  }
+
+  /* ── Setup boxes ── */
+  .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .setup-item {
+    background: #f8f9fc; border-radius: 8px; padding: 16px;
+    border-left: 3px solid #667eea;
+  }
+  .setup-item h4 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: #667eea; margin-bottom: 8px; }
+  .setup-item ul { list-style: none; }
+  .setup-item li { font-size: 0.9rem; padding: 3px 0; }
+  .setup-item li::before { content: '→ '; color: #667eea; }
+
+  /* ── Legend table ── */
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+  .legend-item {
+    display: flex; align-items: center; gap: 6px;
+    background: #f8f9fc; border-radius: 6px; padding: 6px 12px;
+    font-size: 0.88rem;
+  }
+
+  /* ── Test tables ── */
+  .test-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 4px; }
+  .test-table th {
+    background: #f4f4f8; text-align: left;
+    padding: 8px 12px; font-size: 0.78rem;
+    text-transform: uppercase; letter-spacing: 0.04em; color: #666;
+    border-bottom: 2px solid #e8e8ee;
+  }
+  .test-table td { padding: 9px 12px; border-bottom: 1px solid #f0f0f4; vertical-align: top; }
+  .test-table tr:last-child td { border-bottom: none; }
+  .test-table tr:hover td { background: #fafafa; }
+  .test-table td:first-child { font-weight: 700; color: #667eea; width: 44px; white-space: nowrap; }
+  .test-table td:last-child { color: #555; }
+
+  /* Result column */
+  .test-table td.result-col {
+    width: 90px; text-align: center;
+  }
+  .result-box {
+    display: inline-block; width: 70px; height: 26px;
+    border: 2px solid #ddd; border-radius: 6px;
+  }
+
+  /* ── Note / warning callouts ── */
+  .note {
+    background: #fff8e7; border-left: 3px solid #f59e0b;
+    border-radius: 0 8px 8px 0; padding: 10px 14px;
+    font-size: 0.88rem; margin: 12px 0; color: #78350f;
+  }
+  .note strong { color: #92400e; }
+  .info {
+    background: #eff6ff; border-left: 3px solid #3b82f6;
+    border-radius: 0 8px 8px 0; padding: 10px 14px;
+    font-size: 0.88rem; margin: 12px 0; color: #1e40af;
+  }
+
+  /* ── Block badge ── */
+  .block-badge {
+    display: inline-block; background: #ede9fe; color: #5b21b6;
+    border-radius: 999px; padding: 3px 10px; font-size: 0.78rem; font-weight: 700;
+    margin-bottom: 14px;
+  }
+
+  /* ── Flow diagrams ── */
+  .mermaid-wrap {
+    background: white; border-radius: 12px; padding: 28px 24px;
+    margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    overflow-x: auto;
+  }
+  .mermaid-wrap h3 { font-size: 1rem; font-weight: 700; color: #333; margin-bottom: 16px; }
+  .mermaid { max-width: 100%; }
+
+  /* ── Defect template ── */
+  .defect-template {
+    background: #fafafa; border: 1px solid #e8e8ee; border-radius: 8px;
+    padding: 20px; font-family: 'Courier New', monospace; font-size: 0.85rem;
+    line-height: 1.7; white-space: pre-wrap;
+  }
+  .severity-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 16px; }
+  .severity-item { border-radius: 8px; padding: 12px; font-size: 0.85rem; }
+  .sev-critical { background: #fef2f2; border-left: 3px solid #ef4444; }
+  .sev-high { background: #fff7ed; border-left: 3px solid #f97316; }
+  .sev-medium { background: #fffbeb; border-left: 3px solid #f59e0b; }
+  .sev-low { background: #f0fdf4; border-left: 3px solid #22c55e; }
+  .severity-item strong { display: block; margin-bottom: 4px; }
+
+  /* ── Completion checklist ── */
+  .checklist { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  .checklist th { background: #f4f4f8; padding: 10px 16px; text-align: left; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: #666; }
+  .checklist td { padding: 10px 16px; border-bottom: 1px solid #f0f0f4; }
+  .checklist tr:last-child td { border-bottom: none; }
+  .check-box { width: 28px; height: 28px; border: 2px solid #ddd; border-radius: 6px; display: inline-block; }
+  .summary-row { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 20px; }
+  .summary-field { display: flex; flex-direction: column; gap: 4px; }
+  .summary-field label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: #888; }
+  .summary-field input { border: 2px solid #e0e0e8; border-radius: 6px; padding: 6px 10px; font-size: 0.9rem; width: 160px; }
+
+  /* ── Print styles ── */
+  @media print {
+    body { background: white; font-size: 12px; }
+    .page-wrap { padding: 0; max-width: 100%; }
+    .cover { border-radius: 0; page-break-after: always; }
+    .section-header { page-break-before: always; }
+    .card, .mermaid-wrap { box-shadow: none; border: 1px solid #eee; page-break-inside: avoid; }
+    .toc { display: none; }
+  }
+
+  @media (max-width: 640px) {
+    .cover { padding: 28px 20px; }
+    .cover h1 { font-size: 1.6rem; }
+    .setup-grid { grid-template-columns: 1fr; }
+    .card { padding: 20px; }
+    .cover-meta { gap: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Cover -->
+  <div class="cover">
+    <h1>Tiny Party Portal</h1>
+    <div class="subtitle">Functional Testing Guide — v1.1</div>
+    <div class="cover-meta">
+      <div><strong>Date</strong>17 June 2026</div>
+      <div><strong>Prepared by</strong>Development Team</div>
+      <div><strong>For</strong>QA / Functional Tester</div>
+      <div><strong>Total Tests</strong>143 steps across 13 blocks</div>
+      <div><strong>New here?</strong><a href="APP_OVERVIEW.html" style="color:#fff;">Start with the App Guide →</a></div>
+    </div>
+  </div>
+
+  <!-- Table of Contents -->
+  <div class="toc">
+    <h2>Contents</h2>
+    <div class="toc-grid">
+      <a href="#setup"><span class="toc-num">⚙</span> Test Environment Setup</a>
+      <a href="#block1"><span class="toc-num">1</span> Authentication</a>
+      <a href="#block2"><span class="toc-num">2</span> Create Event</a>
+      <a href="#block3"><span class="toc-num">3</span> Event Management</a>
+      <a href="#block4"><span class="toc-num">4</span> Guest Invite / Landing</a>
+      <a href="#block5"><span class="toc-num">5</span> RSVP Form</a>
+      <a href="#block5a"><span class="toc-num">5A</span> Approval-Required RSVP</a>
+      <a href="#block6"><span class="toc-num">6</span> Event Portal</a>
+      <a href="#block7"><span class="toc-num">7</span> Guest List Management</a>
+      <a href="#block8"><span class="toc-num">8</span> Memory Capsule</a>
+      <a href="#block9"><span class="toc-num">9</span> Printable Invite</a>
+      <a href="#block10"><span class="toc-num">10</span> Contact Page</a>
+      <a href="#block11"><span class="toc-num">11</span> Static Pages</a>
+      <a href="#block12"><span class="toc-num">12</span> Share Link &amp; Social Preview</a>
+      <a href="#block13"><span class="toc-num">13</span> Mobile Smoke Test</a>
+      <a href="#defects"><span class="toc-num">!</span> Defect Reporting</a>
+      <a href="#flows"><span class="toc-num">↗</span> User Flow Diagrams</a>
+    </div>
+  </div>
+
+  <!-- Setup -->
+  <div id="setup" class="section-header">
+    <div class="section-num">⚙</div>
+    <h2>Test Environment Setup</h2>
+  </div>
+  <div class="card">
+    <div class="setup-grid">
+      <div class="setup-item">
+        <h4>What you need</h4>
+        <ul>
+          <li>Laptop/desktop browser (Chrome recommended)</li>
+          <li>Real mobile device OR Chrome DevTools at 390×844</li>
+          <li>Two email inboxes you can check in real time</li>
+          <li>A phone number you can receive SMS on</li>
+          <li>Incognito window for all guest flows</li>
+        </ul>
+      </div>
+      <div class="setup-item">
+        <h4>URLs</h4>
+        <ul>
+          <li>App: <strong>https://tinypartyportal.com</strong></li>
+          <li>Admin notifications go to: clb.bertram@gmail.com</li>
+          <li>Contact form goes to: info@tinypartyportal.com</li>
+          <li>Create a test host account before starting Block 1</li>
+        </ul>
+      </div>
+    </div>
+    <h3 style="margin-bottom: 10px;">Symbols used in this guide</h3>
+    <div class="legend">
+      <div class="legend-item">📧 Check email inbox</div>
+      <div class="legend-item">🔒 Requires login</div>
+      <div class="legend-item">👁 Visually verify on screen</div>
+      <div class="legend-item">📱 Test on mobile viewport</div>
+      <div class="legend-item">⚠️ Common failure point — check carefully</div>
+    </div>
+  </div>
+
+  <!-- Block 1 -->
+  <div id="block1" class="section-header">
+    <div class="section-num">1</div>
+    <h2>Authentication</h2>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 1.1</div>
+    <h3>Email Sign Up</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Go to <code>/signup</code></td><td>Sign up page loads with logo, Google button, and email/password form</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Leave all fields blank and click <strong>Sign Up</strong></td><td>Browser validation prevents submit</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Enter name, valid email, and a <strong>5-character</strong> password → click <strong>Sign Up</strong></td><td>Error: "Password must be at least 6 characters"</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>Change password to 6+ characters → click <strong>Sign Up</strong></td><td>Account created, redirected to <code>/dashboard</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5</td><td>📧 Check the email inbox used to sign up</td><td>Welcome email received — subject: "Welcome to Tiny Party Portal! 🎉", contains 4 feature bullet points and a <strong>Create Your First Party</strong> button</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6</td><td>Click the <strong>Create Your First Party</strong> button in the email</td><td>Opens <code>https://tinypartyportal.com/dashboard</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 1.2</div>
+    <h3>Duplicate Email Sign Up</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Go to <code>/signup</code></td><td>Sign up page loads</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Enter the same email from test 1.1, new password → click <strong>Sign Up</strong></td><td>Error: "An account with this email already exists"</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>👁 Check page stays on <code>/signup</code></td><td>No account created, no redirect</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 1.3</div>
+    <h3>Google Sign Up / Sign In</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Go to <code>/signup</code>, click <strong>Continue with Google</strong></td><td>Google OAuth popup appears</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Select a Google account</td><td>Popup closes, redirected to <code>/dashboard</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Log out → go to <code>/login</code> → click <strong>Continue with Google</strong> → select same account</td><td>Redirected to <code>/dashboard</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 1.4</div>
+    <h3>Email Sign In</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Log out → go to <code>/login</code></td><td>Login page loads</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Enter correct email + password from 1.1 → click <strong>Sign In</strong></td><td>Redirected to <code>/dashboard</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Log out → correct email + <strong>wrong password</strong></td><td>Error: "Invalid email or password"</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>Enter a completely made-up email and password</td><td>Error: "Invalid email or password"</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 1.5</div>
+    <h3>Auth Guards</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>While <strong>logged out</strong>, go to <code>/dashboard</code></td><td>Redirected to <code>/login</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>While <strong>logged out</strong>, go to <code>/dashboard/create</code></td><td>Redirected to <code>/login</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>While <strong>logged out</strong>, go to <code>/dashboard/event/FAKEID</code></td><td>Redirected to <code>/login</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>While <strong>logged in</strong>, go to <code>/login</code></td><td>Redirected to <code>/dashboard</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Block 2 -->
+  <div id="block2" class="section-header">
+    <div class="section-num">2</div>
+    <h2>Create Event</h2>
+  </div>
+  <div class="info">🔒 Must be logged in for all tests in this block.</div>
+
+  <div class="card">
+    <div class="block-badge">Block 2.1</div>
+    <h3>Form Validation</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Click <strong>+ New Party</strong> on the dashboard</td><td>Navigates to <code>/dashboard/create</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Click <strong>Create Party</strong> with all fields empty</td><td>Validation error — child name and date are required</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Fill child name only → click <strong>Create Party</strong></td><td>Validation error — date still required</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>Fill child name + date → click <strong>Create Party</strong></td><td>Event created successfully, redirected to event management</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 2.2</div>
+    <h3>Theme &amp; Colour Picker</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>On the create form, click each theme tab: Classic, Dino, Unicorn, Princess, Cars</td><td>Preview panel updates theme illustration for each selection</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Click each colour scheme option</td><td>Preview accent colours update to match</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 2.3</div>
+    <h3>RSVP Toggle on Create</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Toggle <strong>Enable RSVP</strong> on</td><td>RSVP configuration section expands below</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Toggle it off</td><td>Section collapses</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 2.4</div>
+    <h3>Post-Creation Emails</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Create a new event with all required fields</td><td>Redirected to <code>/dashboard/event/:id</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>📧 Check host inbox within 60 seconds</td><td>Email received — subject: "Your Birthday Event is Ready! 🎉", shows event name and date</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>📧 Check admin inbox (clb.bertram@gmail.com)</td><td>Admin notification received with host name, email, event name, child name</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 2.5</div>
+    <h3>Slug Collision</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Create a second event with the <strong>same child name</strong> as an existing event</td><td>Event created — slug has a number suffix (e.g. <code>robins-party-2</code>)</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Navigate to the new event's invite URL</td><td>Correct event loads, not the first one</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Block 3 -->
+  <div id="block3" class="section-header">
+    <div class="section-num">3</div>
+    <h2>Event Management Page</h2>
+  </div>
+  <div class="info">🔒 Navigate to <code>/dashboard/event/:id</code></div>
+
+  <div class="card">
+    <div class="block-badge">Block 3.1</div>
+    <h3>Photo Upload</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Click <strong>Upload Star Photo</strong></td><td>File picker opens</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Select a valid JPG or PNG image</td><td>Upload spinner shows over the photo circle, then photo appears</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>👁 Check the preview panel on the right</td><td>Preview updates to show uploaded photo instead of illustration</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>Click <strong>Remove</strong></td><td>Photo removed, illustration returns in preview</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5</td><td>Try uploading a <code>.pdf</code> or <code>.txt</code> file</td><td>File rejected or upload fails gracefully — no crash</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 3.2</div>
+    <h3>Event Details</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Edit the event name</td><td>Preview panel updates in real time</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Edit host name, host contact, location, address</td><td>All fields save on form submit</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Set a date, start time, and end time</td><td>Preview shows correct date and time range</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>Set an RSVP by date</td><td>Shown on the invite page to guests</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5</td><td>Edit the guest message / description</td><td>Saved and shown on event portal</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 3.3</div>
+    <h3>RSVP Settings</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Disable the RSVP toggle</td><td>RSVP settings section collapses</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Go to <code>/{slug}</code> in incognito</td><td><strong>RSVP NOW</strong> button is hidden or disabled</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Re-enable RSVP</td><td>Button reappears on invite page</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>Enable <strong>Ask child's age</strong></td><td>Age field appears on RSVP form Step 2</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5</td><td>Enable <strong>Ask how many adults</strong></td><td>Adults stepper appears on RSVP form Step 4</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6</td><td>Enable <strong>Ask dietary / allergy notes</strong></td><td>Dietary field appears on RSVP form Step 4</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7</td><td>Enable <strong>Allow siblings</strong></td><td>Siblings section appears on RSVP form Step 2</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>8</td><td>Set parent attendance to <strong>Must stay</strong></td><td>Stay/drop-off question hidden — guests assumed staying</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>9</td><td>Set parent attendance to <strong>Drop-off only</strong></td><td>Stay/drop-off question hidden — guests assumed dropping off</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>10</td><td>Set parent attendance to <strong>Ask</strong></td><td>Stay/drop-off toggle shown on RSVP Step 4</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 3.4 — 3.5</div>
+    <h3>Schedule, Gift Registry &amp; Navigation</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>3.4.1</td><td>Add a schedule item with a time and label</td><td>Saved. Visible on event portal after RSVP (Block 6)</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3.4.2</td><td>Add a gift registry note and/or link</td><td>Saved. Visible only to attending guests in portal</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3.5.1</td><td>Click <strong>View Invite</strong></td><td>Opens <code>/{slug}</code> in a new tab</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3.5.2</td><td>Click <strong>RSVPs</strong></td><td>Navigates to <code>/dashboard/event/:id/rsvps</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3.5.3</td><td>Click <strong>← Back</strong></td><td>Returns to <code>/dashboard</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Block 4 -->
+  <div id="block4" class="section-header">
+    <div class="section-num">4</div>
+    <h2>Guest Invite / Landing Page</h2>
+  </div>
+  <div class="info">Use an <strong>incognito window</strong> for all tests. Navigate to <code>/{slug}</code>.</div>
+
+  <div class="card">
+    <div class="block-badge">Block 4.1</div>
+    <h3>Invite Display</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Load the invite page</td><td>Themed invitation card shows event name, date, time, location, host name</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>👁 If birthday star photo was uploaded</td><td>Photo shown in the card, not the theme illustration</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>👁 If no photo uploaded</td><td>Theme illustration shown</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>Navigate to a non-existent slug e.g. <code>/does-not-exist-xyz</code></td><td>"Party not found" screen shown — no crash</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 4.2</div>
+    <h3>Calendar &amp; Map</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Click <strong>Add to Cal → Google Calendar</strong></td><td>Google Calendar opens in new tab, event prefilled with correct name, date, time, location</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Click <strong>Add to Cal → Apple / Outlook</strong></td><td><code>.ics</code> file downloads</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Click the address / location text</td><td>Google Maps opens to the address</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 4.3</div>
+    <h3>Already RSVP'd Lookup</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Click <strong>Already RSVP'd?</strong> toggle</td><td>Lookup form slides into view</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Enter name and email of a guest who has already RSVP'd</td><td>Match found — portal view shown (Block 6)</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Enter name and contact that don't match any RSVP</td><td>"Not found" message shown</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>After a failed lookup, check if the <strong>Contact Organiser</strong> form appears</td><td>Form shown with name, contact, and message fields</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5</td><td>Fill in the contact form and submit</td><td>Success message shown to guest</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6</td><td>📧 Check host inbox</td><td>Email received — subject: "Message from Guest: [name]", contains message</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7</td><td>⚠️ If guest used an email as their contact</td><td>Host email has <code>reply_to</code> set — replying goes to guest, not the platform</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Block 5 -->
+  <div id="block5" class="section-header">
+    <div class="section-num">5</div>
+    <h2>RSVP Form</h2>
+  </div>
+  <div class="info">Use an <strong>incognito window</strong>. Navigate to <code>/{slug}/rsvp</code>.</div>
+
+  <div class="card">
+    <div class="block-badge">Block 5.1</div>
+    <h3>Standard Attending RSVP (with email)</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Page loads</td><td>Themed RSVP form shown with progress bar</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Click <strong>Yes, we'll be there!</strong></td><td>Auto-advances to Step 2</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Leave child name blank → click <strong>Continue</strong></td><td>Validation error — child name required</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>Enter child name. If age is enabled, enter age</td><td>Fields accepted</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5</td><td>If siblings enabled, click <strong>Add Sibling</strong> → enter name, age, dietary</td><td>Sibling added to the list below</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6</td><td>Click <strong>Continue</strong></td><td>Advances to Step 3</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7</td><td>Leave parent name blank → click <strong>Continue</strong></td><td>Validation error — parent name required</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>8</td><td>Enter parent name → click <strong>Email</strong> → enter <code>notanemail</code></td><td>Validation error — invalid email format</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>9</td><td>Enter a valid email → click <strong>Continue</strong></td><td>Advances to Step 4</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>10</td><td>If stay/drop-off shown, select <strong>Staying</strong></td><td>Adults count stepper appears (if enabled)</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>11</td><td>Adjust adults count stepper</td><td>Value updates</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>12</td><td>If dietary field shown, enter a dietary note</td><td>Field accepts input</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>13</td><td>Enter a comment → click <strong>Submit RSVP</strong></td><td>Success screen with confetti 🎉 and "You're all set!"</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>14</td><td>📧 Check host inbox</td><td>Email received — subject: "New RSVP for [event]", shows child name, parent name, attending: Yes</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>15</td><td>📧 Check guest inbox (email from step 9)</td><td>Rich confirmation email with event date, time, location, dietary notes, adults count, and portal link button</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>16</td><td>Click <strong>View Event Portal</strong> in the guest email</td><td>Opens event portal showing attending status</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 5.2</div>
+    <h3>Standard Declining RSVP</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Start a new RSVP (fresh incognito or clear localStorage)</td><td>Step 1 shown</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Click <strong>Sorry, can't make it</strong></td><td>Auto-advances to Step 2</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Enter child name, parent name, provide email → submit</td><td>Success screen — "Sorry you can't make it", <strong>no confetti</strong></td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>📧 Check host inbox</td><td>Email shows attending: Not Attending</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5</td><td>📧 Check guest inbox</td><td>Confirmation email with grey "Sorry you can't make it" status banner</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 5.3</div>
+    <h3>Phone-Only RSVP</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Start a new RSVP → choose <strong>Phone</strong> on Step 3</td><td>Phone number input shown</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Enter a phone number, complete and submit</td><td>RSVP saved successfully</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>📧 Check host inbox</td><td>RSVP notification email received as normal</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>⚠️ Check guest email</td><td><strong>No email sent</strong> — this is correct, guest used phone only</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 5.4 — 5.5</div>
+    <h3>Step Navigation &amp; Edit Existing RSVP</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>5.4.1</td><td>On any step after Step 1, click <strong>Back</strong></td><td>Returns to previous step</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5.4.2</td><td>👁 Verify data entered on previous step is still present</td><td>Data preserved on back-navigation</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5.5.1</td><td>After completing 5.1, load the invite page <code>/{slug}</code></td><td>Portal view shown (localStorage flag set)</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5.5.2</td><td>Click <strong>CHANGE RSVP</strong></td><td>Navigates to <code>/{slug}/rsvp?edit=true</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5.5.3</td><td>👁 Verify form is pre-filled with existing data</td><td>All prior fields populated correctly</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5.5.4</td><td>Change attending from Yes → No → click <strong>Update RSVP</strong></td><td>Success screen shown, RSVP updated in dashboard</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Block 5A -->
+  <div id="block5a" class="section-header">
+    <div class="section-num">5A</div>
+    <h2>Approval-Required RSVP</h2>
+  </div>
+  <div class="note"><strong>Pre-condition:</strong> Enable <strong>Lock RSVPs</strong> from the host dashboard at <code>/dashboard/event/:id/rsvps</code> — click the lock/unlock toggle button before running these tests.</div>
+
+  <div class="card">
+    <div class="block-badge">Block 5A.1</div>
+    <h3>New Guest Submits Under Lock</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>In incognito, submit a new RSVP with an email address</td><td>Success screen shows ⏳ <strong>"Request Submitted"</strong> — no confetti</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>📧 Check host inbox</td><td>Subject: "Action Required: RSVP Needs Approval for [event]"</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>📧 Check guest inbox</td><td>Subject: "RSVP Received — Awaiting Approval: [event]", shows yellow pending banner</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>In host dashboard, check guest list</td><td>Guest appears with <strong>Needs Approval</strong> status badge</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5</td><td>👁 Check the <strong>Needs Approval</strong> metric card</td><td>Count shows 1 or more</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 5A.2</div>
+    <h3>Host Approves Guest</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Click <strong>Needs Approval</strong> metric card to filter</td><td>Guest list shows only pending guests</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Click <strong>✓ Approve</strong> on the guest</td><td>Status changes to Going, guest moves out of pending list</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>📧 Check guest inbox</td><td>Subject: "You're confirmed for [event]! 🎉" — green header, date/time/location, View Event Portal button</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>Click <strong>View Event Portal</strong> in the approval email</td><td>Portal shows <strong>YOU'RE GOING!</strong> status</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 5A.3 — 5A.4</div>
+    <h3>Host Declines Guest &amp; Resubmission</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>5A.3.1</td><td>With another needs-approval guest, click <strong>✕ Decline</strong></td><td>Status changes to Not Attending</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5A.3.2</td><td>⚠️ Check guest inbox</td><td><strong>No email sent</strong> on decline — this is correct current behaviour</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5A.4.1</td><td>Have a guest who is already Going edit their RSVP and resubmit</td><td>⚠️ Existing approved guest should <strong>not</strong> require re-approval — RSVP updates without going back to needs_approval</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Block 6 -->
+  <div id="block6" class="section-header">
+    <div class="section-num">6</div>
+    <h2>Event Portal (Post-RSVP)</h2>
+  </div>
+  <div class="info">Access the portal by completing an attending RSVP or using the lookup form on the landing page.</div>
+
+  <div class="card">
+    <div class="block-badge">Block 6.1 — 6.3</div>
+    <h3>Portal Content, Host Contact &amp; Past-Event Date</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>6.1.1</td><td>👁 Status banner</td><td>Shows <strong>YOU'RE GOING!</strong> for attending guests</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6.1.2</td><td>👁 Countdown timer</td><td>Shows correct days/hours/minutes until event date, decrements live</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6.1.3</td><td>👁 Schedule section</td><td>Visible if host added schedule items</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6.1.4</td><td>👁 Gift registry</td><td>Visible if host set one AND guest RSVP'd yes. Hidden for declined guests</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6.1.5</td><td>Click <strong>Open in Maps</strong></td><td>Google Maps opens to the address</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6.1.6</td><td>Click <strong>Add to Calendar → Google</strong></td><td>Google Calendar opens with event prefilled</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6.1.7</td><td>Click <strong>Add to Calendar → Apple/Outlook</strong></td><td><code>.ics</code> file downloads</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6.2.1</td><td>Set host contact to an <strong>email</strong> → check portal</td><td><strong>Email Host</strong> button shown</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6.2.2</td><td>Click <strong>Email Host</strong></td><td>Opens <code>mailto:</code> link in default email client</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6.2.3</td><td>Set host contact to a <strong>phone number</strong> → check portal</td><td><strong>SMS Host</strong> button shown</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6.3.1</td><td>Set the event date to a <strong>past date</strong> → check portal</td><td>Countdown shows "It's party time!" or a past-event message — no crash or negative timer</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Block 7 -->
+  <div id="block7" class="section-header">
+    <div class="section-num">7</div>
+    <h2>Guest List Management</h2>
+  </div>
+  <div class="info">🔒 Navigate to <code>/dashboard/event/:id/rsvps</code></div>
+
+  <div class="card">
+    <div class="block-badge">Block 7.1 — 7.2</div>
+    <h3>Metric Cards, Filtering &amp; Search</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>7.1.1</td><td>👁 Verify metric card counts match the actual guest list</td><td>Going / Maybe / Declined / Needs Approval counts are accurate</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.1.2</td><td>Click the <strong>Going</strong> metric card</td><td>Guest list filters to attending guests only</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.1.3</td><td>👁 Filter clear tag "Filtering by yes ✕" appears</td><td>Correct</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.1.4</td><td>Click the <strong>✕</strong> tag</td><td>Filter resets, all guests shown</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.2.1</td><td>Type part of a guest's name in the search box</td><td>List filters live, case-insensitive</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.2.2</td><td>Clear the search box</td><td>Full list returns</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 7.3 — 7.5</div>
+    <h3>Add, Edit &amp; Delete Guests</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>7.3.1</td><td>Click <strong>+ Add Guest</strong></td><td>Inline form appears below the action bar</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.3.2</td><td>Click <strong>Add</strong> with no name</td><td>Validation error</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.3.3</td><td>Enter a name (and optionally email/phone) → click <strong>Add</strong></td><td>Guest added with Pending status</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.3.4</td><td>⚠️ Check host email inbox</td><td><strong>No email triggered</strong> — manually added guests do not send notifications</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.4.1</td><td>Click <strong>✏️ Edit</strong> on any guest</td><td>Edit modal opens with all fields pre-filled</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.4.2</td><td>Change the child's name → click <strong>Save</strong></td><td>Modal closes, name updated in list</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.5.1</td><td>Click the trash icon on a <strong>main guest row</strong></td><td>Confirmation shown, guest deleted, row removed</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.5.2</td><td>Click the trash icon on a <strong>sibling row</strong></td><td>Sibling removed, parent row remains with updated sibling count</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 7.6</div>
+    <h3>Magic Paste</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Click <strong>Magic Paste</strong></td><td>Modal opens with a text area</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Paste: <em>"Hi, Zara and her brother Tom (5) will be coming. No allergies."</em> → click <strong>Parse</strong></td><td>Preview shows extracted fields: child name, siblings, attending status, dietary</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Click <strong>Confirm &amp; Save</strong></td><td>Guest added to list</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>Paste a message over 2000 characters</td><td>Error shown — message too long</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5</td><td>Paste a message with no extractable RSVP info</td><td>AI returns best-guess result or error toast shown</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 7.7 — 7.10</div>
+    <h3>Import, Export, Lock &amp; Estimates</h3>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>7.7.1</td><td>Click <strong>📋 Import List</strong> → upload a valid CSV</td><td>Guests imported with <strong>Pending</strong> status</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.7.2</td><td>⚠️ Check host inbox</td><td><strong>No RSVP email sent</strong> for imported guests — correct behaviour</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.8.1</td><td>Click <strong>Export CSV</strong> with guests present</td><td><code>.csv</code> file downloaded with name, age, parent, email, phone, status, dietary, siblings, date</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.8.2</td><td>Click <strong>Export CSV</strong> with <strong>no guests</strong></td><td>Button disabled — no download attempted</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.9.1</td><td>Click <strong>Unlocked</strong> button</td><td>Button changes to red <strong>Locked</strong>, icon changes to padlock</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.9.2</td><td>Submit a new RSVP from incognito</td><td>Goes through approval flow (see Block 5A)</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.9.3</td><td>Click <strong>Locked</strong> to unlock → submit new RSVP</td><td>Standard RSVP flow — no approval needed</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.10.1</td><td>Hover over the estimates box in the banner → click it</td><td>Inline edit form opens with kids and adults fields</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.10.2</td><td>Update the values → click <strong>Save</strong></td><td>Values update in the banner</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7.10.3</td><td>Click <strong>Cancel</strong></td><td>Values revert to previous</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Block 8 -->
+  <div id="block8" class="section-header">
+    <div class="section-num">8</div>
+    <h2>Memory Capsule</h2>
+  </div>
+  <div class="info">The Memory Capsule is a <strong>private</strong> collection — guests submit photos and messages but never see anyone else's, and only the host can view them. There is no public memory wall and no live slideshow.</div>
+  <div class="note"><strong>Pre-conditions:</strong> the capsule must be <strong>enabled</strong> on the event (8.1), and the privacy checks in 8.5 require the latest <code>firestore.rules</code> / <code>storage.rules</code> to be <strong>deployed</strong>.</div>
+
+  <div class="card">
+    <div class="block-badge">Block 8.1</div>
+    <h3>Enable &amp; Configure the Capsule (Host)</h3>
+    <div class="info" style="margin-bottom: 14px;">🔒 On the event management page <code>/dashboard/event/:id</code>.</div>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>In the module bar, toggle <strong>Memory Capsule</strong> on</td><td>Capsule configuration card appears; a <strong>📸 Capsule</strong> button appears in the page navigation</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Set a capsule <strong>title</strong> and a guest <strong>message</strong> → save</td><td>Both persist after reload</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Optionally set an <strong>open date</strong> and a <strong>close date</strong> → save</td><td>Saved</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>Click <strong>Copy</strong> on the guest submission link</td><td>Copies <code>/{slug}/memories/new</code> to the clipboard</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5</td><td>Click <strong>View Capsule →</strong> (or the 📸 Capsule nav button)</td><td>Opens <code>/dashboard/event/:id/capsule</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6</td><td>Toggle the capsule <strong>off</strong> → save → reload <code>/{slug}</code> in incognito</td><td>No capsule entry point shown to guests</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 8.2</div>
+    <h3>Guest Entry Point — Subtle vs Prominent</h3>
+    <div class="info" style="margin-bottom: 14px;">Use an <strong>incognito window</strong>; capsule enabled. The entry point's prominence depends on the event date.</div>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>With the event date in the <strong>future</strong>, load <code>/{slug}</code></td><td><strong>Subtle</strong> "📸 Add to the memory capsule" link in the footer — away from the RSVP button and event details</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Set the event date to <strong>today</strong> (host dashboard) → reload <code>/{slug}</code></td><td><strong>Prominent</strong> capsule card near the top of the page, showing the capsule title and message</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Complete an attending RSVP, then view the portal on the event day</td><td>The prominent card also appears at the top of the portal view</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>Click the capsule link / card</td><td>Opens <code>/{slug}/memories/new</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5</td><td>Set an <strong>open date in the future</strong> → reload <code>/{slug}</code></td><td>No capsule entry point shown (not open yet)</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6</td><td>Set a <strong>close date in the past</strong> → reload <code>/{slug}</code></td><td>No capsule entry point shown (capsule closed)</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 8.3</div>
+    <h3>Guest Submits a Memory</h3>
+    <div class="info" style="margin-bottom: 14px;">Use an <strong>incognito window</strong>. Navigate to <code>/{slug}/memories/new</code>.</div>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Load the page</td><td>Memory form shown with name, message, and file upload zone</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Click <strong>Share Memory</strong> with no name</td><td>Error: "Please enter your name"</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Enter a name, leave message AND file empty → click <strong>Share Memory</strong></td><td>Error: "Please add a message or upload a photo/video"</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>Enter name + message only → click <strong>Share Memory</strong></td><td>Memory saved, success screen shown</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5</td><td>Click file upload zone → select a JPG or PNG</td><td>Image preview shown in the form</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6</td><td>Click <strong>Remove</strong></td><td>Preview cleared</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7</td><td>Re-upload image → enter name → click <strong>Share Memory</strong></td><td>Progress bar animates 0→100%, success screen shown</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>8</td><td>Test with a <strong>video file (MP4)</strong></td><td>Video player preview shown, uploads successfully</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>9</td><td>⚠️ After submitting, look for any list of other people's memories</td><td>Success screen only — the guest is <strong>never</strong> shown a wall or other guests' submissions</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 8.4</div>
+    <h3>Host Views &amp; Manages the Capsule</h3>
+    <div class="info" style="margin-bottom: 14px;">🔒 Navigate to <code>/dashboard/event/:id/capsule</code>.</div>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>👁 Memories submitted in 8.3 appear</td><td>Shown in a grid with media, message, author name and time-ago; the memory count badge matches</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>👁 Header title + QR panel</td><td>Show the capsule title, submission link, guest message, and open/close dates from 8.1</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Click <strong>Copy</strong> on the submission link</td><td>Copies <code>/{slug}/memories/new</code>; toast shown</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>Click <strong>⬇ Save</strong> on a memory with media</td><td>The photo/video file downloads</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5</td><td>Click <strong>📄 Export</strong></td><td>A <code>.txt</code> file downloads listing each memory's author, date, message and media URL</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6</td><td>Click <strong>🗑</strong> on a memory → confirm</td><td>Memory removed from the list, toast shown</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7</td><td>Delete all memories</td><td>Empty state shown: "The capsule is empty"</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+    <div class="note">There is <strong>no</strong> approve / unapprove step any more — every submission goes straight into the host's private collection.</div>
+  </div>
+
+  <div class="card">
+    <div class="block-badge">Block 8.5</div>
+    <h3>Privacy &amp; Access Control</h3>
+    <div class="note" style="margin-bottom: 14px;"><strong>Requires deployed rules.</strong> If these fail, confirm <code>firestore.rules</code> and <code>storage.rules</code> have been deployed.</div>
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>While <strong>logged out</strong>, go to <code>/dashboard/event/:id/capsule</code></td><td>Redirected to <code>/login</code> (auth-gated)</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Log in as a <strong>different host</strong> (not the event owner) → open the capsule URL</td><td>No memories load — only the owning host can read submissions</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>⚠️ Confirm the removed public routes <code>/{slug}/live</code> and <code>/{slug}/memories</code> both 404</td><td>Not-found page — these features were removed</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>As the owning host, reload the capsule page</td><td>All memories load correctly</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Block 9 -->
+  <div id="block9" class="section-header">
+    <div class="section-num">9</div>
+    <h2>Printable Invite</h2>
+  </div>
+  <div class="info">🔒 Navigate to <code>/dashboard/event/:id/print</code></div>
+
+  <div class="card">
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Page loads</td><td>Invitation card with event details, QR code, and action buttons shown</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Scan the QR code</td><td>Opens <code>/{slug}</code> invite page</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Click <strong>Print</strong></td><td>Browser print dialog opens. Action buttons are hidden in print preview</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>Click <strong>Download as PDF</strong></td><td>PDF file downloads. Card visible, buttons absent</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5</td><td>Click <strong>Download as Image</strong></td><td>PNG file downloads</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6</td><td>Append <code>?size=A4</code> to the URL</td><td>Card scales to A4 layout</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7</td><td>Append <code>?bg=theme</code> to the URL</td><td>Themed gradient background used instead of white</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>8</td><td>👁 If RSVP is enabled</td><td>"SCAN TO RSVP" label and optional RSVP deadline shown on card</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>9</td><td>👁 If birthday star photo uploaded</td><td>Photo shown in card instead of illustration</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Block 10 -->
+  <div id="block10" class="section-header">
+    <div class="section-num">10</div>
+    <h2>Contact Page</h2>
+  </div>
+
+  <div class="card">
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Navigate to <code>/contact</code></td><td>Form shown with name, email, and message fields</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>2</td><td>Click <strong>Send Message</strong> with fields empty</td><td>Browser validation prevents submit</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>3</td><td>Fill all fields → click <strong>Send Message</strong></td><td>Button shows "Sending…", then success message replaces form</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>4</td><td>📧 Check <code>info@tinypartyportal.com</code> inbox</td><td>Email received — subject: "New Contact Form Submission from [name]"</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5</td><td>📧 Check <code>codebertcreations@gmail.com</code> inbox</td><td>Same email received</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>6</td><td>⚠️ Verify <code>reply_to</code> on the email</td><td>Replying to the notification goes to the sender's email</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>7</td><td>Click <strong>Send another message</strong> on the success screen</td><td>Form reappears with fields cleared</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Block 11 -->
+  <div id="block11" class="section-header">
+    <div class="section-num">11</div>
+    <h2>Static Pages</h2>
+  </div>
+
+  <div class="card">
+    <table class="test-table">
+      <thead><tr><th>Test</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>11.1</td><td>Navigate to <code>/privacy</code></td><td>Privacy Policy loads with "Last updated: 13 June 2026"</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>11.2</td><td>Navigate to <code>/terms</code></td><td>Terms of Service loads with "Last updated: 13 June 2026"</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>11.3</td><td>⚠️ Verify neither page shows today's current date dynamically</td><td>Both should show the fixed date above — if date changes daily, this is a bug</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>11.4</td><td>Navigate to <code>/</code></td><td>Home page loads</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>11.5</td><td>Navigate to a random path e.g. <code>/xyz/abc/notapage</code></td><td>404 Not Found page shown — no crash</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Block 12 -->
+  <div id="block12" class="section-header">
+    <div class="section-num">12</div>
+    <h2>Share Link &amp; Social Preview</h2>
+  </div>
+
+  <div class="card">
+    <table class="test-table">
+      <thead><tr><th>Test</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>12.1</td><td>Navigate to <code>/share/{slug}</code> in browser</td><td>Immediately redirects to <code>/{slug}</code></td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>12.2</td><td>Navigate to <code>/share/doesnotexist</code></td><td>404 or redirects to not-found page — no crash</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>12.3</td><td>Share <code>https://tinypartyportal.com/share/{slug}</code> on <strong>WhatsApp</strong></td><td>Rich preview card shown with event name, description, and birthday star photo</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>12.4</td><td>Share the same URL on <strong>iMessage</strong> or <strong>Slack</strong></td><td>OG preview card shown correctly</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Block 13 -->
+  <div id="block13" class="section-header">
+    <div class="section-num">13</div>
+    <h2>Mobile Smoke Test</h2>
+  </div>
+  <div class="info">Run on a real device or Chrome DevTools at <strong>390×844 (iPhone 14)</strong>. Check for: no horizontal scrolling, no clipped content, no overlapping elements.</div>
+
+  <div class="card">
+    <table class="test-table">
+      <thead><tr><th>#</th><th>Page</th><th>What to check</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>13.1</td><td><code>/dashboard</code></td><td>Event cards stack single-column, all text readable</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>13.2</td><td><code>/dashboard/create</code></td><td>Two-column form collapses to single column, all fields reachable</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>13.3</td><td><code>/dashboard/event/:id</code></td><td>Padding reduced, photo row stacks vertically, decorative tree image hidden, nav buttons stretch full width</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>13.4</td><td><code>/dashboard/event/:id/rsvps</code></td><td>Banner stacks vertically, action buttons wrap cleanly, search bar full width, <strong>table replaced by guest cards</strong></td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>13.5</td><td><code>/{slug}</code></td><td>Invitation card centred, all event details readable, RSVP button accessible without scrolling</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>13.6</td><td><code>/{slug}/rsvp</code></td><td>Step form fits screen, back/continue buttons visible and tappable, no content hidden below fold</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>13.7</td><td><code>/{slug}/memories/new</code></td><td>Capsule form fits screen — name, message, upload zone and Share button all reachable</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>13.8</td><td><code>/dashboard/event/:id/print</code></td><td>Print page renders at readable size</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>13.9</td><td><code>/privacy</code> and <code>/terms</code></td><td>Text readable, no horizontal overflow</td><td class="result-col"><div class="result-box"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Defect Reporting -->
+  <div id="defects" class="section-header">
+    <div class="section-num">!</div>
+    <h2>Defect Reporting</h2>
+  </div>
+
+  <div class="card">
+    <h3>Defect Report Template</h3>
+    <div class="defect-template">Test ID:        e.g. 5.1 — Step 13
+Summary:        One-line description of the issue
+Steps to repro:
+  1.
+  2.
+  3.
+Expected:       What should have happened
+Actual:         What actually happened
+Severity:       Critical / High / Medium / Low
+Environment:    Browser, OS, mobile/desktop
+Screenshot/Notes:</div>
+
+    <h3 style="margin-top: 24px; margin-bottom: 14px;">Severity Guide</h3>
+    <div class="severity-grid">
+      <div class="severity-item sev-critical"><strong>Critical</strong>Feature completely broken, data loss, security issue, or app crash</div>
+      <div class="severity-item sev-high"><strong>High</strong>Feature broken for a common use case, no workaround</div>
+      <div class="severity-item sev-medium"><strong>Medium</strong>Feature partially broken or confusing, workaround exists</div>
+      <div class="severity-item sev-low"><strong>Low</strong>Cosmetic issue, minor copy error, non-blocking visual glitch</div>
+    </div>
+  </div>
+
+  <!-- Completion Checklist -->
+  <div class="card" style="margin-top: 32px;">
+    <h3>Test Completion Checklist</h3>
+    <table class="checklist" style="margin-top: 16px;">
+      <thead><tr><th>Done</th><th>Block</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><div class="check-box"></div></td><td>Block 1</td><td>Authentication</td></tr>
+        <tr><td><div class="check-box"></div></td><td>Block 2</td><td>Create Event</td></tr>
+        <tr><td><div class="check-box"></div></td><td>Block 3</td><td>Event Management</td></tr>
+        <tr><td><div class="check-box"></div></td><td>Block 4</td><td>Guest Invite / Landing Page</td></tr>
+        <tr><td><div class="check-box"></div></td><td>Block 5</td><td>RSVP Form</td></tr>
+        <tr><td><div class="check-box"></div></td><td>Block 5A</td><td>Approval-Required RSVP</td></tr>
+        <tr><td><div class="check-box"></div></td><td>Block 6</td><td>Event Portal</td></tr>
+        <tr><td><div class="check-box"></div></td><td>Block 7</td><td>Guest List Management</td></tr>
+        <tr><td><div class="check-box"></div></td><td>Block 8</td><td>Memory Capsule</td></tr>
+        <tr><td><div class="check-box"></div></td><td>Block 9</td><td>Printable Invite</td></tr>
+        <tr><td><div class="check-box"></div></td><td>Block 10</td><td>Contact Page</td></tr>
+        <tr><td><div class="check-box"></div></td><td>Block 11</td><td>Static Pages</td></tr>
+        <tr><td><div class="check-box"></div></td><td>Block 12</td><td>Share Link &amp; Social Preview</td></tr>
+        <tr><td><div class="check-box"></div></td><td>Block 13</td><td>Mobile Smoke Test</td></tr>
+      </tbody>
+    </table>
+    <div class="summary-row" style="margin-top: 24px;">
+      <div class="summary-field"><label>Tester name</label><input type="text" placeholder=""></div>
+      <div class="summary-field"><label>Date completed</label><input type="text" placeholder="DD/MM/YYYY"></div>
+      <div class="summary-field"><label>Total tests</label><input type="text" value="143" readonly></div>
+      <div class="summary-field"><label>Pass</label><input type="text" placeholder=""></div>
+      <div class="summary-field"><label>Fail</label><input type="text" placeholder=""></div>
+      <div class="summary-field"><label>Skip</label><input type="text" placeholder=""></div>
+    </div>
+  </div>
+
+  <!-- User Flow Diagrams -->
+  <div id="flows" class="section-header">
+    <div class="section-num">↗</div>
+    <h2>User Flow Diagrams</h2>
+  </div>
+  <div class="info" style="margin-bottom: 24px;">These diagrams show every path a user can take through the app. Rendered automatically in this page — no extra tools needed.</div>
+
+  <div class="mermaid-wrap">
+    <h3>1. Host Signup &amp; Onboarding</h3>
+    <div class="mermaid">
+flowchart TD
+    A(["Visit tinypartyportal.com"]) --> B{"Have an account?"}
+    B -- No --> C["Click Sign Up"]
+    B -- Yes --> D["Click Log In"]
+    C --> E{"Sign up method"}
+    E -- Google --> F["Google OAuth popup"]
+    E -- Email --> G["Enter name, email, password"]
+    G --> H{"Password 6+ chars?"}
+    H -- No --> I["Error: password too short"]
+    I --> G
+    H -- Yes --> J{"Email already registered?"}
+    J -- Yes --> K["Error: account already exists"]
+    K --> G
+    J -- No --> L["Account created"]
+    F --> L
+    L --> M["Go to dashboard"]
+    M --> N["Welcome email sent to host"]
+    D --> O{"Login method"}
+    O -- Google --> P["Google OAuth popup"]
+    O -- Email/Password --> Q["Enter credentials"]
+    Q --> R{"Credentials valid?"}
+    R -- No --> S["Error: invalid credentials"]
+    S --> Q
+    R -- Yes --> M
+    P --> M
+    </div>
+  </div>
+
+  <div class="mermaid-wrap">
+    <h3>2. Host Creates an Event</h3>
+    <div class="mermaid">
+flowchart TD
+    A(["Dashboard"]) --> B["Click + New Party"]
+    B --> C["Go to create page"]
+    C --> D["Fill required fields: child name, occasion, date"]
+    D --> E["Choose theme and colour scheme"]
+    E --> F["Configure RSVP settings"]
+    F --> G["Click Create Party"]
+    G --> H{"Validation pass?"}
+    H -- No --> I["Show field errors"]
+    I --> D
+    H -- Yes --> J["Event created in Firestore"]
+    J --> K["Go to event management page"]
+    J --> L["Host confirmation email sent"]
+    J --> M["Admin notification email sent"]
+    </div>
+  </div>
+
+  <div class="mermaid-wrap">
+    <h3>3. Host Manages Event Details</h3>
+    <div class="mermaid">
+flowchart TD
+    A(["Event management page"]) --> B["Edit any field: name, date, time, location, theme, photo"]
+    B --> C["Upload birthday star photo"]
+    C --> D{"Upload success?"}
+    D -- Yes --> E["Photo shown in preview and saved"]
+    D -- No --> F["Error toast"]
+    B --> G["Toggle RSVP on/off"]
+    G --> H["RSVP settings expand/collapse"]
+    B --> I["Add schedule items"]
+    B --> J["Add gift registry note/link"]
+    B --> L["Click View Invite"]
+    L --> M["Opens invite page in new tab"]
+    B --> N["Click RSVPs button"]
+    N --> O["Go to guest list page"]
+    B --> P["Click Print Invite"]
+    P --> Q["Go to printable invite page"]
+    Q --> R{"Choose format"}
+    R -- Print --> S["Browser print dialog"]
+    R -- Download PDF --> T["PDF file downloaded"]
+    R -- Download Image --> U["PNG file downloaded"]
+    </div>
+  </div>
+
+  <div class="mermaid-wrap">
+    <h3>4. Guest Views Invite &amp; RSVPs</h3>
+    <div class="mermaid">
+flowchart TD
+    A(["Guest receives invite link"]) --> B["Event landing page"]
+    B --> C{"Event found?"}
+    C -- No --> D["Party not found screen"]
+    C -- Yes --> E["Themed invitation card shown"]
+    E --> F{"Already RSVPd?"}
+    F -- Yes --> G["Portal view shown"]
+    F -- No --> H["Invitation view shown"]
+    H --> I{"Guest actions"}
+    I -- Click RSVP NOW --> J["RSVP Form"]
+    I -- Add to Cal Google --> K["Google Calendar opens prefilled"]
+    I -- Add to Cal Apple/Outlook --> L["ics file downloaded"]
+    I -- Click address --> M["Google Maps opens"]
+    I -- Already RSVPd toggle --> N["Lookup form shown"]
+    N --> O["Enter name and contact"]
+    O --> P{"Match found?"}
+    P -- Yes --> G
+    P -- No --> Q["Not found message"]
+    Q --> R["Contact Organiser form shown"]
+    R --> S["Enter name, contact, message"]
+    S --> T{"Form valid?"}
+    T -- No --> S
+    T -- Yes --> U["contactOrganiser Cloud Function called"]
+    U --> V["Host receives guest message email"]
+    V --> W["Success message shown to guest"]
+    </div>
+  </div>
+
+  <div class="mermaid-wrap">
+    <h3>5. Guest RSVP Form — Full Flow</h3>
+    <div class="mermaid">
+flowchart TD
+    A(["RSVP form"]) --> H["Step 1: Attendance"]
+    H --> I{"Select attending?"}
+    I -- Yes --> J["Step 2: Child Info"]
+    I -- No --> K["Step 2: Child Info - decline path"]
+    J --> L["Enter child name and age if enabled"]
+    L --> M{"Siblings allowed?"}
+    M -- Yes --> N["Add siblings: name, age, dietary"]
+    M -- No --> O
+    N --> O["Step 3: Parent Info"]
+    K --> O
+    O --> P["Enter parent name"]
+    P --> Q{"Choose contact method"}
+    Q -- Email --> R["Enter email address"]
+    Q -- Phone --> S["Enter phone number"]
+    R --> T{"Valid email format?"}
+    T -- No --> R
+    T -- Yes --> U
+    S --> U["Step 4: Details"]
+    U --> Z["Click Submit RSVP"]
+    Z --> BB{"Event locked?"}
+    BB -- Yes, new guest --> CC["RSVP saved with needs_approval status"]
+    CC --> DD["Request Submitted screen - no confetti"]
+    CC --> EE["Host email: Action Required"]
+    CC --> FF["Guest email: Pending Approval - if email provided"]
+    BB -- No --> GG["RSVP saved as attending/declined"]
+    GG --> HH["Success screen + confetti or declined screen"]
+    GG --> II["Host email: New RSVP"]
+    GG --> JJ["Guest confirmation email - if email provided"]
+    </div>
+  </div>
+
+  <div class="mermaid-wrap">
+    <h3>6. Host Approves / Declines Guests</h3>
+    <div class="mermaid">
+flowchart TD
+    A(["Guest list page"]) --> B["Needs Approval badge visible"]
+    B --> C["Click Needs Approval metric card to filter"]
+    C --> D["Guest shown with needs_approval status"]
+    D --> E{"Host action"}
+    E -- Click Approve --> F["RSVP attending updated to true"]
+    F --> G["Guest moves to Going list"]
+    F --> H{"Guest has email?"}
+    H -- Yes --> I["You're In approval email sent to guest"]
+    H -- No --> J["No notification - phone only"]
+    E -- Click Decline --> K["RSVP attending updated to false"]
+    K --> L["Guest moves to Declined list"]
+    L --> M["No email sent on decline"]
+    </div>
+  </div>
+
+  <div class="mermaid-wrap">
+    <h3>7. Email Notification Map</h3>
+    <div class="mermaid">
+flowchart LR
+    subgraph Triggers
+        T1["New user signup"]
+        T2["New event created"]
+        T3["New RSVP submitted"]
+        T4["RSVP approved by host"]
+        T5["Guest contacts organiser"]
+        T6["Contact page form submitted"]
+    end
+    subgraph Recipients
+        R1["New host"]
+        R2["Event host"]
+        R3["Guest"]
+        R4["Admin"]
+        R5["Support team"]
+    end
+    T1 -->|"Welcome email"| R1
+    T1 -->|"New signup notification"| R4
+    T2 -->|"Your Party is Ready"| R2
+    T2 -->|"New event notification"| R4
+    T3 -->|"New RSVP / Action Required"| R2
+    T3 -->|"RSVP Confirmed / Pending - if email given"| R3
+    T4 -->|"Confirmed - if email given"| R3
+    T5 -->|"Guest message email"| R2
+    T6 -->|"Contact form submission"| R5
+    </div>
+  </div>
+
+  <div class="mermaid-wrap">
+    <h3>8. Memory Capsule — Entry, Submit &amp; Private Collection</h3>
+    <div class="mermaid">
+flowchart TD
+    A(["Guest on event page /slug"]) --> B{"Capsule enabled and within open/close window?"}
+    B -- No --> Z["No capsule entry point shown"]
+    B -- Yes --> C{"Event day reached?"}
+    C -- Before event --> D["Subtle link in footer"]
+    C -- On or after event --> E["Prominent card near top"]
+    D --> F["Open /slug/memories/new"]
+    E --> F
+    F --> G["Form: name required, message and file optional"]
+    G --> H["Click Share Memory"]
+    H --> I{"Validation"}
+    I -- Name missing --> J["Error: please enter your name"]
+    I -- No message AND no file --> K["Error: add message or photo"]
+    I -- Valid --> L{"File attached?"}
+    L -- Yes --> M["Upload to Firebase Storage - unguessable path"]
+    M --> N["Memory saved to Firestore"]
+    L -- No --> N
+    N --> O["Success screen - guest sees no other memories"]
+
+    P(["Host dashboard"]) --> Q["Open private capsule /capsule"]
+    Q --> R["View, download, export or delete submissions"]
+    R --> S{"Read access"}
+    S -- Owning host only --> T["Memories load"]
+    S -- Anyone else --> U["Denied by security rules"]
+    </div>
+  </div>
+
+  <div class="mermaid-wrap">
+    <h3>9. Share Link &amp; OG Preview</h3>
+    <div class="mermaid">
+flowchart TD
+    A(["Host copies invite share link"]) --> B{"Shared via"}
+    B -- WhatsApp / iMessage / social --> C["eventShareMeta Cloud Function"]
+    C --> D["Serves HTML with OG meta tags"]
+    D --> E["Rich preview card shown in chat or feed"]
+    E --> F["Recipient clicks preview"]
+    F --> G["JavaScript redirect to invite page"]
+    G --> H["Event landing page"]
+    B -- Direct invite link --> H
+    B -- Share link in browser --> I["ShareRedirect component"]
+    I --> J["window.location.replace to invite page"]
+    J --> H
+    </div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { curve: 'basis' } });
+</script>
+</body>
+</html>

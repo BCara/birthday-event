@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tiny Party Portal — How It Works</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 15px; line-height: 1.6; color: #1a1a2e; background: #f8f9fc;
+  }
+  .page-wrap { max-width: 960px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* Cover */
+  .cover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white; border-radius: 16px; padding: 48px 40px; margin-bottom: 40px;
+    print-color-adjust: exact; -webkit-print-color-adjust: exact;
+  }
+  .cover h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 8px; }
+  .cover .subtitle { font-size: 1.1rem; opacity: 0.85; margin-bottom: 24px; }
+  .cover-meta { display: flex; gap: 32px; flex-wrap: wrap; }
+  .cover-meta div { font-size: 0.9rem; opacity: 0.9; }
+  .cover-meta strong { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; margin-bottom: 2px; }
+
+  /* TOC */
+  .toc { background: white; border-radius: 12px; padding: 28px 32px; margin-bottom: 40px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  .toc h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; color: #667eea; margin-bottom: 16px; }
+  .toc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px; }
+  .toc a { display: flex; align-items: center; gap: 8px; color: #444; text-decoration: none; font-size: 0.9rem; padding: 5px 8px; border-radius: 6px; transition: background 0.15s; }
+  .toc a:hover { background: #f0f0ff; color: #667eea; }
+  .toc-num { background: #667eea; color: white; border-radius: 4px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+
+  /* Section headings */
+  .section-header { display: flex; align-items: center; gap: 14px; margin: 52px 0 20px; }
+  .section-num { background: linear-gradient(135deg, #667eea, #764ba2); color: white; border-radius: 10px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 800; flex-shrink: 0; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .section-header h2 { font-size: 1.5rem; font-weight: 700; }
+
+  /* Cards */
+  .card { background: white; border-radius: 12px; padding: 28px 32px; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  .card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; color: #333; }
+  .card p { margin-bottom: 12px; }
+  .card ul, .card ol { margin: 0 0 12px 20px; }
+  .card li { margin: 5px 0; }
+
+  /* Actor / glossary grid */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .mini { background: #f8f9fc; border-radius: 8px; padding: 16px; border-left: 3px solid #667eea; }
+  .mini h4 { font-size: 0.95rem; color: #4c3a8c; margin-bottom: 6px; }
+  .mini p { font-size: 0.9rem; margin: 0; color: #444; }
+
+  /* Tables */
+  .test-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 4px; }
+  .test-table th { background: #f4f4f8; text-align: left; padding: 8px 12px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: #666; border-bottom: 2px solid #e8e8ee; }
+  .test-table td { padding: 9px 12px; border-bottom: 1px solid #f0f0f4; vertical-align: top; }
+  .test-table tr:last-child td { border-bottom: none; }
+  .test-table tr:hover td { background: #fafafa; }
+  .test-table code { background: rgba(102,126,234,0.1); }
+
+  code { background: rgba(125,125,125,.14); padding: 1px 6px; border-radius: 5px; font-size: 0.85em; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+
+  /* Callouts */
+  .note { background: #fff8e7; border-left: 3px solid #f59e0b; border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 0.88rem; margin: 12px 0; color: #78350f; }
+  .note strong { color: #92400e; }
+  .info { background: #eff6ff; border-left: 3px solid #3b82f6; border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 0.88rem; margin: 12px 0; color: #1e40af; }
+
+  /* Step list */
+  .steps { counter-reset: step; list-style: none; margin: 0 0 14px 0 !important; }
+  .steps li { position: relative; padding: 4px 0 4px 34px; margin: 0; }
+  .steps li::before { counter-increment: step; content: counter(step); position: absolute; left: 0; top: 4px; width: 22px; height: 22px; background: #ede9fe; color: #5b21b6; border-radius: 50%; font-size: 0.78rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+
+  /* Tested-in link */
+  .tested { display: inline-flex; align-items: center; gap: 7px; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; border-radius: 999px; padding: 6px 14px; font-size: 0.83rem; font-weight: 600; text-decoration: none; margin-top: 4px; transition: background 0.15s; }
+  .tested:hover { background: #dcfce7; }
+
+  /* Flow diagrams */
+  .mermaid-wrap { background: white; border-radius: 12px; padding: 24px; margin: 16px 0; box-shadow: inset 0 0 0 1px #eef0f6; overflow-x: auto; }
+  .mermaid { max-width: 100%; }
+
+  /* Pills */
+  .pill { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 0.78rem; font-weight: 700; }
+  .pill-host { background: #ede9fe; color: #5b21b6; }
+  .pill-guest { background: #e0f2fe; color: #075985; }
+  .pill-system { background: #f1f5f9; color: #475569; }
+
+  a { color: #667eea; }
+  footer { color: #888; font-size: 12.5px; text-align: center; margin-top: 30px; }
+
+  @media (max-width: 640px) {
+    .cover { padding: 28px 20px; } .cover h1 { font-size: 1.6rem; }
+    .grid-2 { grid-template-columns: 1fr; } .card { padding: 20px; }
+  }
+  @media print {
+    body { background: white; } .toc { display: none; }
+    .section-header { page-break-before: always; }
+    .card, .mermaid-wrap { box-shadow: none; border: 1px solid #eee; page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Cover -->
+  <div class="cover">
+    <h1>Tiny Party Portal</h1>
+    <div class="subtitle">How It Works — App &amp; Interaction Guide</div>
+    <div class="cover-meta">
+      <div><strong>Date</strong>17 June 2026</div>
+      <div><strong>Audience</strong>New team members, testers, stakeholders</div>
+      <div><strong>Companion to</strong><a href="testing-guide.html" style="color:#fff;">Functional Testing Guide</a></div>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h2>Contents</h2>
+    <div class="toc-grid">
+      <a href="#what"><span class="toc-num">1</span> What is Tiny Party Portal?</a>
+      <a href="#who"><span class="toc-num">2</span> Who Uses It</a>
+      <a href="#glossary"><span class="toc-num">3</span> Key Words to Know</a>
+      <a href="#bigpicture"><span class="toc-num">4</span> The Big Picture</a>
+      <a href="#flows"><span class="toc-num">5</span> Interaction Flows</a>
+      <a href="#f-signup"><span class="toc-num">↳</span> Sign Up &amp; Onboarding</a>
+      <a href="#f-create"><span class="toc-num">↳</span> Create an Event</a>
+      <a href="#f-configure"><span class="toc-num">↳</span> Configure &amp; Modules</a>
+      <a href="#f-share"><span class="toc-num">↳</span> Share the Invite</a>
+      <a href="#f-invite"><span class="toc-num">↳</span> Guest Views the Invite</a>
+      <a href="#f-rsvp"><span class="toc-num">↳</span> Guest RSVPs</a>
+      <a href="#f-approval"><span class="toc-num">↳</span> Approval-Required RSVP</a>
+      <a href="#f-portal"><span class="toc-num">↳</span> The Event Portal</a>
+      <a href="#f-guestlist"><span class="toc-num">↳</span> Managing the Guest List</a>
+      <a href="#f-capsule"><span class="toc-num">↳</span> The Memory Capsule</a>
+      <a href="#f-print"><span class="toc-num">↳</span> Printable Invite</a>
+      <a href="#f-emails"><span class="toc-num">↳</span> Email Notifications</a>
+      <a href="#under"><span class="toc-num">6</span> Under the Hood</a>
+      <a href="#further"><span class="toc-num">7</span> Further Reading</a>
+    </div>
+  </div>
+
+  <!-- 1. What is it -->
+  <div id="what" class="section-header"><div class="section-num">1</div><h2>What is Tiny Party Portal?</h2></div>
+  <div class="card">
+    <p><strong>Tiny Party Portal</strong> is a web app for planning a child's birthday party. A parent (the <span class="pill pill-host">host</span>) creates a themed event page, shares a link or QR code, and guests reply (<strong>RSVP</strong>) in seconds — no app to download, no account needed.</p>
+    <p>Around that core, the app offers three optional pieces per event:</p>
+    <ul>
+      <li><strong>Web invite</strong> — the always-on themed page with date, time, location and details.</li>
+      <li><strong>RSVP</strong> — guests confirm attendance, dietary needs, siblings and more; the host sees a live guest list.</li>
+      <li><strong>Memory Capsule</strong> — a <em>private</em> place for guests to add photos and messages from the day, collected only for the host and child.</li>
+    </ul>
+    <div class="info">It is a single-page web app (React) hosted on Firebase. There is nothing to install — everything runs in the browser.</div>
+  </div>
+
+  <!-- 2. Who uses it -->
+  <div id="who" class="section-header"><div class="section-num">2</div><h2>Who Uses It</h2></div>
+  <div class="card">
+    <div class="grid-2">
+      <div class="mini"><h4><span class="pill pill-host">Host</span></h4><p>The parent organising the party. Signs in, creates and configures the event, shares it, manages RSVPs, and views the Memory Capsule. The only person who needs an account.</p></div>
+      <div class="mini"><h4><span class="pill pill-guest">Guest</span></h4><p>An invited family. Opens the link, views the invite, RSVPs, and (optionally) adds a memory. Never logs in — they're identified by the link they hold.</p></div>
+      <div class="mini"><h4><span class="pill pill-system">Admin</span></h4><p>The Tiny Party Portal operator. Receives notification emails (new signups, new events) but doesn't act inside a host's event.</p></div>
+      <div class="mini"><h4><span class="pill pill-system">System</span></h4><p>Background Cloud Functions that send emails, look up RSVPs, parse pasted messages, and serve social-share previews.</p></div>
+    </div>
+  </div>
+
+  <!-- 3. Glossary -->
+  <div id="glossary" class="section-header"><div class="section-num">3</div><h2>Key Words to Know</h2></div>
+  <div class="card">
+    <table class="test-table">
+      <thead><tr><th>Term</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Event</strong></td><td>One party. Holds all its settings (date, theme, modules, etc.).</td></tr>
+        <tr><td><strong>Slug</strong></td><td>The readable name in the event's URL, e.g. <code>robins-party</code> in <code>/robins-party</code>.</td></tr>
+        <tr><td><strong>Published</strong></td><td>A flag that makes an event publicly viewable. Guests can only open published events.</td></tr>
+        <tr><td><strong>Invite / landing page</strong></td><td>What a guest sees at <code>/{slug}</code> — the themed invitation.</td></tr>
+        <tr><td><strong>RSVP</strong></td><td>A guest's reply (attending or not) plus their details. Stored as one record with an unguessable ID.</td></tr>
+        <tr><td><strong>Portal</strong></td><td>The richer view a guest sees <em>after</em> they've RSVP'd — schedule, gift info, contact, etc.</td></tr>
+        <tr><td><strong>Module</strong></td><td>A toggleable feature on an event: Web (always on), RSVP, Memory Capsule.</td></tr>
+        <tr><td><strong>Memory Capsule</strong></td><td>A private collection of guest photos/messages, visible only to the host.</td></tr>
+        <tr><td><strong>Lock RSVPs</strong></td><td>A host setting that makes new RSVPs require host approval before they're confirmed.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 4. Big picture -->
+  <div id="bigpicture" class="section-header"><div class="section-num">4</div><h2>The Big Picture</h2></div>
+  <div class="card">
+    <p>From start to finish, here's the journey of a party — host actions in purple, guest actions in blue.</p>
+    <div class="mermaid-wrap"><div class="mermaid">
+flowchart TD
+    A["Host signs up"]:::host --> B["Creates an event"]:::host
+    B --> C["Configures details and modules"]:::host
+    C --> D["Shares the invite link or QR"]:::host
+    D --> E["Guest opens the invite"]:::guest
+    E --> F{"RSVP enabled?"}
+    F -- Yes --> G["Guest RSVPs"]:::guest
+    G --> H["Guest sees the event portal"]:::guest
+    F -- No --> H
+    C --> I["Host views guest list and estimates"]:::host
+    H --> J{"On the party day and capsule on?"}
+    J -- Yes --> K["Guest adds a memory"]:::guest
+    K --> L["Host views private Memory Capsule"]:::host
+    classDef host fill:#ede9fe,stroke:#8b5cf6,color:#4c1d95;
+    classDef guest fill:#e0f2fe,stroke:#38bdf8,color:#075985;
+    </div></div>
+  </div>
+
+  <!-- 5. Flows -->
+  <div id="flows" class="section-header"><div class="section-num">5</div><h2>Interaction Flows</h2></div>
+  <div class="info">Each flow below explains <strong>what happens and why</strong>, with a diagram and a link to the matching tests in the Functional Testing Guide.</div>
+
+  <!-- Sign up -->
+  <div id="f-signup" class="card">
+    <h3>① Sign Up &amp; Onboarding <span class="pill pill-host">Host</span></h3>
+    <p>A new host creates an account with Google or an email + password. On success they land on their dashboard and receive a welcome email; the admin is notified of the new signup.</p>
+    <ol class="steps">
+      <li>Visit the site → choose <strong>Sign Up</strong>.</li>
+      <li>Sign up with Google (one tap) or email + password (6+ characters).</li>
+      <li>Account is created → redirected to <code>/dashboard</code>.</li>
+      <li>System sends a welcome email to the host and a notification to the admin.</li>
+    </ol>
+    <a class="tested" href="testing-guide.html#block1">✓ Tested in → Block 1: Authentication</a>
+  </div>
+
+  <!-- Create -->
+  <div id="f-create" class="card">
+    <h3>② Create an Event <span class="pill pill-host">Host</span></h3>
+    <p>The host fills in the essentials (child's name, date), picks a theme and colour, and the event is saved. Two emails go out: a confirmation to the host and a notification to the admin. If the chosen name clashes with an existing event, the slug gets a number suffix.</p>
+    <div class="mermaid-wrap"><div class="mermaid">
+flowchart TD
+    A(["+ New Party"]) --> B["Enter child name, date and details"]
+    B --> C["Pick theme and colour"]
+    C --> D["Click Create Party"]
+    D --> E{"Required fields valid?"}
+    E -- No --> B
+    E -- Yes --> F["Event saved in Firestore"]
+    F --> G["Open event management page"]
+    F --> H["Host confirmation + admin notification emails"]
+    </div></div>
+    <a class="tested" href="testing-guide.html#block2">✓ Tested in → Block 2: Create Event</a>
+  </div>
+
+  <!-- Configure -->
+  <div id="f-configure" class="card">
+    <h3>③ Configure the Event &amp; Modules <span class="pill pill-host">Host</span></h3>
+    <p>On the management page the host fine-tunes everything: photo, date/time, location, schedule, gift info, and the <strong>module bar</strong> at the top. <strong>Web</strong> is always on; <strong>RSVP</strong> and <strong>Memory Capsule</strong> are toggles that reveal their own settings when switched on. A live preview reflects changes.</p>
+    <ul>
+      <li><strong>RSVP settings</strong> — choose which questions guests answer (age, adults, dietary, siblings, whether parents stay or drop off).</li>
+      <li><strong>Memory Capsule</strong> — title, guest message, and optional open/close dates.</li>
+    </ul>
+    <a class="tested" href="testing-guide.html#block3">✓ Tested in → Block 3: Event Management</a>
+  </div>
+
+  <!-- Share -->
+  <div id="f-share" class="card">
+    <h3>④ Share the Invite <span class="pill pill-host">Host</span></h3>
+    <p>The host shares the event link, a QR code, or a WhatsApp message. The link adapts to which modules are on — if RSVP is enabled it points to the RSVP entry, otherwise straight to the info portal. A special <code>/share/{slug}</code> link produces a rich preview card (photo + details) when pasted into WhatsApp, iMessage or social apps, then forwards the recipient to the real invite.</p>
+    <div class="mermaid-wrap"><div class="mermaid">
+flowchart TD
+    A["Host copies the share link"] --> B{"Shared where?"}
+    B -- WhatsApp / iMessage / social --> C["eventShareMeta serves preview card"]
+    C --> D["Recipient taps card"]
+    D --> E["Forwarded to the invite page"]
+    B -- Direct link / QR --> E["Guest opens /slug"]
+    </div></div>
+    <a class="tested" href="testing-guide.html#block12">✓ Tested in → Block 12: Share Link &amp; Social Preview</a>
+  </div>
+
+  <!-- Invite -->
+  <div id="f-invite" class="card">
+    <h3>⑤ Guest Views the Invite <span class="pill pill-guest">Guest</span></h3>
+    <p>The guest opens <code>/{slug}</code> and sees the themed invitation with all the details, a countdown, and add-to-calendar / map buttons. If they've already RSVP'd (remembered on their device), they see the portal instead. If they're on a new device, a "Find your RSVP" lookup restores access.</p>
+    <a class="tested" href="testing-guide.html#block4">✓ Tested in → Block 4: Guest Invite / Landing</a>
+  </div>
+
+  <!-- RSVP -->
+  <div id="f-rsvp" class="card">
+    <h3>⑥ Guest RSVPs <span class="pill pill-guest">Guest</span></h3>
+    <p>A short, four-step form: attendance → child info → parent contact → details. Guests can reply yes or no, add siblings, and give an email or phone. On submit they see a confirmation (with confetti if attending), the host is emailed the new RSVP, and the guest gets a confirmation email if they provided one.</p>
+    <div class="mermaid-wrap"><div class="mermaid">
+flowchart TD
+    A(["RSVP form"]) --> B["Step 1: Attending?"]
+    B --> C["Step 2: Child info + siblings"]
+    C --> D["Step 3: Parent name + email or phone"]
+    D --> E["Step 4: Details: adults, dietary, stay/drop-off"]
+    E --> F["Submit"]
+    F --> G["Success screen"]
+    F --> H["Host email: New RSVP"]
+    F --> I["Guest confirmation email (if email given)"]
+    </div></div>
+    <a class="tested" href="testing-guide.html#block5">✓ Tested in → Block 5: RSVP Form</a>
+  </div>
+
+  <!-- Approval -->
+  <div id="f-approval" class="card">
+    <h3>⑦ Approval-Required RSVP <span class="pill pill-host">Host</span> <span class="pill pill-guest">Guest</span></h3>
+    <p>If the host turns on <strong>Lock RSVPs</strong>, new replies arrive as <em>Needs Approval</em> instead of going straight through. The guest sees a "request submitted" screen; the host gets an "action required" email and approves or declines from the guest list. Approving sends the guest a confirmation. Guests who were already approved can edit their RSVP without needing re-approval.</p>
+    <div class="mermaid-wrap"><div class="mermaid">
+flowchart TD
+    A["Guest submits under lock"] --> B["Saved as Needs Approval"]
+    B --> C["Guest: request submitted, no confetti"]
+    B --> D["Host email: Action Required"]
+    D --> E{"Host decision"}
+    E -- Approve --> F["Confirmed → guest emailed You're In"]
+    E -- Decline --> G["Marked Not Attending → no email"]
+    </div></div>
+    <a class="tested" href="testing-guide.html#block5a">✓ Tested in → Block 5A: Approval-Required RSVP</a>
+  </div>
+
+  <!-- Portal -->
+  <div id="f-portal" class="card">
+    <h3>⑧ The Event Portal <span class="pill pill-guest">Guest</span></h3>
+    <p>After RSVP'ing, the guest sees the portal: their attending status, a live countdown, the party schedule, location with maps, gift information (only for attending guests), and a way to contact the host. It's the "everything you need to know" view in the run-up to the day.</p>
+    <a class="tested" href="testing-guide.html#block6">✓ Tested in → Block 6: Event Portal</a>
+  </div>
+
+  <!-- Guest list -->
+  <div id="f-guestlist" class="card">
+    <h3>⑨ Managing the Guest List <span class="pill pill-host">Host</span></h3>
+    <p>The host's RSVP dashboard shows headcount metric cards (Going / Maybe / Declined / Needs Approval), search and filtering, and tools to add, edit, import (CSV), or export guests. <strong>Magic Paste</strong> turns a pasted message ("Zara and her brother Tom will come") into a structured RSVP using AI. Manually added or imported guests do <em>not</em> trigger emails.</p>
+    <a class="tested" href="testing-guide.html#block7">✓ Tested in → Block 7: Guest List Management</a>
+  </div>
+
+  <!-- Capsule -->
+  <div id="f-capsule" class="card">
+    <h3>⑩ The Memory Capsule <span class="pill pill-host">Host</span> <span class="pill pill-guest">Guest</span></h3>
+    <p>When enabled, guests can add photos, videos and messages — but the capsule is <strong>private</strong>: a guest submits "blind" and never sees anyone else's contribution. Only the host views the collection (and can download or export it) for the child to look back on.</p>
+    <p>The entry point on the guest page is deliberately understated <strong>before the event</strong> (a small footer link, away from the RSVP) and becomes <strong>prominent on the day</strong> (a card near the top), when people are most likely to share. Optional open/close dates control the window.</p>
+    <div class="mermaid-wrap"><div class="mermaid">
+flowchart TD
+    A(["Guest on /slug"]) --> B{"Capsule on and in window?"}
+    B -- No --> Z["No entry point"]
+    B -- Yes --> C{"Event day reached?"}
+    C -- Before --> D["Subtle footer link"]
+    C -- On / after --> E["Prominent card near top"]
+    D --> F["Submit a memory (name + message/media)"]
+    E --> F
+    F --> G["Saved privately + success screen"]
+    G --> H["Host views in private capsule; guest sees nothing else"]:::host
+    classDef host fill:#ede9fe,stroke:#8b5cf6,color:#4c1d95;
+    </div></div>
+    <div class="note"><strong>Privacy by design:</strong> there is no public memory wall and no live slideshow. Submissions are readable only by the owning host (enforced by security rules), and uploaded files use unguessable paths.</div>
+    <a class="tested" href="testing-guide.html#block8">✓ Tested in → Block 8: Memory Capsule</a>
+  </div>
+
+  <!-- Print -->
+  <div id="f-print" class="card">
+    <h3>⑪ Printable Invite <span class="pill pill-host">Host</span></h3>
+    <p>The host can open a print-ready invitation card with a QR code and download it as a PDF or image, or print it. Paper size (A5/A4) and a themed or white background are set via URL options.</p>
+    <a class="tested" href="testing-guide.html#block9">✓ Tested in → Block 9: Printable Invite</a>
+  </div>
+
+  <!-- Emails -->
+  <div id="f-emails" class="card">
+    <h3>⑫ Email Notifications <span class="pill pill-system">System</span></h3>
+    <p>Several actions trigger automatic emails. Guests are only emailed when they provide an email address.</p>
+    <table class="test-table">
+      <thead><tr><th>When this happens</th><th>Who gets an email</th></tr></thead>
+      <tbody>
+        <tr><td>New host signs up</td><td>Host (welcome) + Admin (notification)</td></tr>
+        <tr><td>New event created</td><td>Host (confirmation) + Admin (notification)</td></tr>
+        <tr><td>New RSVP submitted</td><td>Host (new RSVP, or "action required" if locked) + Guest (confirmation/pending)</td></tr>
+        <tr><td>Host approves a locked RSVP</td><td>Guest (you're confirmed)</td></tr>
+        <tr><td>Guest contacts the organiser</td><td>Host (guest message, reply-to set to guest)</td></tr>
+        <tr><td>Contact-page form submitted</td><td>Support team</td></tr>
+      </tbody>
+    </table>
+    <a class="tested" href="testing-guide.html#flows">✓ See → Email Notification Map (Testing Guide, diagram 7)</a>
+  </div>
+
+  <!-- 6. Under the hood -->
+  <div id="under" class="section-header"><div class="section-num">6</div><h2>Under the Hood</h2></div>
+
+  <div class="card">
+    <h3>Technology</h3>
+    <ul>
+      <li><strong>Frontend:</strong> React + Vite single-page app. All UI runs in the browser.</li>
+      <li><strong>Backend:</strong> Firebase — <strong>Auth</strong> (host login), <strong>Firestore</strong> (data), <strong>Storage</strong> (photos/videos), <strong>Cloud Functions</strong> (emails, lookups, share previews), <strong>Hosting</strong> (serves the site).</li>
+      <li><strong>Email:</strong> sent from Cloud Functions on key events.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Route Map</h3>
+    <table class="test-table">
+      <thead><tr><th>Route</th><th>Who</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>/</code></td><td><span class="pill pill-guest">Public</span></td><td>Marketing home page</td></tr>
+        <tr><td><code>/login</code>, <code>/signup</code></td><td><span class="pill pill-guest">Public</span></td><td>Host authentication</td></tr>
+        <tr><td><code>/contact</code>, <code>/privacy</code>, <code>/terms</code></td><td><span class="pill pill-guest">Public</span></td><td>Static pages</td></tr>
+        <tr><td><code>/dashboard</code></td><td><span class="pill pill-host">Host</span></td><td>List of the host's events</td></tr>
+        <tr><td><code>/dashboard/create</code></td><td><span class="pill pill-host">Host</span></td><td>Create a new event</td></tr>
+        <tr><td><code>/dashboard/event/:id</code></td><td><span class="pill pill-host">Host</span></td><td>Manage / configure an event</td></tr>
+        <tr><td><code>/dashboard/event/:id/rsvps</code></td><td><span class="pill pill-host">Host</span></td><td>Guest list management</td></tr>
+        <tr><td><code>/dashboard/event/:id/capsule</code></td><td><span class="pill pill-host">Host</span></td><td>Private Memory Capsule</td></tr>
+        <tr><td><code>/dashboard/event/:id/print</code></td><td><span class="pill pill-host">Host</span></td><td>Printable invite</td></tr>
+        <tr><td><code>/{slug}</code></td><td><span class="pill pill-guest">Guest</span></td><td>Invite landing (or portal if already RSVP'd)</td></tr>
+        <tr><td><code>/{slug}/rsvp</code></td><td><span class="pill pill-guest">Guest</span></td><td>RSVP form</td></tr>
+        <tr><td><code>/{slug}/portal</code></td><td><span class="pill pill-guest">Guest</span></td><td>Post-RSVP details portal</td></tr>
+        <tr><td><code>/{slug}/memories/new</code></td><td><span class="pill pill-guest">Guest</span></td><td>Submit a memory (blind)</td></tr>
+        <tr><td><code>/share/{slug}</code></td><td><span class="pill pill-system">System</span></td><td>Social-preview redirect</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Data Model (Firestore)</h3>
+    <table class="test-table">
+      <thead><tr><th>Collection</th><th>Holds</th><th>Who can read</th></tr></thead>
+      <tbody>
+        <tr><td><code>users</code></td><td>Host account profile</td><td>That host only</td></tr>
+        <tr><td><code>events</code></td><td>All event settings (details, theme, modules, RSVP &amp; capsule config)</td><td>Owning host always; anyone if the event is <em>published</em></td></tr>
+        <tr><td><code>rsvps</code></td><td>One record per guest reply</td><td>Owning host (full list); a guest can read/edit their own via its unguessable ID</td></tr>
+        <tr><td><code>memories</code></td><td>Guest photos, videos and messages</td><td><strong>Owning host only</strong> — guests can create but never read</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:14px;">Files live in <strong>Storage</strong>: <code>event-photos/{eventId}/…</code> (host uploads) and <code>memories/{eventId}/…</code> (guest uploads, unguessable filenames, size/type limited).</p>
+  </div>
+
+  <div class="card">
+    <h3>How Access is Kept Safe (in plain terms)</h3>
+    <ul>
+      <li><strong>Hosts only touch their own events.</strong> The rules check that the logged-in user owns the event.</li>
+      <li><strong>Guests don't log in.</strong> Their RSVP link contains an unguessable ID that acts like a ticket — holding it lets them see and edit only that one RSVP.</li>
+      <li><strong>Published events are public to read</strong> so guests can open the invite, but only the host can list all RSVPs (no bulk harvesting of contact details).</li>
+      <li><strong>The Memory Capsule is private.</strong> Anyone can submit to a published event, but only the owning host can read submissions.</li>
+    </ul>
+    <a class="tested" href="SECURITY_AND_DESIGN_REVIEW.html">→ Full detail: Security &amp; Design Review</a>
+  </div>
+
+  <!-- 7. Further reading -->
+  <div id="further" class="section-header"><div class="section-num">7</div><h2>Further Reading</h2></div>
+  <div class="card">
+    <ul>
+      <li><a href="testing-guide.html">Functional Testing Guide</a> — step-by-step tests for every flow above.</li>
+      <li><a href="SECURITY_AND_DESIGN_REVIEW.html">Security &amp; Design Review</a> — rules, data handling and findings.</li>
+      <li><a href="SEO_AND_DISCOVERABILITY.html">SEO &amp; Discoverability Roadmap</a> — how the app gets found and what's left to do.</li>
+      <li><a href="USER_FLOWS.md">User Flow Diagrams</a> — the raw Mermaid source for the diagrams.</li>
+    </ul>
+  </div>
+
+  <footer>Tiny Party Portal — How It Works · 17 June 2026 · Companion to the Functional Testing Guide</footer>
+
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { curve: 'basis' } });
+</script>
+</body>
+</html>

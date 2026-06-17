@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tiny Party Portal — Security &amp; Design Review</title>
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --card: #ffffff;
+    --text: #1f2733;
+    --muted: #5b6675;
+    --border: #e4e8ef;
+    --accent: #6d5dfc;
+    --crit-bg: #fdecec; --crit-bd: #f5b5b5; --crit-tx: #a3261f;
+    --high-bg: #fff4e5; --high-bd: #ffd29a; --high-tx: #9a5a00;
+    --med-bg: #eef4ff;  --med-bd: #b9d1ff;  --med-tx: #2b54a8;
+    --low-bg: #eef7f0;  --low-bd: #b9e2c4;  --low-tx: #1f7a3d;
+    --fix: #1f7a3d; --part: #9a5a00; --todo: #5b6675;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161c; --card: #1c1f27; --text: #e7eaf0; --muted: #9aa3b2; --border: #2a2e38;
+      --crit-bg:#3a1f1d; --crit-bd:#6e2f2a; --crit-tx:#ff9a90;
+      --high-bg:#3a2c16; --high-bd:#6e5320; --high-tx:#ffc36b;
+      --med-bg:#1c273e; --med-bd:#33507f; --med-tx:#9cc0ff;
+      --low-bg:#1b2e22; --low-bd:#2f5a3d; --low-tx:#8fe0a6;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6; padding: 32px 16px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  header.page {
+    background: linear-gradient(135deg, #6d5dfc, #8b7bff); color: #fff;
+    border-radius: 16px; padding: 28px 32px; margin-bottom: 24px;
+  }
+  header.page h1 { margin: 0 0 6px; font-size: 26px; }
+  header.page p { margin: 0; opacity: .92; font-size: 14px; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 28px;
+    font-size: 13px;
+  }
+  .legend span { background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; }
+  section.group { margin-bottom: 30px; }
+  h2.grouph {
+    font-size: 13px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 12px; padding-left: 4px;
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; margin-bottom: 12px;
+  }
+  .card h3 { margin: 0 0 8px; font-size: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .card .code { color: var(--muted); font-size: 12.5px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .card p { margin: 8px 0; font-size: 14.5px; }
+  .card ul { margin: 8px 0; padding-left: 20px; font-size: 14.5px; }
+  .card li { margin: 4px 0; }
+  code { background: rgba(125,125,125,.14); padding: 1px 6px; border-radius: 5px; font-size: 13px;
+         font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .sev { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; letter-spacing: .04em; }
+  .sev.crit { background: var(--crit-bg); border: 1px solid var(--crit-bd); color: var(--crit-tx); }
+  .sev.high { background: var(--high-bg); border: 1px solid var(--high-bd); color: var(--high-tx); }
+  .sev.med  { background: var(--med-bg);  border: 1px solid var(--med-bd);  color: var(--med-tx); }
+  .sev.low  { background: var(--low-bg);  border: 1px solid var(--low-bd);  color: var(--low-tx); }
+  .status { font-size: 13px; font-weight: 700; margin-left: auto; }
+  .status.fix  { color: var(--fix); }
+  .status.part { color: var(--part); }
+  .status.todo { color: var(--todo); }
+  .compact .card { padding: 12px 16px; }
+  .compact .card h3 { font-size: 14.5px; margin-bottom: 4px; }
+  .compact .card p { font-size: 13.5px; margin: 4px 0; }
+  pre {
+    background: #0f1117; color: #e7eaf0; border-radius: 10px; padding: 14px 16px;
+    overflow-x: auto; font-size: 13px; font-family: ui-monospace, Menlo, Consolas, monospace; line-height: 1.5;
+  }
+  .note { background: var(--med-bg); border: 1px solid var(--med-bd); color: var(--med-tx);
+          border-radius: 10px; padding: 12px 16px; font-size: 14px; }
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 30px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page">
+    <h1>🔐 Tiny Party Portal — Security &amp; Design Review</h1>
+    <p>Date: 2026-06-13 · Covers Firebase rules, Cloud Functions, host dashboard, guest flow, auth &amp; config.
+       Severity reflects impact given the app stores children's and parents' personal data.</p>
+  </header>
+
+  <div class="legend">
+    <span><strong style="color:var(--fix)">✅ fixed</strong> in this pass</span>
+    <span><strong style="color:var(--part)">🟡 partial</strong> — follow-up needed</span>
+    <span><strong style="color:var(--todo)">⬜ documented</strong>, not yet actioned</span>
+  </div>
+
+  <!-- CRITICAL -->
+  <section class="group">
+    <h2 class="grouph">Critical</h2>
+
+    <div class="card">
+      <h3><span class="sev crit">CRITICAL</span> C1 — Any guest could read/list/edit/delete every RSVP
+        <span class="status fix">✅ fixed</span></h3>
+      <div class="code">firestore.rules (rsvps block)</div>
+      <ul>
+        <li>The <code>list</code> rule let any guest download <strong>all</strong> RSVP documents for a published event
+          (names, ages, emails, phones, dietary notes) — a bulk PII-harvesting hole. The "Already RSVP'd?" lookup
+          relied on this (downloaded the whole collection and filtered client-side).</li>
+        <li>The <code>get/update/delete</code> rule ended in <code>|| true</code>, so anyone could modify or delete any RSVP.</li>
+      </ul>
+      <p><strong>Fix:</strong> <code>list</code> and <code>delete</code> are now host-only. Guest "find my RSVP" moved to a
+        server-side Cloud Function (<code>lookupRsvp</code>) that requires child name <strong>and</strong> matching
+        email/phone before returning anything. <code>get</code>/<code>update</code> remain open as a deliberate
+        bearer-token model (must know the unguessable 20-char document ID — e.g. own localStorage or edit link).</p>
+      <p><strong>Residual risk (documented):</strong> holding an RSVP's document ID grants read/edit of that one RSVP —
+        the intended "edit-link" design. A fully locked-down version routes all reads/writes through Cloud Functions (see F1).</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev crit">CRITICAL</span> C2 — Storage was world-readable AND world-writable
+        <span class="status fix">✅ fixed</span></h3>
+      <div class="code">storage.rules</div>
+      <p><code>allow read, write: if true</code> on <code>memories/**</code> and <code>event-photos/**</code> let anyone
+        upload unlimited files of any type/size, and <strong>overwrite or delete</strong> existing photos/memories.</p>
+      <p><strong>Fix:</strong> uploads are now create-only (no overwrite/delete by clients), restricted to image/* (&lt;15 MB)
+        and video/* (&lt;200 MB). Event-photo uploads additionally require an authenticated user. Host memory deletion still
+        works (it only removes the Firestore doc).</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev crit">CRITICAL</span> C3 — <code>memories</code> collection had no Firestore rule
+        <span class="status fix">✅ fixed</span></h3>
+      <div class="code">firestore.rules</div>
+      <p>The repo ruleset defined <code>users</code>, <code>events</code>, <code>rsvps</code> then default-deny — the
+        <code>memories</code> collection had <strong>no rule</strong>, so under these rules every memory read/write is denied.
+        (The live deployment may differ from the repo, which is itself a risk.)</p>
+      <p><strong>Fix:</strong> added an explicit <code>memories</code> rule — public read, validated public create
+        (size caps on text), update/delete host-only.</p>
+    </div>
+  </section>
+
+  <!-- HIGH -->
+  <section class="group">
+    <h2 class="grouph">High</h2>
+
+    <div class="card">
+      <h3><span class="sev high">HIGH</span> H1 — RSVP creation is an open email-sending oracle
+        <span class="status part">🟡 partial</span></h3>
+      <div class="code">firestore.rules (rsvps create) + functions/index.js (onRsvpCreated)</div>
+      <p>Anyone can create an RSVP doc with an arbitrary <code>email</code>; the function then sends a styled email from the
+        Resend account to that address — usable to spam third parties and the host, and to burn sender reputation.</p>
+      <p><strong>Mitigated:</strong> create is now validated (event must be published; size caps on all text fields and the
+        siblings array) which limits payload abuse.</p>
+      <p><strong>Follow-up (F2):</strong> the real fix is <strong>Firebase App Check</strong> plus per-event rate limiting.
+        Requires Firebase console setup.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev high">HIGH</span> H2 — Unauthenticated callable functions with no abuse controls
+        <span class="status part">🟡 partial</span></h3>
+      <div class="code">functions/index.js — contactOrganiser, submitGlobalContactForm</div>
+      <p>No auth, no captcha, no rate limit, no length caps → spam relays to host/admin inboxes.</p>
+      <p><strong>Mitigated:</strong> added field validation and length caps (name ≤100, contact ≤200, message ≤4000,
+        basic email shape) to both functions.</p>
+      <p><strong>Follow-up (F2):</strong> App Check + rate limiting.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev high">HIGH</span> H3 — No email verification and no password reset
+        <span class="status fix">✅ fixed</span></h3>
+      <div class="code">AuthContext.jsx, SignupPage.jsx, LoginPage.jsx</div>
+      <p>Signup never verified emails; there was no "Forgot password?" path, so a locked-out host permanently lost their event.</p>
+      <p><strong>Fix:</strong> signup now sends a verification email (non-blocking — does not gate access), minimum password
+        length raised to 8, and a "Forgot password?" flow (<code>sendPasswordResetEmail</code>) added to the login page.</p>
+    </div>
+  </section>
+
+  <!-- MEDIUM -->
+  <section class="group compact">
+    <h2 class="grouph">Medium</h2>
+
+    <div class="card"><h3><span class="sev med">MED</span> M1 — <code>events</code> create doesn't bind <code>hostId</code> to the caller<span class="status todo">⬜ to do</span></h3>
+      <p>A user can create/alter events under another UID. Add <code>request.resource.data.hostId == request.auth.uid</code> on create and freeze it on update.</p></div>
+
+    <div class="card"><h3><span class="sev med">MED</span> M2 — Admin/notification emails interpolated user input unescaped<span class="status fix">✅ fixed</span></h3>
+      <p><code>onEventCreated</code> / <code>onUserCreated</code> — HTML injection into our own inboxes. Now escaped.</p></div>
+
+    <div class="card"><h3><span class="sev med">MED</span> M3 — <code>contactOrganiser</code> used <code>/\\n/g</code> instead of <code>/\n/g</code><span class="status fix">✅ fixed</span></h3>
+      <p>Newline-to-&lt;br&gt; conversion was matching a literal backslash-n. Fixed.</p></div>
+
+    <div class="card"><h3><span class="sev med">MED</span> M4 — Event password stored in plaintext<span class="status todo">⬜ to do</span></h3>
+      <p><code>CreateEventPage</code>, <code>EventManagePage</code>. Hash server-side if the password gate is kept.</p></div>
+
+    <div class="card"><h3><span class="sev med">MED</span> M5 — Slug uniqueness is check-then-write (race)<span class="status todo">⬜ to do</span></h3>
+      <p>Use a <code>slugs/{slug}</code> reservation doc in a transaction, or a Cloud Function.</p></div>
+
+    <div class="card"><h3><span class="sev med">MED</span> M6 — Google Maps API key shipped to the client<span class="status todo">⬜ verify</span></h3>
+      <p><code>LocationInput</code>. Acceptable only if HTTP-referrer-restricted in Google Cloud console — verify.</p></div>
+
+    <div class="card"><h3><span class="sev med">MED</span> M7 — <code>/dev/themes</code> route ships in production<span class="status todo">⬜ to do</span></h3>
+      <p><code>router.jsx</code>. Gate behind <code>import.meta.env.DEV</code>.</p></div>
+
+    <div class="card"><h3><span class="sev med">MED</span> M8 — Hardcoded personal emails in functions<span class="status todo">⬜ to do</span></h3>
+      <p>Admin/notify addresses in <code>functions/index.js</code>. Move to config/secrets.</p></div>
+
+    <div class="card"><h3><span class="sev med">MED</span> M9 — Server-side validation generally absent<span class="status todo">⬜ to do</span></h3>
+      <p>RSVP deadline not enforced; approval/lockdown logic is client-side and bypassable. Durable fix = route guest writes through Cloud Functions (F1).</p></div>
+
+    <div class="card"><h3><span class="sev med">MED</span> M10 — Two god components<span class="status todo">⬜ to do</span></h3>
+      <p><code>EventManagePage.jsx</code> (~1340 lines) and <code>GuestListPage.jsx</code>. Extract sub-components.</p></div>
+
+    <div class="card"><h3><span class="sev med">MED</span> M11 — Scalability<span class="status todo">⬜ to do</span></h3>
+      <p>Guest list, memories and lookup load entire collections client-side. Add pagination past a few hundred docs.</p></div>
+
+    <div class="card"><h3><span class="sev med">MED</span> M12 — Stubbed/dead UI<span class="status todo">⬜ to do</span></h3>
+      <p><code>BillingPage</code> calls <code>createStripeCheckoutSession</code> which does not exist; "Send Reminder" button is unwired. Wire up or hide.</p></div>
+  </section>
+
+  <!-- LOW -->
+  <section class="group compact">
+    <h2 class="grouph">Low</h2>
+    <div class="card"><h3><span class="sev low">LOW</span> L1 — RSVP doc IDs (bearer tokens) live in localStorage<span class="status todo">⬜</span></h3><p>Shared-device leakage.</p></div>
+    <div class="card"><h3><span class="sev low">LOW</span> L2 — QR codes generated via third-party api.qrserver.com<span class="status todo">⬜</span></h3><p>Leaks invite URLs. Generate client-side instead.</p></div>
+    <div class="card"><h3><span class="sev low">LOW</span> L3 — Calendar export doesn't fully sanitise newlines/&amp; <span class="status todo">⬜</span></h3><p>For ICS / Google Calendar URLs.</p></div>
+    <div class="card"><h3><span class="sev low">LOW</span> L4 — <code>/login</code> &amp; <code>/signup</code> should set <code>noindex</code>; no CSP headers<span class="status todo">⬜</span></h3><p>Login already does.</p></div>
+    <div class="card"><h3><span class="sev low">LOW</span> L5 — <code>RequireAuth</code> renders <code>null</code> while auth resolves<span class="status todo">⬜</span></h3><p>Blank flash — return the loader.</p></div>
+    <div class="card"><h3><span class="sev low">LOW</span> L6 — Login doesn't preserve the originally-requested URL after redirect<span class="status todo">⬜</span></h3></div>
+  </section>
+
+  <!-- FOLLOW-UPS -->
+  <section class="group">
+    <h2 class="grouph">Follow-ups requiring console / product decisions</h2>
+    <div class="card">
+      <ul>
+        <li><strong>F1</strong> — Route all guest RSVP reads/writes through Cloud Functions (removes the bearer-token residual in C1; makes approval/lockdown/deadline server-authoritative).</li>
+        <li><strong>F2</strong> — Enable <strong>Firebase App Check</strong> (reCAPTCHA Enterprise/v3) and enforce on callable functions and Firestore/Storage — the proper fix for H1/H2.</li>
+        <li><strong>F3</strong> — Add <code>@firebase/rules-unit-testing</code> tests so a regression like the <code>|| true</code> in C1 can never ship silently again.</li>
+        <li><strong>F4</strong> — Decide on memory moderation (currently auto-approved and shown on the live display within seconds of upload).</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- DEPLOY -->
+  <section class="group">
+    <h2 class="grouph">Deployment notes — order matters (live site)</h2>
+    <div class="note">The rules changes depend on the new <code>lookupRsvp</code> function and the rebuilt client.
+      Deploy in this order to avoid breaking the live guest flow. If rules are deployed first, the "Already RSVP'd?"
+      lookup will fail until the client/function catch up.</div>
+    <pre>1. firebase deploy --only functions                 # publishes lookupRsvp + validation
+2. npm run build &amp;&amp; firebase deploy --only hosting   # client that calls lookupRsvp
+3. firebase deploy --only firestore:rules,storage   # locks down access</pre>
+  </section>
+
+  <footer>
+    Generated from <code>docs/SECURITY_AND_DESIGN_REVIEW.md</code> · Tiny Party Portal
+  </footer>
+
+</div>
+</body>
+</html>
