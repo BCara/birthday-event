@@ -54,7 +54,7 @@ const LeaveMemoryPage  = React.lazy(() => import('./pages/guest/LeaveMemoryPage'
 const ThemeDebugPage   = React.lazy(() => import('./pages/ThemeDebugPage'));
 
 
-const router = createBrowserRouter([
+const routes = [
   // ── Public marketing + auth ──
   {
     element: <MainLayout />,
@@ -106,12 +106,16 @@ const router = createBrowserRouter([
       { path: '/share/:slug',   element: <ShareRedirect /> },
     ],
   },
+];
 
-  // ── Developer / QA routes ──
-  {
+// ── Developer / QA routes ──
+if (import.meta.env.DEV) {
+  routes.push({
     path: '/dev/themes',
     element: <Lazy><ThemeDebugPage /></Lazy>
-  }
-]);
+  });
+}
+
+const router = createBrowserRouter(routes);
 
 export default router;

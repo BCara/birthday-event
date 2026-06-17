@@ -10,6 +10,7 @@ import { THEME_COLOR_SCHEMES, getTheme } from '../../theme/themes';
 import ThemeIllustration from '../../theme/ThemeIllustration';
 import OgImageTemplate from '../../components/OgImageTemplate';
 import LocationInput from '../../components/LocationInput';
+import ModuleCard from '../../components/ModuleCard';
 import '../guest/EventLandingPage.css';
 import './EventManagePage.css';
 import { getDevSafeOrigin } from '../../utils/url';
@@ -558,48 +559,43 @@ export default function EventManagePage() {
           </div>
         </div>
 
-        {/* Module bar */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
-          {/* Web — always on */}
-          <div style={{ flex: 1, minWidth: 140, padding: '14px 18px', borderRadius: 16, background: 'var(--kb-surface)', border: '2px solid var(--kb-mint)', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 22 }}>🌐</span>
-            <div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--kb-text)' }}>Web</div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--kb-mint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Always on</div>
-            </div>
-          </div>
-
-          {/* RSVP */}
-          <label htmlFor="module-rsvp" style={{ flex: 1, minWidth: 140, padding: '14px 18px', borderRadius: 16, background: 'var(--kb-surface)', border: `2px solid ${rsvpEnabled ? 'var(--kb-purple)' : 'var(--kb-border)'}`, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', userSelect: 'none', transition: 'border-color 0.2s' }}>
-            <span style={{ fontSize: 22 }}>✅</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--kb-text)' }}>RSVP</div>
-              <div style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: rsvpEnabled ? 'var(--kb-purple)' : 'var(--kb-text-muted)' }}>{rsvpEnabled ? 'Enabled' : 'Disabled'}</div>
-            </div>
-            <div style={{ width: 36, height: 20, borderRadius: 10, background: rsvpEnabled ? 'var(--kb-purple)' : 'var(--kb-input-border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-              <input id="module-rsvp" type="checkbox" checked={rsvpEnabled} onChange={e => setRsvpEnabled(e.target.checked)} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
-              <div style={{ position: 'absolute', top: 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', left: rsvpEnabled ? 18 : 2, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-            </div>
-          </label>
-
-          {/* Memory Capsule */}
-          <label htmlFor="module-capsule" style={{ flex: 1, minWidth: 140, padding: '14px 18px', borderRadius: 16, background: 'var(--kb-surface)', border: `2px solid ${memoriesEnabled ? 'var(--kb-coral)' : 'var(--kb-border)'}`, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', userSelect: 'none', transition: 'border-color 0.2s' }}>
-            <span style={{ fontSize: 22 }}>📸</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--kb-text)' }}>Memory Capsule</div>
-              <div style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: memoriesEnabled ? 'var(--kb-coral)' : 'var(--kb-text-muted)' }}>{memoriesEnabled ? 'Enabled' : 'Disabled'}</div>
-            </div>
-            <div style={{ width: 36, height: 20, borderRadius: 10, background: memoriesEnabled ? 'var(--kb-coral)' : 'var(--kb-input-border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-              <input id="module-capsule" type="checkbox" checked={memoriesEnabled} onChange={e => setMemoriesEnabled(e.target.checked)} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
-              <div style={{ position: 'absolute', top: 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', left: memoriesEnabled ? 18 : 2, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-            </div>
-          </label>
-        </div>
-
         <div className="em-grid">
           {/* Edit Form Column */}
           <form onSubmit={handleSave} className="em-form-col">
 
+            <div className="kb-card" style={{ ...styles.card, background: 'linear-gradient(145deg, var(--kb-surface) 0%, rgba(255,255,255,0.4) 100%)' }}>
+              <h3 style={styles.cardTitle}><span>🧩</span> Event Modules</h3>
+              <p style={{ color: 'var(--kb-text-muted)', fontSize: 14, marginBottom: 24, marginTop: -12 }}>
+                Customize the features available for this event. Turn off what you don't need to keep things simple.
+              </p>
+              
+              <ModuleCard 
+                title="RSVP & Guest List" 
+                description="Collect RSVPs, track dietary needs, and manage your guest list."
+                icon="🎟️" 
+                checked={rsvpEnabled} 
+                onChange={setRsvpEnabled} 
+                accentColor="var(--kb-purple)" 
+              />
+              
+              <ModuleCard 
+                title="Event Website" 
+                description="Publish a shareable website with your schedule, location, and details."
+                icon="🌐" 
+                checked={websiteEnabled} 
+                onChange={setWebsiteEnabled} 
+                accentColor="var(--kb-mint)" 
+              />
+              
+              <ModuleCard 
+                title="Memories & Gallery" 
+                description="Allow guests to upload photos and leave messages after the event."
+                icon="📸" 
+                checked={memoriesEnabled} 
+                onChange={setMemoriesEnabled} 
+                accentColor="var(--kb-coral)" 
+              />
+            </div>
 
             <div className="kb-card" style={styles.card}>
               <h3 style={styles.cardTitle}><span>📝</span> Basic Information</h3>
@@ -660,6 +656,7 @@ export default function EventManagePage() {
               </div>
             </div>
 
+            {websiteEnabled && (
             <div className="kb-card" style={styles.card}>
               <h3 style={styles.cardTitle}><span>🎨</span> Theme & Style</h3>
               <div style={styles.themePicker}>
@@ -700,6 +697,7 @@ export default function EventManagePage() {
                 </div>
               </div>
             </div>
+            )}
 
             <div className="kb-card" style={styles.card}>
               <h3 style={styles.cardTitle}><span>📅</span> Date & Time</h3>
@@ -725,30 +723,34 @@ export default function EventManagePage() {
               </div>
             </div>
 
-            <div className="kb-card" style={{ ...styles.card, overflow: 'visible' }}>
-              <h3 style={styles.cardTitle}><span>📍</span> Event Location</h3>
-              <div className="em-location-row">
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div className="kb-field" style={{ marginBottom: 0 }}>
-                    <label className="kb-label" htmlFor="em-location">Event/Venue Name</label>
-                    <input id="em-location" type="text" className="kb-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. SuperZu Playcentre" />
-                  </div>
-                  <div className="kb-field" style={{ marginBottom: 0 }}>
-                    <label className="kb-label" htmlFor="em-address">Address</label>
-                    <LocationInput id="em-address" value={address} onChange={setAddress} placeholder="Search or enter address..." />
+            {websiteEnabled && (
+              <>
+                <div className="kb-card" style={{ ...styles.card, overflow: 'visible' }}>
+                  <h3 style={styles.cardTitle}><span>📍</span> Event Location</h3>
+                  <div className="em-location-row">
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      <div className="kb-field" style={{ marginBottom: 0 }}>
+                        <label className="kb-label" htmlFor="em-location">Event/Venue Name</label>
+                        <input id="em-location" type="text" className="kb-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. SuperZu Playcentre" />
+                      </div>
+                      <div className="kb-field" style={{ marginBottom: 0 }}>
+                        <label className="kb-label" htmlFor="em-address">Address</label>
+                        <LocationInput id="em-address" value={address} onChange={setAddress} placeholder="Search or enter address..." />
+                      </div>
+                    </div>
+                    <img src="/images/park_trees_icon_1779434614720.png" alt="Trees" style={{height: 68, marginTop: 24}} />
                   </div>
                 </div>
-                <img src="/images/park_trees_icon_1779434614720.png" alt="Trees" style={{height: 68, marginTop: 24}} />
-              </div>
-            </div>
 
-            <div className="kb-card" style={styles.card}>
-              <h3 style={styles.cardTitle}><span>💬</span> Message to Guests</h3>
-              <div className="kb-field" style={{marginBottom: 0, position: 'relative'}}>
-                <textarea id="em-description" className="kb-input" value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Add a special message for your guests..." style={styles.textarea} />
-                <span style={{position: 'absolute', bottom: 12, right: 12, fontSize: 20}}>🎉</span>
-              </div>
-            </div>
+                <div className="kb-card" style={styles.card}>
+                  <h3 style={styles.cardTitle}><span>💬</span> Message to Guests</h3>
+                  <div className="kb-field" style={{marginBottom: 0, position: 'relative'}}>
+                    <textarea id="em-description" className="kb-input" value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Add a special message for your guests..." style={styles.textarea} />
+                    <span style={{position: 'absolute', bottom: 12, right: 12, fontSize: 20}}>🎉</span>
+                  </div>
+                </div>
+              </>
+            )}
 
             {rsvpEnabled && (
             <div className="kb-card" style={styles.card}>
@@ -939,6 +941,7 @@ export default function EventManagePage() {
             </div>
             )}
 
+            {websiteEnabled && (
             <div className="kb-card" style={{ ...styles.card, transition: 'all 0.3s ease' }}>
               <div 
                 onClick={() => setShowEventPageInfo(!showEventPageInfo)} 
@@ -1006,7 +1009,7 @@ export default function EventManagePage() {
                       </div>
                     )}
                     
-                    {/* Fallback for old string schedule */}
+                    {/* Fallback for old schedule */}
                     {schedule && scheduleItems.length === 0 && (
                       <div style={{ marginTop: 16, padding: 12, background: 'rgba(255, 183, 77, 0.1)', borderRadius: 12, border: '1px solid rgba(255, 183, 77, 0.3)' }}>
                         <p style={{ margin: 0, fontSize: 13, color: '#d84315' }}>You have an old text-based schedule. It will still show to guests until you delete it and use the new schedule builder above.</p>
@@ -1070,6 +1073,7 @@ export default function EventManagePage() {
                 </div>
               )}
             </div>
+            )}
 
             <div style={styles.saveRow}>
               <button type="submit" className="kb-btn kb-btn-primary" disabled={saving}>

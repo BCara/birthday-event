@@ -31,13 +31,18 @@ service cloud.firestore {
 
     // ---- events ----
     match /events/{eventId} {
-      // host can do anything to their own events
-      allow read, update, delete: if request.auth != null
+      // host can read or delete their own events
+      allow read, delete: if request.auth != null
         && resource.data.hostId == request.auth.uid;
       // anyone can read a published event (for the guest landing page)
       allow read: if resource.data.published == true;
-      // authenticated users can create
-      allow create: if request.auth != null;
+      // authenticated users can create, binding hostId to their auth UID
+      allow create: if request.auth != null
+        && request.resource.data.hostId == request.auth.uid;
+      // host can update if hostId remains unchanged
+      allow update: if request.auth != null
+        && resource.data.hostId == request.auth.uid
+        && request.resource.data.hostId == resource.data.hostId;
     }
 
     // ---- rsvps ----

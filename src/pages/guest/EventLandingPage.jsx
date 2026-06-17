@@ -44,6 +44,7 @@ export default function EventLandingPage() {
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [redirectToRsvp, setRedirectToRsvp] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
   const [memoryDismissed, setMemoryDismissed] = useState(false);
   const [hasRsvped, setHasRsvped] = useState(false);
@@ -83,6 +84,10 @@ export default function EventLandingPage() {
     fetchEventBySlug(slug)
       .then(e => {
         console.log("Fetched event result:", e);
+        if (e && e.websiteEnabled === false && e.rsvpEnabled !== false) {
+          setRedirectToRsvp(true);
+          return;
+        }
         setEvent(e);
         setLoading(false);
       })
@@ -91,6 +96,10 @@ export default function EventLandingPage() {
         setLoading(false);
       });
   }, [slug]);
+
+  if (redirectToRsvp) {
+    return <Navigate to={`/${slug}/rsvp`} replace />;
+  }
 
   useEffect(() => {
     if (event?.id) {

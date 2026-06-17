@@ -476,6 +476,31 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
   }
 
 
+  // Fallback UI if RSVP is disabled by host
+  if (event.rsvpEnabled === false) {
+    return (
+      <ThemedPage themeKey={event.theme || "kids-generic"}>
+        <div className="rsvp-container">
+          <div className="rsvp-card" style={{ textAlign: 'center', padding: '40px 24px', maxWidth: 500, margin: '40px auto', borderRadius: 24, background: 'var(--t-card-bg)', border: '1px solid var(--t-card-border)' }}>
+            <span style={{ fontSize: 48 }}>🎟️</span>
+            <h2 style={{ fontFamily: 'var(--t-font-heading)', color: 'var(--t-text)', marginTop: 16 }}>RSVP Closed</h2>
+            <p style={{ fontFamily: 'var(--t-font-body)', color: 'var(--t-text-light)', marginTop: 8, lineHeight: 1.5 }}>
+              Online RSVPs are not enabled or have been closed for this event. Please contact the host directly.
+            </p>
+            {event.hostContact && (
+              <p style={{ marginTop: 24, fontSize: 14, fontWeight: 'bold', color: 'var(--t-text)' }}>
+                📞 Host Contact: {event.hostContact}
+              </p>
+            )}
+            <Link to={`/${slug}`} className="rsvp-btn" style={{ display: 'inline-block', marginTop: 24, textDecoration: 'none' }}>
+              ← Return to Event Portal
+            </Link>
+          </div>
+        </div>
+      </ThemedPage>
+    );
+  }
+
   const themeKey = event.theme?.startsWith('kids-') ? event.theme : `kids-${event.theme || 'generic'}`;
   const askChildAge = event.askChildAge !== false;
   const askAdultCount = event.askAdultCount !== false;

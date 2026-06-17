@@ -22,7 +22,13 @@ export function generateICS({ title, date, time, endTime, location, description,
   }
   let fullDesc = description || '';
   if (url) { if (fullDesc) fullDesc += '\\n\\n'; fullDesc += `View event details: ${url}`; }
-  const esc = s => (s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+  const esc = s => (s||'')
+    .replace(/\\/g,'\\\\')
+    .replace(/;/g,'\\;')
+    .replace(/,/g,'\\,')
+    .replace(/\r\n/g,'\n')
+    .replace(/\r/g,'\n')
+    .replace(/\n/g,'\\n');
   const uid = `${Date.now()}-${Math.random().toString(36).slice(2)}@tinypartyportal.app`;
   const now = new Date();
   const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}T${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
