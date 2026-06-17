@@ -668,7 +668,7 @@
       <thead><tr><th>#</th><th>Action</th><th>Expected result</th><th>Result</th></tr></thead>
       <tbody>
         <tr><td>5A.3.1</td><td>With another needs-approval guest, click <strong>✕ Decline</strong></td><td>Status changes to Not Attending</td><td class="result-col"><div class="result-box"></div></td></tr>
-        <tr><td>5A.3.2</td><td>⚠️ Check guest inbox</td><td><strong>No email sent</strong> on decline — this is correct current behaviour</td><td class="result-col"><div class="result-box"></div></td></tr>
+        <tr><td>5A.3.2</td><td>📧 Check guest inbox (if the guest provided an email)</td><td>Polite decline email received — subject: "Update on your RSVP for [event]", amber header, gently explains the party is at capacity. <strong>No email</strong> if the guest only gave a phone number</td><td class="result-col"><div class="result-box"></div></td></tr>
         <tr><td>5A.4.1</td><td>Have a guest who is already Going edit their RSVP and resubmit</td><td>⚠️ Existing approved guest should <strong>not</strong> require re-approval — RSVP updates without going back to needs_approval</td><td class="result-col"><div class="result-box"></div></td></tr>
       </tbody>
     </table>
@@ -1206,7 +1206,9 @@ flowchart TD
     H -- No --> J["No notification - phone only"]
     E -- Click Decline --> K["RSVP attending updated to false"]
     K --> L["Guest moves to Declined list"]
-    L --> M["No email sent on decline"]
+    L --> N{"Guest has email?"}
+    N -- Yes --> O["Polite at-capacity email sent to guest"]
+    N -- No --> P["No notification - phone only"]
     </div>
   </div>
 
@@ -1219,6 +1221,7 @@ flowchart LR
         T2["New event created"]
         T3["New RSVP submitted"]
         T4["RSVP approved by host"]
+        T4b["RSVP declined by host"]
         T5["Guest contacts organiser"]
         T6["Contact page form submitted"]
     end
@@ -1236,6 +1239,7 @@ flowchart LR
     T3 -->|"New RSVP / Action Required"| R2
     T3 -->|"RSVP Confirmed / Pending - if email given"| R3
     T4 -->|"Confirmed - if email given"| R3
+    T4b -->|"At-capacity decline - if email given"| R3
     T5 -->|"Guest message email"| R2
     T6 -->|"Contact form submission"| R5
     </div>

@@ -254,7 +254,7 @@ flowchart TD
   <!-- Share -->
   <div id="f-share" class="card">
     <h3>④ Share the Invite <span class="pill pill-host">Host</span></h3>
-    <p>The host shares the event link, a QR code, or a WhatsApp message. The link adapts to which modules are on — if RSVP is enabled it points to the RSVP entry, otherwise straight to the info portal. A special <code>/share/{slug}</code> link produces a rich preview card (photo + details) when pasted into WhatsApp, iMessage or social apps, then forwards the recipient to the real invite.</p>
+    <p>The host shares the event link, a QR code, or a WhatsApp message. The link adapts to which modules are on — if RSVP is enabled it points to the RSVP entry, otherwise straight to the info portal. A special <code>/share/{slug}</code> link produces a rich preview card (theme illustration + details) when pasted into WhatsApp, iMessage or social apps, then forwards the recipient to the real invite.</p>
     <div class="mermaid-wrap"><div class="mermaid">
 flowchart TD
     A["Host copies the share link"] --> B{"Shared where?"}
@@ -302,7 +302,7 @@ flowchart TD
     B --> D["Host email: Action Required"]
     D --> E{"Host decision"}
     E -- Approve --> F["Confirmed → guest emailed You're In"]
-    E -- Decline --> G["Marked Not Attending → no email"]
+    E -- Decline --> G["Marked Not Attending → polite at-capacity email (if email given)"]
     </div></div>
     <a class="tested" href="testing-guide.html#block5a">✓ Tested in → Block 5A: Approval-Required RSVP</a>
   </div>
@@ -361,6 +361,7 @@ flowchart TD
         <tr><td>New event created</td><td>Host (confirmation) + Admin (notification)</td></tr>
         <tr><td>New RSVP submitted</td><td>Host (new RSVP, or "action required" if locked) + Guest (confirmation/pending)</td></tr>
         <tr><td>Host approves a locked RSVP</td><td>Guest (you're confirmed)</td></tr>
+        <tr><td>Host declines a locked RSVP</td><td>Guest (polite "at capacity" note, if an email was given)</td></tr>
         <tr><td>Guest contacts the organiser</td><td>Host (guest message, reply-to set to guest)</td></tr>
         <tr><td>Contact-page form submitted</td><td>Support team</td></tr>
       </tbody>
@@ -377,6 +378,7 @@ flowchart TD
       <li><strong>Frontend:</strong> React + Vite single-page app. All UI runs in the browser.</li>
       <li><strong>Backend:</strong> Firebase — <strong>Auth</strong> (host login), <strong>Firestore</strong> (data), <strong>Storage</strong> (photos/videos), <strong>Cloud Functions</strong> (emails, lookups, share previews), <strong>Hosting</strong> (serves the site).</li>
       <li><strong>Email:</strong> sent from Cloud Functions on key events.</li>
+      <li><strong>Analytics:</strong> Google Analytics 4 (GA4) tracks page views and key user actions (invite views, memory uploads). It stays dormant until a measurement ID is configured.</li>
     </ul>
   </div>
 
