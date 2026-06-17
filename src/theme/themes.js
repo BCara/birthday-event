@@ -19,7 +19,7 @@ export const THEMES = {
       '--t-font-heading': "'Fredoka', sans-serif",
       '--t-font-body':    "'Quicksand', sans-serif",
     },
-    patternSvg: (color) => `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='15' cy='15' r='3' fill='${encodeURIComponent(color)}' opacity='0.15'/%3E%3Ccircle cx='65' cy='15' r='2' fill='${encodeURIComponent(color)}' opacity='0.12'/%3E%3Ccircle cx='40' cy='65' r='2.5' fill='${encodeURIComponent(color)}' opacity='0.15'/%3E%3Ccircle cx='65' cy='65' r='3.5' fill='${encodeURIComponent(color)}' opacity='0.1'/%3E%3Cpath d='M25 45 L26 48 L29 49 L26 50 L25 53 L24 50 L21 49 L24 48 Z' fill='${encodeURIComponent(color)}' opacity='0.15'/%3E%3C/svg%3E")`,
+    patternSvg: (color) => `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='10' cy='10' r='1.5' fill='${encodeURIComponent(color)}' opacity='0.15'/%3E%3Ccircle cx='70' cy='15' r='1' fill='${encodeURIComponent(color)}' opacity='0.1'/%3E%3Cpath d='M40 45 L41.5 49 L45 50 L41.5 51 L40 55 L38.5 51 L35 50 L38.5 49 Z' fill='${encodeURIComponent(color)}' opacity='0.15'/%3E%3Cpath d='M20 30 L21 33 L24 34 L21 35 L20 38 L19 35 L16 34 L19 33 Z' fill='${encodeURIComponent(color)}' opacity='0.12'/%3E%3C/svg%3E")`,
   },
 
   'kids-dino': {
@@ -38,7 +38,7 @@ export const THEMES = {
       '--t-font-heading': "'Fredoka', sans-serif",
       '--t-font-body':    "'Outfit', sans-serif",
     },
-    patternSvg: (color) => `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cellipse cx='20' cy='70' rx='6' ry='3' fill='${encodeURIComponent(color)}' opacity='0.15' transform='rotate(-15 20 70)'/%3E%3Cellipse cx='60' cy='20' rx='5' ry='2.5' fill='${encodeURIComponent(color)}' opacity='0.12' transform='rotate(20 60 20)'/%3E%3Ccircle cx='40' cy='40' r='2.5' fill='${encodeURIComponent(color)}' opacity='0.1'/%3E%3Ccircle cx='70' cy='50' r='1.5' fill='${encodeURIComponent(color)}' opacity='0.1'/%3E%3C/svg%3E")`,
+    patternSvg: (color) => `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 80 Q 25 75, 30 80 Q 25 85, 20 80 Z' fill='${encodeURIComponent(color)}' opacity='0.08'/%3E%3Ccircle cx='70' cy='30' r='2' fill='${encodeURIComponent(color)}' opacity='0.1'/%3E%3Ccircle cx='85' cy='75' r='1.5' fill='${encodeURIComponent(color)}' opacity='0.08'/%3E%3Cpath d='M50 15 Q 55 10, 60 15 Q 55 20, 50 15 Z' fill='${encodeURIComponent(color)}' opacity='0.08'/%3E%3C/svg%3E")`,
   },
 
   'kids-unicorn': {
@@ -57,7 +57,7 @@ export const THEMES = {
       '--t-font-heading': "'Fredoka', sans-serif",
       '--t-font-body':    "'Quicksand', sans-serif",
     },
-    patternSvg: (color) => `url("data:image/svg+xml,%3Csvg width='70' height='70' viewBox='0 0 70 70' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M35 5 L36.2 11 L42 12 L36.2 13 L35 19 L33.8 13 L28 12 L33.8 11 Z' fill='${encodeURIComponent(color)}' opacity='0.15'/%3E%3Ccircle cx='55' cy='45' r='2' fill='${encodeURIComponent(color)}' opacity='0.12'/%3E%3Ccircle cx='15' cy='45' r='1.5' fill='${encodeURIComponent(color)}' opacity='0.12'/%3E%3Cpath d='M50 20 C 53 18, 57 22, 54 25 C 57 28, 50 32, 48 27' fill='none' stroke='${encodeURIComponent(color)}' stroke-width='1.5' opacity='0.15'/%3E%3C/svg%3E")`,
+    patternSvg: (color) => `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 20 L33 30 L43 30 L35 37 L38 47 L30 40 L22 47 L25 37 L17 30 L27 30 Z' fill='${encodeURIComponent(color)}' opacity='0.12'/%3E%3Cpath d='M90 60 L92 66 L98 67 L92 68 L90 74 L88 68 L82 67 L88 66 Z' fill='${encodeURIComponent(color)}' opacity='0.1'/%3E%3Cpath d='M50 100 C 50 100, 48 95, 55 95 C 62 95, 60 100, 60 100 C 60 100, 62 105, 55 105 C 48 105, 50 100, 50 100' fill='${encodeURIComponent(color)}' opacity='0.08'/%3E%3Ccircle cx='100' cy='20' r='1.5' fill='${encodeURIComponent(color)}' opacity='0.1'/%3E%3C/svg%3E")`,
   },
 
   'kids-princess': {
@@ -76,7 +76,7 @@ export const THEMES = {
       '--t-font-heading': "'Fredoka', sans-serif",
       '--t-font-body':    "'Quicksand', sans-serif",
     },
-    patternSvg: (color) => `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M40 10 L43 20 L53 20 L45 26 L48 36 L40 30 L32 36 L35 26 L27 20 L37 20 Z' fill='${encodeURIComponent(color)}' opacity='0.1'/%3E%3Ccircle cx='15' cy='60' r='2' fill='${encodeURIComponent(color)}' opacity='0.12'/%3E%3Ccircle cx='65' cy='60' r='2' fill='${encodeURIComponent(color)}' opacity='0.12'/%3E%3C/svg%3E")`,
+    patternSvg: (color) => `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 20 L55 35 L70 35 L58 44 L62 59 L50 50 L38 59 L42 44 L30 35 L45 35 Z' fill='${encodeURIComponent(color)}' opacity='0.08'/%3E%3Cpath d='M20 70 C 20 70, 18 65, 25 65 C 32 65, 30 70, 30 70 C 30 70, 32 75, 25 75 C 18 75, 20 70, 20 70' fill='${encodeURIComponent(color)}' opacity='0.1'/%3E%3Ccircle cx='80' cy='80' r='1.5' fill='${encodeURIComponent(color)}' opacity='0.12'/%3E%3C/svg%3E")`,
   },
 
   'kids-cars': {
@@ -95,7 +95,7 @@ export const THEMES = {
       '--t-font-heading': "'Fredoka', sans-serif",
       '--t-font-body':    "'Outfit', sans-serif",
     },
-    patternSvg: (color) => `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='0' width='12' height='12' fill='${encodeURIComponent(color)}' opacity='0.08'/%3E%3Crect x='12' y='12' width='12' height='12' fill='${encodeURIComponent(color)}' opacity='0.08'/%3E%3C/svg%3E")`,
+    patternSvg: (color) => `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0 L30 0 L30 30 L0 30 Z M30 30 L60 30 L60 60 L30 60 Z' fill='${encodeURIComponent(color)}' opacity='0.05'/%3E%3Ccircle cx='15' cy='45' r='1' fill='${encodeURIComponent(color)}' opacity='0.1'/%3E%3Ccircle cx='45' cy='15' r='1' fill='${encodeURIComponent(color)}' opacity='0.1'/%3E%3C/svg%3E")`,
   },
 };
 

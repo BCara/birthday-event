@@ -1,13 +1,16 @@
 // src/layouts/MainLayout.jsx
 // Marketing site + host dashboard layout with navbar and footer
 import React, { useState, useEffect } from 'react';
-import { Outlet, Link, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { trackEvent } from '../firebase';
+import AnalyticsTracker from '../components/AnalyticsTracker';
 import './MainLayout.css';
 
 export default function MainLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -15,6 +18,14 @@ export default function MainLayout() {
     document.documentElement.setAttribute('data-theme', 'light');
     localStorage.setItem('kb-theme', 'light');
   }, []);
+
+  // GA4 SPA page-view tracking (no-op until a measurementId is configured)
+  useEffect(() => {
+    trackEvent('page_view', {
+      page_path: location.pathname + location.search,
+      page_location: window.location.href,
+    });
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -29,6 +40,7 @@ export default function MainLayout() {
 
   return (
     <div className="ml-wrap">
+      <AnalyticsTracker />
       <header className={`ml-header ${scrolled ? 'ml-header-scrolled' : ''}`}>
         <div className="ml-header-inner">
           <Link to="/" className="ml-logo">
@@ -99,6 +111,7 @@ export default function MainLayout() {
               <h4 className="ml-footer-heading">Support</h4>
               <div className="ml-footer-links-col">
                 <Link to="/contact" className="ml-footer-link">Contact Us</Link>
+                <a href="mailto:info@tinypartyportal.com" className="ml-footer-link" style={{ textTransform: 'lowercase' }}>info@tinypartyportal.com</a>
               </div>
             </div>
 

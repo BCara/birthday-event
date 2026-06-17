@@ -1,9 +1,9 @@
-// src/router.jsx
 import React, { Suspense } from 'react';
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, useParams } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import GuestLayout from './layouts/GuestLayout';
 import RequireAuth from './components/RequireAuth';
+import RootErrorBoundary from './components/RootErrorBoundary';
 
 // Loader fallback
 function PageLoader() {
@@ -17,6 +17,14 @@ function PageLoader() {
 
 function Lazy({ children }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
+}
+
+function ShareRedirect() {
+  const { slug } = useParams();
+  React.useEffect(() => {
+    window.location.replace(`/${slug}`);
+  }, [slug]);
+  return <PageLoader />;
 }
 
 // ── Public marketing pages (with nav/footer) ──
@@ -40,9 +48,7 @@ const PrintableInvitePage = React.lazy(() => import('./pages/dashboard/Printable
 // ── Guest-facing pages (no nav — full-screen themed) ──
 const EventLandingPage = React.lazy(() => import('./pages/guest/EventLandingPage'));
 const RSVPPage         = React.lazy(() => import('./pages/guest/RSVPPage'));
-const MemoryWallPage   = React.lazy(() => import('./pages/guest/MemoryWallPage'));
 const LeaveMemoryPage  = React.lazy(() => import('./pages/guest/LeaveMemoryPage'));
-const LiveDisplayPage  = React.lazy(() => import('./pages/guest/LiveDisplayPage'));
 
 // ── Developer routes ──
 const ThemeDebugPage   = React.lazy(() => import('./pages/ThemeDebugPage'));
@@ -52,6 +58,7 @@ const router = createBrowserRouter([
   // ── Public marketing + auth ──
   {
     element: <MainLayout />,
+    errorElement: <RootErrorBoundary />,
     children: [
       { path: '/',       element: <Lazy><HomePage /></Lazy> },
       { path: '/login',  element: <Lazy><LoginPage /></Lazy> },
@@ -69,6 +76,7 @@ const router = createBrowserRouter([
           { path: '/dashboard/create',                   element: <Lazy><CreateEventPage /></Lazy> },
           { path: '/dashboard/event/:eventId',           element: <Lazy><EventManagePage /></Lazy> },
           { path: '/dashboard/event/:eventId/rsvps',     element: <Lazy><GuestListPage /></Lazy> },
+          { path: '/dashboard/event/:eventId/capsule',   element: <Lazy><MemoriesPage /></Lazy> },
         ],
       },
 
@@ -79,6 +87,7 @@ const router = createBrowserRouter([
   // ── Print layouts (auth-gated, no nav) ──
   {
     element: <RequireAuth />,
+    errorElement: <RootErrorBoundary />,
     children: [
       { path: '/dashboard/event/:eventId/print', element: <Lazy><PrintableInvitePage /></Lazy> },
     ],
@@ -87,14 +96,14 @@ const router = createBrowserRouter([
   // ── Guest-facing: themed, no nav ──
   {
     element: <GuestLayout />,
+    errorElement: <RootErrorBoundary />,
     children: [
       { path: '/:slug',         element: <Lazy><EventLandingPage /></Lazy> },
       { path: '/:slug/invite',  element: <Lazy><RSVPPage /></Lazy> },
       { path: '/:slug/portal',  element: <Lazy><EventLandingPage /></Lazy> },
       { path: '/:slug/rsvp',    element: <Lazy><RSVPPage /></Lazy> },
-      { path: '/:slug/memories',element: <Lazy><MemoryWallPage /></Lazy> },
       { path: '/:slug/memories/new', element: <Lazy><LeaveMemoryPage /></Lazy> },
-      { path: '/:slug/live',    element: <Lazy><LiveDisplayPage /></Lazy> },
+      { path: '/share/:slug',   element: <ShareRedirect /> },
     ],
   },
 

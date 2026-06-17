@@ -1,19 +1,20 @@
 // src/pages/guest/RSVPPage.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, doc, getDoc } from 'firebase/firestore';
 import ThemedPage from '../../theme/ThemedPage';
 import ThemeIllustration from '../../theme/ThemeIllustration';
 import { fetchEventBySlug } from '../../utils/fetchEvent';
 import { getGoogleCalendarUrl } from '../../utils/calendarUtils';
 import { getDevSafeOrigin } from '../../utils/url';
-import { db } from '../../firebase';
+import { db, trackEvent } from '../../firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import './RSVPPage.css';
 import '../guest/EventLandingPage.css'; // ensure we have styles for invitation card
 import { downloadICS, generateICS } from '../../utils/calendarUtils';
+import SEO from '../../components/SEO';
 
 function SkeletonRSVP() {
   return (
@@ -58,6 +59,16 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [canSubmitFinal, setCanSubmitFinal] = useState(false);
+
+  useEffect(() => {
+    if (currentStep === 4) {
+      const timer = setTimeout(() => setCanSubmitFinal(true), 500);
+      return () => clearTimeout(timer);
+    } else {
+      setCanSubmitFinal(false);
+    }
+  }, [currentStep]);
 
   const validateStep = (step) => {
     setError('');
@@ -253,32 +264,14 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
     setLookupError('');
     setLookupLoading(true);
     try {
-      const q = query(
-        collection(db, 'rsvps'),
-        where('eventId', '==', event.id)
-      );
-      const querySnapshot = await getDocs(q);
-      if (querySnapshot.empty) {
-        setLookupError("No RSVPs found for this event yet.");
-        setLookupLoading(false);
-        return;
-      }
-
-      const inputChildClean = lookupChildName.trim().toLowerCase();
-      const inputContactClean = lookupContact.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-      let foundRsvp = null;
-
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        const storedChildClean = (data.childName || '').trim().toLowerCase();
-        const storedEmailClean = (data.email || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-        const storedPhoneClean = (data.phone || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-        
-        if (storedChildClean === inputChildClean && 
-            (storedEmailClean === inputContactClean || storedPhoneClean === inputContactClean)) {
-          foundRsvp = { id: doc.id, ...data };
-        }
+      const functions = getFunctions();
+      const lookup = httpsCallable(functions, 'lookupRsvp');
+      const res = await lookup({
+        eventId: event.id,
+        childName: lookupChildName,
+        contact: lookupContact,
       });
+      const foundRsvp = res.data?.found ? res.data.rsvp : null;
 
       if (foundRsvp) {
         localStorage.setItem('rsvp_' + event.id, foundRsvp.id);
@@ -300,9 +293,11 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
         setMatchFound(true);
         setSuccess(true);
         setShowLookup(false);
+        trackEvent('rsvp_lookup', { result: 'found' });
       } else {
         setLookupError("No matching RSVP found. Please check spelling or contact the host.");
         setShowContactOrganiser(true);
+        trackEvent('rsvp_lookup', { result: 'not_found' });
       }
     } catch (err) {
       console.error("Error looking up RSVP:", err);
@@ -347,6 +342,18 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // If the user presses Enter on a step before the final step, proceed to the next step
+    if (currentStep < 4) {
+      handleNextStep();
+      return;
+    }
+
+    // Prevent queued double-submits from Enter keypresses
+    if (currentStep === 4 && !canSubmitFinal) {
+      return;
+    }
+
     if (!parentName.trim() || !childName.trim()) {
       setError('Please fill in your name and your child\'s name.');
       return;
@@ -374,14 +381,22 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
       let requiresApproval = false;
 
       if (event.lockDownRSVP && !existingDocId) {
-        const q = query(
-          collection(db, 'rsvps'),
-          where('eventId', '==', event.id),
-          where('childName', '==', childName.trim())
-        );
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-          existingDocId = snap.docs[0].id;
+        // Match an existing RSVP server-side (requires child name + matching contact),
+        // so the guest list can't be enumerated from the client.
+        const contact = email.trim() || phone.trim();
+        let matchedId = null;
+        if (contact) {
+          try {
+            const functions = getFunctions();
+            const lookup = httpsCallable(functions, 'lookupRsvp');
+            const res = await lookup({ eventId: event.id, childName: childName.trim(), contact });
+            if (res.data?.found) matchedId = res.data.rsvp.id;
+          } catch (err) {
+            console.error('lockdown lookup failed', err);
+          }
+        }
+        if (matchedId) {
+          existingDocId = matchedId;
         } else {
           requiresApproval = true;
           finalAttending = 'needs_approval';
@@ -416,7 +431,13 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
       
       localStorage.setItem('rsvp_' + event.id, rsvpId);
       localStorage.setItem('rsvp_status_' + event.id, requiresApproval ? 'needs_approval' : (isAttending ? 'yes' : 'no'));
-      
+
+      trackEvent('rsvp_submitted', {
+        attending: requiresApproval ? 'needs_approval' : (isAttending ? 'yes' : 'no'),
+        party_size: isAttending ? (1 + (siblings?.length || 0)) : 0,
+        is_edit: isEditMode,
+      });
+
       if (isAttending && !requiresApproval) {
         confetti({
           particleCount: 150,
@@ -551,7 +572,13 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
     if (embedded) return successCard;
 
     return (
-      <ThemedPage themeKey={themeKey} themeColor={event.themeColor} themeMode={event.themeMode}>
+      <ThemedPage themeKey={themeKey} themeColor={event.themeColor}>
+        <SEO 
+          title={`RSVP - ${event.childName ? event.childName + "'s " : ""}${event.name}`} 
+          description={`RSVP to ${event.childName ? event.childName + "'s " : ""} birthday party!`}
+          url={pageUrl}
+          noindex={true}
+        />
         {successCard}
       </ThemedPage>
     );
@@ -894,9 +921,16 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
                         )}
                       </div>
                     ))}
-                    <button type="button" className="rsvp-add-sibling-btn" onClick={addSibling} style={{ marginTop: siblings.length > 0 ? '8px' : '0' }}>
-                      + Add another child
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: siblings.length > 0 ? '8px' : '0' }}>
+                      <button type="button" className="rsvp-add-sibling-btn" onClick={addSibling} style={{ flex: 1 }}>
+                        + Add another child
+                      </button>
+                      {siblings.length === 0 && (
+                        <button type="button" className="rsvp-add-sibling-btn" onClick={handleNextStep} style={{ flex: 1, background: 'var(--t-soft-bg)', border: '1.5px solid var(--t-border)', color: 'var(--t-text-light)' }}>
+                          No children to add →
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -922,19 +956,17 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
                 {!showEmailInput && !showPhoneInput ? (
                   <div className="rsvp-field">
                     <label className="rsvp-label">Contact Method *</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div className="rsvp-toggle-group">
                       <button 
                         type="button" 
-                        className="rsvp-btn" 
-                        style={{ flex: 1, background: 'var(--t-surface)', border: '2px solid var(--t-input-border)', color: 'var(--t-text)' }}
+                        className="rsvp-toggle" 
                         onClick={() => setShowEmailInput(true)}
                       >
                         ✉️ Email
                       </button>
                       <button 
                         type="button" 
-                        className="rsvp-btn" 
-                        style={{ flex: 1, background: 'var(--t-surface)', border: '2px solid var(--t-input-border)', color: 'var(--t-text)' }}
+                        className="rsvp-toggle" 
                         onClick={() => setShowPhoneInput(true)}
                       >
                         📱 Phone
@@ -1161,10 +1193,24 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
               ) : currentStep === 4 ? (
                 <button
                   type="submit"
-                  className="rsvp-btn rsvp-btn-accent rsvp-submit-btn"
-                  disabled={submitting}
+                  className="rsvp-btn rsvp-submit-btn"
+                  disabled={submitting || !canSubmitFinal}
                   id="rsvp-submit"
-                  style={{ flex: 2, margin: 0 }}
+                  style={{ 
+                    flex: 2, 
+                    margin: 0, 
+                    opacity: canSubmitFinal ? 1 : 0.7,
+                    borderRadius: '50px', 
+                    fontSize: '1.3rem', 
+                    padding: '20px 24px', 
+                    boxShadow: '0 12px 32px color-mix(in srgb, var(--t-accent) 40%, transparent)', 
+                    width: '100%', 
+                    textTransform: 'uppercase', 
+                    letterSpacing: '0.05em',
+                    background: 'var(--t-btn-bg)',
+                    color: 'var(--t-btn-text)',
+                    border: 'none'
+                  }}
                 >
                   {submitting ? 'Sending…' : (isEditMode ? '✅ Update RSVP' : '✉️ Submit RSVP')}
                 </button>
@@ -1182,7 +1228,13 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
   if (embedded) return containerContent;
 
   return (
-    <ThemedPage themeKey={themeKey} themeColor={event.themeColor} themeMode={event.themeMode}>
+    <ThemedPage themeKey={themeKey} themeColor={event.themeColor}>
+      <SEO 
+        title={`RSVP - ${event.childName ? event.childName + "'s " : ""}${event.name}`} 
+        description={`RSVP to ${event.childName ? event.childName + "'s " : ""} birthday party!`}
+        url={pageUrl}
+        noindex={true}
+      />
       {containerContent}
     </ThemedPage>
   );

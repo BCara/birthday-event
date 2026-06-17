@@ -1,0 +1,188 @@
+/* ─── GuestListPage ─── */
+
+.gl-root {
+  padding: 40px 24px;
+}
+
+/* Desktop: cards hidden, table shown */
+.gl-cards-mobile {
+  display: none;
+}
+
+/* ── Mobile ── */
+@media (max-width: 700px) {
+  .gl-root {
+    padding: 12px 12px 48px;
+  }
+
+  .gl-banner {
+    padding: 16px !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 16px !important;
+  }
+
+  .gl-root .kb-card {
+    padding: 20px !important;
+    border-radius: 16px !important;
+  }
+
+  /* Action bar: stack search below buttons */
+  .gl-guest-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .gl-guest-btns {
+    flex-wrap: wrap !important;
+    border-right: none !important;
+    margin-right: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--kb-border);
+    gap: 6px !important;
+  }
+
+  .gl-search-wrap {
+    width: 100%;
+  }
+
+  .gl-search-wrap input {
+    width: 100% !important;
+    box-sizing: border-box;
+    padding-left: 36px !important;
+  }
+
+  /* Swap table → cards */
+  .gl-table-desktop {
+    display: none;
+  }
+
+  .gl-cards-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 16px 16px;
+  }
+}
+
+/* ── Guest card ── */
+.gl-guest-card {
+  background: var(--kb-surface);
+  border: 1px solid var(--kb-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gl-sibling-card {
+  margin-left: 16px;
+  border-left: 3px solid var(--kb-purple);
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+  background: var(--kb-surface-2);
+}
+
+.gl-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.gl-card-identity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.gl-sib-label {
+  font-size: 11px;
+  color: var(--kb-text-muted);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.gl-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--kb-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gl-card-age {
+  font-size: 12px;
+  color: var(--kb-text-muted);
+  font-weight: 600;
+  background: var(--kb-surface-2);
+  padding: 2px 6px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.gl-card-status-pending {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--kb-text-muted);
+  background: var(--kb-surface-2);
+  padding: 3px 8px;
+  border-radius: 100px;
+  font-family: var(--kb-font-ui);
+  white-space: nowrap;
+}
+
+.gl-card-status-approval {
+  font-size: 12px;
+  font-weight: 700;
+  color: #F97316;
+  background: rgba(249, 115, 22, 0.1);
+  padding: 3px 8px;
+  border-radius: 100px;
+  font-family: var(--kb-font-ui);
+  white-space: nowrap;
+}
+
+.gl-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.gl-card-parent {
+  font-size: 13px;
+  color: var(--kb-text-muted);
+  font-weight: 600;
+}
+
+.gl-card-dietary {
+  font-size: 12px;
+  color: var(--kb-coral);
+  font-weight: 700;
+}
+
+.gl-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.gl-card-date {
+  font-size: 11px;
+  color: var(--kb-text-muted);
+  font-weight: 500;
+}
+
+.gl-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}

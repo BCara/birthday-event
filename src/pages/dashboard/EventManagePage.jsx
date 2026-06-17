@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { db, storage } from '../../firebase';
+import { db, storage, trackEvent } from '../../firebase';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadString, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
+import html2canvas from 'html2canvas';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { THEME_COLOR_SCHEMES, getTheme } from '../../theme/themes';
 import ThemeIllustration from '../../theme/ThemeIllustration';
+import OgImageTemplate from '../../components/OgImageTemplate';
 import LocationInput from '../../components/LocationInput';
 import '../guest/EventLandingPage.css';
 import './EventManagePage.css';
@@ -50,7 +52,6 @@ function Toggle({ id, checked, onChange, label }) {
 function MiniPreview({ 
   themeKey, 
   themeColor, 
-  themeMode,
   name, 
   childName, 
   date, 
@@ -108,7 +109,7 @@ function MiniPreview({
           overflowY: 'hidden'
         }} 
         className="elp-container-preview tp-root"
-        data-theme={themeMode === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : themeMode}
+        data-theme="light"
       >
         {/* Scrollable area */}
         <div style={{ ...phoneStyles.scrollContent, transform: 'scale(0.9)', transformOrigin: 'top center' }}>
@@ -122,22 +123,31 @@ function MiniPreview({
                 <span className="elp-invitation-badge">You're Invited!</span>
               </div>
 
-              <div className="elp-hero" style={{ padding: '4px 0' }}>
-                <h1 className="elp-title" style={{ fontSize: '1.35rem', margin: '0 0 4px' }}>{name || 'Party Name'}</h1>
-                {childName && <p className="elp-subtitle" style={{ fontSize: '0.85rem' }}>Celebrating {childName}'s special day!</p>}
-              </div>
-
               {/* Photo OR Illustration */}
-              <div className="elp-illustration-container" style={{ margin: '8px 0', display: 'flex', justifyContent: 'center' }}>
+              <div className="elp-illustration-container" style={{ margin: '-8px auto -12px', zIndex: 1, position: 'relative' }}>
                 {photoUrl ? (
-                  <div className="elp-photo-wrap" style={{ width: '100px', height: '100px' }}>
+                  <div className="elp-photo-wrap" style={{ width: '100px', height: '100px', margin: '0 auto' }}>
                     <img src={photoUrl} alt="Event" className="elp-photo" />
                   </div>
                 ) : (
-                  <div className="elp-illustration-wrap" style={{ maxWidth: '120px', animation: 'none' }}>
+                  <div className="elp-illustration-wrap" style={{ maxWidth: '140px', margin: '0 auto', transform: 'scale(1.15)', animation: 'none' }}>
                     <ThemeIllustration theme={normalizedThemeKey} themeColor={themeColor} />
                   </div>
                 )}
+              </div>
+
+              <div className="elp-hero" style={{ zIndex: 2, position: 'relative', marginTop: 0, paddingTop: 0 }}>
+                <h1 className="elp-title" style={{ fontSize: '1.25rem', margin: '0 0 4px' }}>
+                  {childName ? (
+                    <>
+                      <span style={{ color: 'var(--t-accent)' }}>{childName}{childName.toLowerCase().endsWith('s') || childName.includes("'") ? '' : "'s"}</span><br />
+                      <span style={{ color: 'var(--t-text)', fontSize: '0.8em', display: 'block', marginTop: '4px' }}>{name || 'Party Name'}</span>
+                    </>
+                  ) : (
+                    <span style={{ color: 'var(--t-accent)' }}>{name || 'Party Name'}</span>
+                  )}
+                </h1>
+                <p className="elp-subtitle" style={{ marginTop: '12px', fontSize: '0.85rem' }}>✨ Join us for a magical {themeKey?.replace('kids-', '') || 'unicorn'} celebration! ✨</p>
               </div>
 
               <div className="elp-divider" style={{ margin: '10px 0' }}>
@@ -146,39 +156,35 @@ function MiniPreview({
                 <span className="elp-divider-dot"></span>
               </div>
 
+              {/* Centered Details */}
               <div className="elp-details-clean" style={{ gap: '12px' }}>
-                <div className="elp-detail-item">
-                  <span className="elp-detail-icon-clean" style={{ fontSize: '1.4rem' }}>📅</span>
-                  <div className="elp-detail-content-clean">
-                    <div className="elp-detail-label-clean">Date</div>
-                    <div className="elp-detail-value-clean" style={{ fontSize: '0.85rem' }}>{formattedDate}</div>
-                  </div>
-                </div>
-                <div className="elp-detail-item">
-                  <span className="elp-detail-icon-clean" style={{ fontSize: '1.4rem' }}>🕐</span>
-                  <div className="elp-detail-content-clean">
-                    <div className="elp-detail-label-clean">Time</div>
-                    <div className="elp-detail-value-clean" style={{ fontSize: '0.85rem' }}>{tStart} – {tEnd}</div>
-                  </div>
-                </div>
-                <div className="elp-detail-item">
-                  <span className="elp-detail-icon-clean" style={{ fontSize: '1.4rem' }}>📍</span>
-                  <div className="elp-detail-content-clean">
-                    <div className="elp-detail-label-clean">Location</div>
-                    <div className="elp-detail-value-clean" style={{ fontSize: '0.85rem' }}>
-                      <div style={{ fontWeight: 700 }}>{location || 'Party Location'}</div>
-                      {address && <div style={{ opacity: 0.8, marginTop: '2px' }}>{address}</div>}
+                {(formattedDate || tStart) && (
+                  <div className="elp-detail-item elp-detail-datetime" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div className="elp-detail-content-clean" style={{ textAlign: 'center' }}>
+                      <div className="elp-detail-value-clean">
+                        {formattedDate && <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--t-text)' }}>📅 {formattedDate}</div>}
+                        {tStart && <div style={{ fontWeight: 700, fontSize: '0.8rem', opacity: 0.9, marginTop: '2px', color: 'var(--t-text)' }}>🕛 {tStart}{tEnd && ` – ${tEnd}`}</div>}
+                      </div>
                     </div>
                   </div>
-                </div>
-                {(hostName || hostContact) && (
-                  <div className="elp-detail-item">
-                    <span className="elp-detail-icon-clean" style={{ fontSize: '1.4rem' }}>📞</span>
-                    <div className="elp-detail-content-clean">
-                      <div className="elp-detail-label-clean">Contact</div>
-                      <div className="elp-detail-value-clean" style={{ fontSize: '0.85rem' }}>
-                        {hostName && <div>{hostName}</div>}
-                        {hostContact && <div>{hostContact}</div>}
+                )}
+                {location && (
+                  <div className="elp-detail-item elp-detail-location" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div className="elp-detail-content-clean" style={{ textAlign: 'center' }}>
+                      <div className="elp-detail-value-clean">
+                        <div style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--t-accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📍 {location}</div>
+                        {address && (
+                          <div style={{ fontSize: '0.75rem', fontWeight: 600, marginTop: '2px', color: 'var(--t-text)', lineHeight: 1.2 }}>
+                            {(() => {
+                              const loc = (location || '').trim().toLowerCase();
+                              const addr = (address || '').trim();
+                              if (loc && addr.toLowerCase().startsWith(loc)) {
+                                return addr.slice(loc.length).replace(/^[,\s]+/, '');
+                              }
+                              return addr;
+                            })()}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -241,7 +247,6 @@ export default function EventManagePage() {
   const [childName, setChildName] = useState('');
   const [theme, setTheme] = useState('generic');
   const [themeColor, setThemeColor] = useState('default');
-  const [themeMode, setThemeMode] = useState('light');
   const [date, setDate] = useState('');
   const [rsvpByDate, setRsvpByDate] = useState('');
   const [time, setTime] = useState('');
@@ -258,20 +263,32 @@ export default function EventManagePage() {
   const [rsvpEnabled, setRsvpEnabled] = useState(true);
   const [websiteEnabled, setWebsiteEnabled] = useState(true);
   const [memoriesEnabled, setMemoriesEnabled] = useState(false);
+  const [memoriesTitle, setMemoriesTitle] = useState('');
+  const [memoriesMessage, setMemoriesMessage] = useState('');
+  const [memoriesOpenDate, setMemoriesOpenDate] = useState('');
+  const [memoriesCloseDate, setMemoriesCloseDate] = useState('');
   const [showParentAttendance, setShowParentAttendance] = useState(true);
   const [stayOrDropOffMode, setStayOrDropOffMode] = useState('ask'); // 'ask' | 'stay' | 'dropoff'
   const [askChildAge, setAskChildAge] = useState(true);
   const [askAdultCount, setAskAdultCount] = useState(true);
   const [askDietary, setAskDietary] = useState(true);
+  const [allowAdditionalChildren, setAllowAdditionalChildren] = useState(true);
+  const [lockDownRSVP, setLockDownRSVP] = useState(false);
+  const [requireGuestMatch, setRequireGuestMatch] = useState(false);
+  const [authType, setAuthType] = useState('name');
+  const [eventPassword, setEventPassword] = useState('');
+  const [advancedRsvpOpen, setAdvancedRsvpOpen] = useState(false);
   const [kidsEstimate, setKidsEstimate] = useState(10);
   const [adultsEstimate, setAdultsEstimate] = useState(10);
   const [giftRegistryNote, setGiftRegistryNote] = useState('');
   const [giftRegistryLink, setGiftRegistryLink] = useState('');
   
   const [photoUrl, setPhotoUrl] = useState('');
+  const [invitePreviewUrl, setInvitePreviewUrl] = useState('');
+  
+  const ogPreviewRef = React.useRef(null);
   const [uploading, setUploading] = useState(false);
   const [showEventPageInfo, setShowEventPageInfo] = useState(false);
-  const [guestNameForPrint, setGuestNameForPrint] = useState('');
   const [printSize, setPrintSize] = useState('A5');
   const [printBg, setPrintBg] = useState('white');
   const fileInputRef = React.useRef(null);
@@ -288,7 +305,6 @@ export default function EventManagePage() {
       childName === '' && setChildName(data.childName ?? '');
       setTheme(data.theme ?? 'generic');
       setThemeColor(data.themeColor ?? 'default');
-      setThemeMode(data.themeMode ?? 'light');
       setDate(data.date ?? '');
       setTime(data.time ?? '');
       setEndTime(data.endTime ?? '');
@@ -305,16 +321,27 @@ export default function EventManagePage() {
       setRsvpEnabled(data.rsvpEnabled ?? true);
       setWebsiteEnabled(data.websiteEnabled ?? true);
       setMemoriesEnabled(data.memoriesEnabled ?? false);
-      setShowParentAttendance(data.showParentAttendance ?? true);
-      setStayOrDropOffMode(data.stayOrDropOffMode ?? 'ask');
+      setMemoriesTitle(data.memoriesTitle ?? '');
+      setMemoriesMessage(data.memoriesMessage ?? '');
+      setMemoriesOpenDate(data.memoriesOpenDate ?? '');
+      setMemoriesCloseDate(data.memoriesCloseDate ?? '');
+      const showParent = data.showParentAttendance ?? true;
+      setShowParentAttendance(showParent);
+      setStayOrDropOffMode(showParent ? (data.stayOrDropOffMode ?? 'ask') : 'none');
       setAskChildAge(data.askChildAge ?? true);
       setAskAdultCount(data.askAdultCount ?? true);
       setAskDietary(data.askDietary ?? true);
+      setAllowAdditionalChildren(data.allowAdditionalChildren ?? true);
+      setLockDownRSVP(data.lockDownRSVP ?? false);
+      setRequireGuestMatch(data.requireGuestMatch ?? false);
+      setAuthType(data.authType ?? 'name');
+      setEventPassword(data.eventPassword ?? '');
       setKidsEstimate(data.kidsEstimate ?? (data.guestEstimate ? Math.floor(data.guestEstimate / 2) : 10));
       setAdultsEstimate(data.adultsEstimate ?? (data.guestEstimate ? Math.floor(data.guestEstimate / 2) : 10)); // Fixed: adultsEstimate should use ceil or keep consistent
       setGiftRegistryNote(data.giftRegistryNote ?? '');
       setGiftRegistryLink(data.giftRegistryLink ?? '');
       setPhotoUrl(data.photoUrl ?? '');
+      setInvitePreviewUrl(data.invitePreviewUrl ?? '');
       setLoading(false);
     }, err => {
       console.error(err);
@@ -327,13 +354,27 @@ export default function EventManagePage() {
   async function handleSave(e) {
     e.preventDefault();
     setSaving(true);
+    
+    let updatedPreviewUrl = invitePreviewUrl;
+    try {
+      if (ogPreviewRef.current) {
+        const canvas = await html2canvas(ogPreviewRef.current, { scale: 1, useCORS: true, backgroundColor: null });
+        const dataUrl = canvas.toDataURL('image/png');
+        const imageRef = ref(storage, `invite-previews/${eventId}.png`);
+        await uploadString(imageRef, dataUrl, 'data_url');
+        updatedPreviewUrl = await getDownloadURL(imageRef);
+        setInvitePreviewUrl(updatedPreviewUrl);
+      }
+    } catch (err) {
+      console.error("Failed to generate or upload invite preview image", err);
+    }
+
     try {
       await updateDoc(doc(db, 'events', eventId), {
         name: name.trim(),
         childName: childName.trim(),
         theme,
         themeColor,
-        themeMode,
         date,
         time,
         endTime,
@@ -350,16 +391,26 @@ export default function EventManagePage() {
         rsvpEnabled,
         websiteEnabled,
         memoriesEnabled,
-        showParentAttendance,
-        stayOrDropOffMode,
+        memoriesTitle: memoriesTitle.trim(),
+        memoriesMessage: memoriesMessage.trim(),
+        memoriesOpenDate,
+        memoriesCloseDate,
+        showParentAttendance: stayOrDropOffMode !== 'none',
+        stayOrDropOffMode: stayOrDropOffMode === 'none' ? 'ask' : stayOrDropOffMode,
         askChildAge,
         askAdultCount,
         askDietary,
+        allowAdditionalChildren,
+        lockDownRSVP,
+        requireGuestMatch,
+        authType,
+        eventPassword: authType === 'password' ? eventPassword : '',
         kidsEstimate: kidsEstimate !== '' ? Number(kidsEstimate) : 10,
         adultsEstimate: adultsEstimate !== '' ? Number(adultsEstimate) : 10,
         giftRegistryNote: giftRegistryNote.trim(),
         giftRegistryLink: giftRegistryLink.trim(),
         photoUrl,
+        invitePreviewUrl: updatedPreviewUrl,
       });
       toast.success('Changes saved! ✅');
     } catch (err) {
@@ -420,16 +471,18 @@ export default function EventManagePage() {
 
   function handleCopyLink() {
     if (!event?.slug) return;
-    const url = `${getDevSafeOrigin()}/${event.slug}`;
-    navigator.clipboard.writeText(url).then(() => {
+    const urlToCopy = `${getDevSafeOrigin()}/share/${event.slug}`;
+    navigator.clipboard.writeText(urlToCopy).then(() => {
       setCopied(true);
       toast.success('Link copied!');
+      trackEvent('invite_shared', { method: 'copy_link' });
       setTimeout(() => setCopied(false), 2500);
     });
   }
 
   async function handleDownloadQR() {
     if (!event?.slug) return;
+    trackEvent('invite_shared', { method: 'qr_download' });
     try {
       const response = await fetch(qrCodeUrl);
       const blob = await response.blob();
@@ -449,9 +502,6 @@ export default function EventManagePage() {
 
   function handlePrintInvite() {
     let url = `/dashboard/event/${eventId}/print?size=${printSize}&bg=${printBg}`;
-    if (guestNameForPrint.trim()) {
-      url += `&guestName=${encodeURIComponent(guestNameForPrint.trim())}`;
-    }
     window.open(url, '_blank');
   }
 
@@ -463,14 +513,18 @@ export default function EventManagePage() {
     );
   }
 
-  const inviteUrl = event?.slug ? `${getDevSafeOrigin()}/${event.slug}` : 'tinypartyportal.com/r/...';
+  const inviteUrl = event?.slug
+    ? rsvpEnabled
+      ? `${getDevSafeOrigin()}/${event.slug}`
+      : `${getDevSafeOrigin()}/${event.slug}/portal`
+    : 'tinypartyportal.com/...';
   const qrCodeUrl = event?.slug 
     ? `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(inviteUrl)}`
     : '/images/qr_code_mockup_1779434680273.png';
   const activeTheme = THEMES.find(t => t.key === theme);
 
   return (
-    <div style={styles.root}>
+    <div className="em-root" style={{ minHeight: '100vh', background: 'var(--kb-bg)' }}>
       <div style={styles.inner}>
         
         {/* Header */}
@@ -489,14 +543,57 @@ export default function EventManagePage() {
               </div>
             </div>
           </div>
-          <div style={styles.navBtns}>
-            <a href={`${getDevSafeOrigin()}/${event?.slug}`} target="_blank" rel="noreferrer" className="kb-btn kb-btn-secondary kb-btn-sm" style={{ ...styles.navBtn, borderColor: 'var(--kb-mint)', color: 'var(--kb-mint)' }}>
-              <span>👁️</span> View Invite
+          <div className="em-nav-btns" style={styles.navBtns}>
+            <a href={inviteUrl} target="_blank" rel="noreferrer" className="kb-btn kb-btn-secondary kb-btn-sm em-nav-btn" style={{ ...styles.navBtn, borderColor: 'var(--kb-mint)', color: 'var(--kb-mint)' }}>
+              <span>👁️</span> {rsvpEnabled ? 'View RSVP Page' : 'View Event Page'}
             </a>
-            <Link to={`/dashboard/event/${eventId}/rsvps`} className="kb-btn kb-btn-secondary kb-btn-sm" style={styles.navBtn}>
+            <Link to={`/dashboard/event/${eventId}/rsvps`} className="kb-btn kb-btn-secondary kb-btn-sm em-nav-btn" style={styles.navBtn}>
               <span style={{color: 'var(--kb-purple)'}}>👥</span> RSVPs
             </Link>
+            {memoriesEnabled && (
+              <Link to={`/dashboard/event/${eventId}/capsule`} className="kb-btn kb-btn-secondary kb-btn-sm em-nav-btn" style={styles.navBtn}>
+                <span style={{color: 'var(--kb-coral)'}}>📸</span> Capsule
+              </Link>
+            )}
           </div>
+        </div>
+
+        {/* Module bar */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
+          {/* Web — always on */}
+          <div style={{ flex: 1, minWidth: 140, padding: '14px 18px', borderRadius: 16, background: 'var(--kb-surface)', border: '2px solid var(--kb-mint)', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 22 }}>🌐</span>
+            <div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--kb-text)' }}>Web</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--kb-mint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Always on</div>
+            </div>
+          </div>
+
+          {/* RSVP */}
+          <label htmlFor="module-rsvp" style={{ flex: 1, minWidth: 140, padding: '14px 18px', borderRadius: 16, background: 'var(--kb-surface)', border: `2px solid ${rsvpEnabled ? 'var(--kb-purple)' : 'var(--kb-border)'}`, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', userSelect: 'none', transition: 'border-color 0.2s' }}>
+            <span style={{ fontSize: 22 }}>✅</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--kb-text)' }}>RSVP</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: rsvpEnabled ? 'var(--kb-purple)' : 'var(--kb-text-muted)' }}>{rsvpEnabled ? 'Enabled' : 'Disabled'}</div>
+            </div>
+            <div style={{ width: 36, height: 20, borderRadius: 10, background: rsvpEnabled ? 'var(--kb-purple)' : 'var(--kb-input-border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+              <input id="module-rsvp" type="checkbox" checked={rsvpEnabled} onChange={e => setRsvpEnabled(e.target.checked)} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
+              <div style={{ position: 'absolute', top: 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', left: rsvpEnabled ? 18 : 2, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+            </div>
+          </label>
+
+          {/* Memory Capsule */}
+          <label htmlFor="module-capsule" style={{ flex: 1, minWidth: 140, padding: '14px 18px', borderRadius: 16, background: 'var(--kb-surface)', border: `2px solid ${memoriesEnabled ? 'var(--kb-coral)' : 'var(--kb-border)'}`, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', userSelect: 'none', transition: 'border-color 0.2s' }}>
+            <span style={{ fontSize: 22 }}>📸</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--kb-text)' }}>Memory Capsule</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: memoriesEnabled ? 'var(--kb-coral)' : 'var(--kb-text-muted)' }}>{memoriesEnabled ? 'Enabled' : 'Disabled'}</div>
+            </div>
+            <div style={{ width: 36, height: 20, borderRadius: 10, background: memoriesEnabled ? 'var(--kb-coral)' : 'var(--kb-input-border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+              <input id="module-capsule" type="checkbox" checked={memoriesEnabled} onChange={e => setMemoriesEnabled(e.target.checked)} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
+              <div style={{ position: 'absolute', top: 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', left: memoriesEnabled ? 18 : 2, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+            </div>
+          </label>
         </div>
 
         <div className="em-grid">
@@ -508,7 +605,7 @@ export default function EventManagePage() {
               <h3 style={styles.cardTitle}><span>📝</span> Basic Information</h3>
               
               {/* Photo Upload Row */}
-              <div style={{ display: 'flex', gap: 24, alignItems: 'center', marginBottom: 28, padding: '20px', background: 'rgba(155, 93, 229, 0.04)', borderRadius: 20, border: '1px solid rgba(155, 93, 229, 0.1)' }}>
+              <div className="em-photo-row" style={{ padding: '20px', background: 'rgba(155, 93, 229, 0.04)', borderRadius: 20, border: '1px solid rgba(155, 93, 229, 0.1)' }}>
                 <div style={{ position: 'relative', width: 90, height: 90, borderRadius: '50%', overflow: 'hidden', background: 'var(--kb-surface)', border: '3px solid var(--kb-surface)', boxShadow: 'var(--kb-shadow-md)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {photoUrl ? (
                     <img src={photoUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -602,29 +699,6 @@ export default function EventManagePage() {
                   Selected Accent: <strong>{THEME_COLOR_SCHEMES[theme.startsWith('kids-') ? theme : `kids-${theme}`]?.[themeColor]?.label || 'Default'}</strong>
                 </div>
               </div>
-
-              {/* Theme Mode Picker */}
-              <div style={{ marginTop: 24 }}>
-                <span className="kb-label">Appearance</span>
-                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                  {['light', 'dark', 'system'].map(mode => (
-                    <button
-                      key={mode}
-                      type="button"
-                      title={mode === 'system' ? "Matches guest's device settings" : undefined}
-                      onClick={() => setThemeMode(mode)}
-                      style={{
-                        ...styles.themeBtn,
-                        flex: 1,
-                        justifyContent: 'center',
-                        ...(themeMode === mode ? styles.themeBtnActive : {})
-                      }}
-                    >
-                      <span style={{ textTransform: 'capitalize' }}>{mode === 'system' ? '💻 System' : (mode === 'light' ? '☀️ Light' : '🌙 Dark')}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
 
             <div className="kb-card" style={styles.card}>
@@ -653,7 +727,7 @@ export default function EventManagePage() {
 
             <div className="kb-card" style={{ ...styles.card, overflow: 'visible' }}>
               <h3 style={styles.cardTitle}><span>📍</span> Event Location</h3>
-              <div style={{display: 'flex', gap: 16, alignItems: 'flex-start'}}>
+              <div className="em-location-row">
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <div className="kb-field" style={{ marginBottom: 0 }}>
                     <label className="kb-label" htmlFor="em-location">Event/Venue Name</label>
@@ -676,71 +750,194 @@ export default function EventManagePage() {
               </div>
             </div>
 
+            {rsvpEnabled && (
             <div className="kb-card" style={styles.card}>
               <h3 style={styles.cardTitle}><span>✅</span> RSVP Settings</h3>
-              <div style={styles.toggleGroup}>
-                <Toggle id="em-rsvp" checked={rsvpEnabled} onChange={setRsvpEnabled} label="Enable RSVP for this event" />
-                {rsvpEnabled && (
-                  <>
-                    <div style={{ paddingTop: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap', marginBottom: 16 }}>
-                        <Toggle id="em-showParentAttendance" checked={showParentAttendance} onChange={setShowParentAttendance} label="Parent Attendance Options" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-                        {showParentAttendance && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 260 }}>
-                            <label className="kb-label" htmlFor="em-stayOrDropOffMode" style={{ marginBottom: 0, whiteSpace: 'nowrap' }}>Mode:</label>
-                            <select 
-                              id="em-stayOrDropOffMode" 
-                              className="kb-select" 
-                              value={stayOrDropOffMode} 
-                              onChange={e => setStayOrDropOffMode(e.target.value)}
-                              style={{ marginBottom: 0, flex: 1 }}
-                            >
-                              <option value="ask">Ask guest (Staying vs Drop-off)</option>
-                              <option value="stay">Parents must stay</option>
-                              <option value="dropoff">Drop-off allowed (No parents)</option>
-                            </select>
-                          </div>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', gap: 12 }}>
-                        <div style={{ flex: 1 }}>
-                          <label className="kb-label" htmlFor="em-kidsEstimate">Estimated Kids</label>
+                  {/* Parents + Estimates row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, flexWrap: 'wrap' }}>
+                    <div>
+                      <label className="kb-label" htmlFor="em-stayOrDropOffMode">Parents at party</label>
+                      <select
+                        id="em-stayOrDropOffMode"
+                        className="kb-select"
+                        value={stayOrDropOffMode}
+                        onChange={e => setStayOrDropOffMode(e.target.value)}
+                      >
+                        <option value="none">Don't ask</option>
+                        <option value="ask">Ask (staying or drop-off?)</option>
+                        <option value="stay">Must stay</option>
+                        <option value="dropoff">Drop-off only</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="kb-label">Estimated guests</label>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <div style={{ flex: 1, textAlign: 'center' }}>
                           <input
                             id="em-kidsEstimate"
                             type="number"
                             min="0"
                             className="kb-input"
-                            placeholder="e.g. 10"
+                            placeholder="0"
                             value={kidsEstimate}
                             onChange={e => setKidsEstimate(e.target.value === '' ? '' : Number(e.target.value))}
                           />
+                          <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: 'var(--kb-text-muted)', fontWeight: 600 }}>Kids</p>
                         </div>
-                        <div style={{ flex: 1 }}>
-                          <label className="kb-label" htmlFor="em-adultsEstimate">Estimated Adults</label>
+                        <div style={{ flex: 1, textAlign: 'center' }}>
                           <input
                             id="em-adultsEstimate"
                             type="number"
                             min="0"
                             className="kb-input"
-                            placeholder="e.g. 10"
+                            placeholder="0"
                             value={adultsEstimate}
                             onChange={e => setAdultsEstimate(e.target.value === '' ? '' : Number(e.target.value))}
                           />
+                          <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: 'var(--kb-text-muted)', fontWeight: 600 }}>Adults</p>
                         </div>
                       </div>
                     </div>
+                  </div>
 
-                    <div style={{ borderTop: '1px solid var(--kb-border)', marginTop: 8, paddingTop: 12 }}>
-                      <Toggle id="em-askChildAge" checked={askChildAge} onChange={setAskChildAge} label="Ask for guest child's age" />
-                      <Toggle id="em-askAdultCount" checked={askAdultCount} onChange={setAskAdultCount} label="Ask for number of adults attending" />
-                      <Toggle id="em-askDietary" checked={askDietary} onChange={setAskDietary} label="Ask for dietary requirements" />
+                  {/* Ask guests about — compact chip toggles */}
+                  <div>
+                    <p style={{ margin: '0 0 10px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--kb-text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Ask guests about</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      {[
+                        { id: 'em-askChildAge', checked: askChildAge, onChange: setAskChildAge, label: "Child's age" },
+                        { id: 'em-askAdultCount', checked: askAdultCount, onChange: setAskAdultCount, label: 'Adults attending' },
+                        { id: 'em-askDietary', checked: askDietary, onChange: setAskDietary, label: 'Dietary needs' },
+                        { id: 'em-allowAdditionalChildren', checked: allowAdditionalChildren, onChange: setAllowAdditionalChildren, label: 'Extra children' },
+                      ].map(({ id, checked, onChange, label }) => (
+                        <label key={id} htmlFor={id} style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+                          background: checked ? 'rgba(52, 211, 153, 0.07)' : 'var(--kb-surface)',
+                          border: `1.5px solid ${checked ? 'var(--kb-mint)' : 'var(--kb-border)'}`,
+                          transition: 'all 0.15s', userSelect: 'none'
+                        }}>
+                          <div style={{ width: 30, height: 17, borderRadius: 9, flexShrink: 0, position: 'relative', transition: 'background 0.2s', background: checked ? 'var(--kb-mint)' : 'var(--kb-input-border)' }}>
+                            <input id={id} type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
+                            <div style={{ position: 'absolute', top: 2, width: 13, height: 13, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', left: checked ? 15 : 2, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                          </div>
+                          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--kb-text)' }}>{label}</span>
+                        </label>
+                      ))}
                     </div>
-                  </>
+                  </div>
+
+                  {/* Advanced Settings */}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setAdvancedRsvpOpen(o => !o)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        background: 'none', border: 'none', padding: 0,
+                        cursor: 'pointer', color: 'var(--kb-text-muted)',
+                        fontSize: '0.82rem', fontWeight: 600
+                      }}
+                    >
+                      <span style={{ display: 'inline-block', transition: 'transform 0.2s', transform: advancedRsvpOpen ? 'rotate(90deg)' : 'rotate(0deg)', fontSize: '0.65rem' }}>▶</span>
+                      Advanced
+                    </button>
+
+                    {advancedRsvpOpen && (
+                      <div style={{
+                        marginTop: 12, padding: '16px', borderRadius: 12,
+                        background: 'var(--kb-surface)', border: '1px solid var(--kb-border)',
+                        display: 'flex', flexDirection: 'column', gap: 14
+                      }}>
+                        <Toggle id="em-lockRsvp" checked={lockDownRSVP} onChange={setLockDownRSVP} label="Require approval for unlisted guests" />
+                        <Toggle id="em-requireMatch" checked={requireGuestMatch} onChange={setRequireGuestMatch} label="Only invited guests can RSVP" />
+                        <div>
+                          <label className="kb-label" htmlFor="em-authType">Cross-device re-authentication</label>
+                          <select
+                            id="em-authType"
+                            className="kb-select"
+                            value={authType}
+                            onChange={e => setAuthType(e.target.value)}
+                            style={{ maxWidth: 280 }}
+                          >
+                            <option value="name">Name &amp; contact lookup</option>
+                            <option value="password">Event password</option>
+                          </select>
+                          {authType === 'password' && (
+                            <input
+                              className="kb-input"
+                              type="text"
+                              placeholder="e.g. Birthday2026"
+                              value={eventPassword}
+                              onChange={e => setEventPassword(e.target.value)}
+                              style={{ maxWidth: 280, marginTop: 8 }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+            </div>
+            )}
+
+            {memoriesEnabled && (
+            <div className="kb-card" style={styles.card}>
+              <h3 style={styles.cardTitle}><span>📸</span> Memory Capsule</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <div className="kb-field" style={{ marginBottom: 0 }}>
+                    <label className="kb-label" htmlFor="em-memoriesTitle">Capsule title (optional)</label>
+                    <input
+                      id="em-memoriesTitle"
+                      type="text"
+                      className="kb-input"
+                      value={memoriesTitle}
+                      onChange={e => setMemoriesTitle(e.target.value)}
+                      placeholder={childName ? `${childName}'s Memories` : 'Birthday Memories'}
+                    />
+                  </div>
+                  <div className="kb-field" style={{ marginBottom: 0 }}>
+                    <label className="kb-label" htmlFor="em-memoriesMessage">Message shown to guests (optional)</label>
+                    <input
+                      id="em-memoriesMessage"
+                      type="text"
+                      className="kb-input"
+                      value={memoriesMessage}
+                      onChange={e => setMemoriesMessage(e.target.value)}
+                      placeholder="Share a photo or memory from the party!"
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <div className="kb-field" style={{ marginBottom: 0 }}>
+                    <label className="kb-label" htmlFor="em-memoriesOpenDate">Open date (optional)</label>
+                    <input id="em-memoriesOpenDate" type="date" className="kb-input" value={memoriesOpenDate} onChange={e => setMemoriesOpenDate(e.target.value)} />
+                  </div>
+                  <div className="kb-field" style={{ marginBottom: 0 }}>
+                    <label className="kb-label" htmlFor="em-memoriesCloseDate">Close date (optional)</label>
+                    <input id="em-memoriesCloseDate" type="date" className="kb-input" value={memoriesCloseDate} onChange={e => setMemoriesCloseDate(e.target.value)} />
+                  </div>
+                </div>
+
+                {event?.slug && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--kb-surface-2)', borderRadius: 12, padding: '12px 14px', flexWrap: 'wrap' }}>
+                    <code style={{ flex: 1, fontSize: '0.8rem', color: 'var(--kb-text-muted)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {getDevSafeOrigin()}/{event.slug}/memories/new
+                    </code>
+                    <button type="button" onClick={() => { navigator.clipboard.writeText(`${getDevSafeOrigin()}/${event.slug}/memories/new`); toast.success('Copied!'); }} className="kb-btn kb-btn-secondary kb-btn-sm">Copy link</button>
+                    <Link to={`/dashboard/event/${eventId}/capsule`} className="kb-btn kb-btn-secondary kb-btn-sm" style={{ color: 'var(--kb-coral)', borderColor: 'var(--kb-coral)' }}>View Capsule →</Link>
+                  </div>
                 )}
+
               </div>
             </div>
+            )}
 
             <div className="kb-card" style={{ ...styles.card, transition: 'all 0.3s ease' }}>
               <div 
@@ -790,7 +987,7 @@ export default function EventManagePage() {
                             
                             <div style={{ width: '100%', maxWidth: 120 }}>
                               <label className="kb-label" style={{ fontSize: 12 }}>Icon</label>
-                              <select className="kb-select" style={{ padding: '8px', fontSize: 14 }} value={item.iconKey} onChange={e => updateScheduleItem(index, 'iconKey', e.target.value)}>
+                              <select className="kb-select" style={{ padding: '8px 32px 8px 8px', fontSize: 14, height: 'auto' }} value={item.iconKey} onChange={e => updateScheduleItem(index, 'iconKey', e.target.value)}>
                                 {SCHEDULE_ICONS.map(icon => (
                                   <option key={icon.id} value={icon.id}>{icon.label}</option>
                                 ))}
@@ -893,7 +1090,6 @@ export default function EventManagePage() {
                 <MiniPreview 
                   themeKey={theme} 
                   themeColor={themeColor} 
-                  themeMode={themeMode}
                   name={name} 
                   childName={childName} 
                   date={date} 
@@ -915,20 +1111,13 @@ export default function EventManagePage() {
               <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--kb-border)' }}>
                 <h4 style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--kb-text)', fontWeight: 600 }}>Printable Version</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    <input 
-                      type="text" 
-                      className="kb-input" 
-                      placeholder="Guest Name (Optional)" 
-                      value={guestNameForPrint}
-                      onChange={(e) => setGuestNameForPrint(e.target.value)}
-                      style={{ fontSize: 13, padding: '8px 12px', flex: 1 }}
-                    />
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <span style={{ fontSize: 13, color: 'var(--kb-text-muted)' }}>Paper Size:</span>
                     <select 
                       className="kb-select"
                       value={printSize}
                       onChange={(e) => setPrintSize(e.target.value)}
-                      style={{ fontSize: 13, padding: '8px 32px 8px 12px', width: 'auto', marginBottom: 0 }}
+                      style={{ fontSize: 13, padding: '8px 40px 8px 12px', width: 'auto', marginBottom: 0, height: 'auto' }}
                     >
                       <option value="A5">A5</option>
                       <option value="A4">A4</option>
@@ -940,7 +1129,7 @@ export default function EventManagePage() {
                       className="kb-select"
                       value={printBg}
                       onChange={(e) => setPrintBg(e.target.value)}
-                      style={{ fontSize: 13, padding: '8px 12px', flex: 1, marginBottom: 0 }}
+                      style={{ fontSize: 13, padding: '8px 40px 8px 12px', flex: 1, marginBottom: 0, height: 'auto' }}
                     >
                       <option value="white">White (Ink Saver)</option>
                       <option value="theme">Themed Colors</option>
@@ -961,10 +1150,14 @@ export default function EventManagePage() {
             <div className="kb-card" style={styles.sideCard}>
               <div style={styles.sideCardHeader}>
                 <span style={{fontSize: 18, color: 'var(--kb-mint)'}}>🚀</span>
-                <h3 style={styles.sideCardTitle}>Share Invite</h3>
+                <h3 style={styles.sideCardTitle}>{rsvpEnabled ? 'Share RSVP Invite' : 'Share Event Page'}</h3>
               </div>
-              <p style={styles.shareDesc}>Share this link with your guests via WhatsApp, text, or email — or scan the QR code.</p>
-              
+              <p style={styles.shareDesc}>
+                {rsvpEnabled
+                  ? 'Guests open this link to see the event details and RSVP. Share via WhatsApp, text, or email.'
+                  : 'Share your event page with guests via WhatsApp, text, or email — no RSVP required.'}
+              </p>
+
               <div className="em-share-flex">
                 <div style={styles.shareFlexLeft}>
                   <div style={styles.urlBox}>
@@ -973,7 +1166,14 @@ export default function EventManagePage() {
                       {copied ? '✅' : '📋'} Copy
                     </button>
                   </div>
-                  <a href={`https://wa.me/?text=You're invited!%20${encodeURIComponent(inviteUrl)}`} target="_blank" rel="noreferrer" className="kb-btn" style={styles.whatsappBtn}>
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(rsvpEnabled ? `You're invited! RSVP here: ${inviteUrl}` : `Check out our event: ${inviteUrl}`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="kb-btn"
+                    style={styles.whatsappBtn}
+                    onClick={() => trackEvent('invite_shared', { method: 'whatsapp' })}
+                  >
                     <span style={{fontSize: 18}}>💬</span> Share on WhatsApp
                   </a>
                 </div>
@@ -991,6 +1191,27 @@ export default function EventManagePage() {
                   </button>
                 </div>
               </div>
+
+              {memoriesEnabled && event?.slug && (
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--kb-border)' }}>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--kb-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 8px' }}>
+                    📸 Memory Capsule link
+                  </p>
+                  <div style={styles.urlBox}>
+                    <span style={{ ...styles.urlText, fontSize: '0.75rem' }}>
+                      {`${getDevSafeOrigin()}/${event.slug}/memories/new`.replace(/^https?:\/\//, '')}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => { navigator.clipboard.writeText(`${getDevSafeOrigin()}/${event.slug}/memories/new`); toast.success('Copied!'); }}
+                      className="kb-btn kb-btn-secondary kb-btn-sm"
+                      style={styles.copyBtn}
+                    >
+                      📋 Copy
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div style={styles.bannerCard}>
@@ -1001,6 +1222,23 @@ export default function EventManagePage() {
               <img src="/images/cute_dino_mascot_1779434654723.png" alt="Mascot" style={{height: 60}} />
             </div>
 
+          </div>
+        </div>
+
+        {/* Hidden OG Image Generator */}
+        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+          <div ref={ogPreviewRef}>
+            <OgImageTemplate 
+              themeKey={theme} 
+              themeColor={themeColor} 
+              name={name} 
+              childName={childName} 
+              date={date} 
+              time={time} 
+              endTime={endTime} 
+              location={location}
+              address={address}
+            />
           </div>
         </div>
       </div>

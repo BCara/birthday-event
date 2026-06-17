@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { db } from '../../firebase';
+import { db, trackEvent } from '../../firebase';
 import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { THEME_COLOR_SCHEMES, getTheme } from '../../theme/themes';
 import LocationInput from '../../components/LocationInput';
 import ThemeIllustration from '../../theme/ThemeIllustration';
+import './CreateEventPage.css';
 
 const THEMES = [
   { key: 'generic', emoji: '🎈', label: 'Classic' },
@@ -63,7 +64,6 @@ export default function CreateEventPage() {
   const [name, setName] = useState('');
   const [theme, setTheme] = useState('generic');
   const [themeColor, setThemeColor] = useState('default');
-  const [themeMode, setThemeMode] = useState('light');
   const [date, setDate] = useState('');
   const [rsvpByDate, setRsvpByDate] = useState('');
   const [time, setTime] = useState('');
@@ -93,6 +93,12 @@ export default function CreateEventPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!childName.trim() || !name.trim() || !date) {
+      const missing = [
+        !childName.trim() && 'child_name',
+        !name.trim() && 'event_name',
+        !date && 'date',
+      ].filter(Boolean).join(',');
+      trackEvent('create_event_validation_failed', { missing });
       toast.error("Please fill in all required fields.");
       return;
     }
@@ -121,7 +127,6 @@ export default function CreateEventPage() {
         slug,
         theme,
         themeColor,
-        themeMode,
         date,
         time,
         endTime,
@@ -151,10 +156,17 @@ export default function CreateEventPage() {
         published: true,
         createdAt: serverTimestamp(),
       });
+      trackEvent('event_created', {
+        theme,
+        theme_color: themeColor,
+        rsvp_enabled: rsvpEnabled,
+        lockdown: lockDownRSVP,
+      });
       toast.success('Party created! 🎉');
       navigate(`/dashboard/event/${docRef.id}`);
     } catch (err) {
       console.error(err);
+      trackEvent('create_event_failed', { reason: 'error' });
       toast.error('Failed to create party. Please try again.');
     } finally {
       setLoading(false);
@@ -164,7 +176,7 @@ export default function CreateEventPage() {
   const activeThemeObj = getTheme(`kids-${theme}`, themeColor);
 
   return (
-    <div style={styles.root}>
+    <div className="cep-root" style={{ minHeight: '100vh', background: 'var(--kb-bg)' }}>
       <div style={styles.inner}>
         {/* Header */}
         <div style={styles.header}>
@@ -177,7 +189,7 @@ export default function CreateEventPage() {
           <p style={styles.subheading}>Fill in the details to set up your event page.</p>
         </div>
 
-        <div style={styles.mainGrid}>
+        <div className="cep-main-grid">
           <form onSubmit={handleSubmit} style={styles.form}>
             {/* Section: Basic Info */}
             <SectionTitle>Basic Info</SectionTitle>

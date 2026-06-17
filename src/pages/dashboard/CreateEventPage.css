@@ -1,0 +1,25 @@
+/* ─── CreateEventPage mobile styles ─── */
+
+.cep-root {
+  padding: 40px 24px;
+}
+
+.cep-main-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 40px;
+  align-items: start;
+}
+
+@media (max-width: 800px) {
+  .cep-main-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .cep-root {
+    padding: 12px 12px 48px;
+  }
+}

@@ -46,3 +46,64 @@
     align-items: stretch;
   }
 }
+
+/* ── Page root padding ── */
+.em-root {
+  padding: 40px 24px;
+}
+
+/* ── Photo upload row ── */
+.em-photo-row {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+/* ── Location card row (fields + decorative tree) ── */
+.em-location-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+/* ── Nav buttons ── */
+.em-nav-btns {
+  display: flex;
+  gap: 12px;
+}
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+  .em-root {
+    padding: 12px 12px 48px;
+  }
+
+  .em-root .kb-card {
+    padding: 20px !important;
+    border-radius: 16px !important;
+  }
+
+  /* Photo row: stack photo + buttons vertically */
+  .em-photo-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  /* Hide decorative tree image */
+  .em-location-row > img {
+    display: none;
+  }
+
+  /* Nav buttons: stretch full width */
+  .em-nav-btns {
+    width: 100%;
+  }
+
+  .em-nav-btn {
+    flex: 1;
+    justify-content: center;
+    text-align: center;
+  }
+}

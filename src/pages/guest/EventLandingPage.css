@@ -465,6 +465,10 @@
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
+.elp-deadline-reminder {
+  position: relative;
+  display: inline-block;
+}
 
 @keyframes kb-float {
   0% { transform: translateY(0px); }
@@ -979,15 +983,162 @@
 }
 
 @media (max-width: 500px) {
-  .elp-portal-v2 { padding: 40px 16px 60px; }
-  .elp-p2-header-details { padding: 12px 20px; font-size: 0.85rem; gap: 12px; }
-  .elp-p2-title { font-size: 2.8rem; }
-  .elp-p2-title-age { font-size: 2.4rem; }
-  .elp-p2-actions { flex-direction: column; }
-  .elp-p2-btn-going, .elp-p2-btn-change { width: 100%; justify-content: center; }
+  .elp-portal-v2 { padding: 20px 16px 60px; }
+  
+  .elp-p2-header {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: calc(100dvh - 40px);
+    margin-bottom: 40px;
+    position: relative;
+    padding-bottom: 40px;
+  }
+  
+  .elp-p2-header-main { gap: 16px; margin-bottom: 24px; }
+  
+  .elp-p2-header-main:has(.elp-p2-photo-col) .elp-p2-illus-col {
+    display: none;
+  }
+
+  .elp-p2-photo-frame { width: 140px; height: 140px; border-width: 4px; }
+  .elp-p2-title { font-size: 2.4rem; }
+  .elp-p2-title-age { font-size: 2rem; margin-top: 4px; }
+  .elp-p2-main-illus { width: 130px; }
+  
+  .elp-p2-banner-wrap { margin-bottom: 16px; }
+  
+  .elp-p2-header-details { padding: 12px 16px; gap: 8px; margin-bottom: 24px; border-radius: 20px; font-size: 0.85rem; }
+  .elp-p2-h-detail { font-size: 0.95rem !important; }
+  .elp-p2-h-location-block > div:first-child { font-size: 0.85rem !important; }
+  .elp-p2-h-location-block > div:last-child { font-size: 0.95rem !important; }
+
+  .elp-p2-actions { flex-direction: column; gap: 12px; }
+  .elp-p2-btn-going, .elp-p2-btn-change { width: 100%; justify-content: center; padding: 12px 20px; }
+  
   .elp-p2-card { padding: 24px 20px; border-radius: 20px; }
   .elp-p2-timeline::before { left: 75px; }
   .elp-p2-t-time::after { left: 75px; }
   .elp-p2-t-time { width: 60px; padding-right: 15px; font-size: 0.8rem; }
   .elp-p2-footer-msg { font-size: 1.6rem; }
+}
+
+.elp-p2-scroll-indicator {
+  display: none;
+}
+
+@media (max-width: 500px) {
+  .elp-p2-scroll-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--t-accent);
+    opacity: 0.7;
+    animation: elp-bounce 2s infinite ease-in-out;
+  }
+  
+  .elp-p2-scroll-text {
+    font-family: var(--t-font-body);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+}
+
+@keyframes elp-bounce {
+  0%, 20%, 50%, 80%, 100% { transform: translate(-50%, 0); }
+  40% { transform: translate(-50%, -10px); }
+  60% { transform: translate(-50%, -5px); }
+}
+
+/* ── Memory capsule entry point ── */
+
+/* Prominent card (shown from the event day onwards) */
+.elp-capsule-prominent-wrap {
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto 20px;
+}
+.elp-capsule-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: #fff;
+  border: 2px solid color-mix(in srgb, var(--t-accent) 45%, transparent);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--t-accent) 18%, transparent);
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.elp-capsule-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 38px color-mix(in srgb, var(--t-accent) 28%, transparent);
+}
+.elp-capsule-emoji {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.7rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--t-accent) 12%, #fff);
+}
+.elp-capsule-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.elp-capsule-card-title {
+  font-family: var(--t-font-heading);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--t-accent);
+  line-height: 1.2;
+}
+.elp-capsule-card-sub {
+  font-size: 0.9rem;
+  color: var(--t-text);
+  opacity: 0.8;
+  line-height: 1.35;
+}
+.elp-capsule-arrow {
+  flex-shrink: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--t-accent);
+}
+
+/* Subtle link (shown before the event day) */
+.elp-capsule-subtle-wrap {
+  text-align: center;
+  margin: 6px 0 12px;
+}
+.elp-capsule-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--t-accent);
+  text-decoration: none;
+  opacity: 0.85;
+  padding-bottom: 2px;
+  border-bottom: 1px dashed color-mix(in srgb, var(--t-accent) 50%, transparent);
+  transition: opacity 0.2s ease;
+}
+.elp-capsule-link:hover {
+  opacity: 1;
 }

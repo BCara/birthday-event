@@ -2,8 +2,9 @@
    Tiny Party Portal — Global Design System
    ============================================================ */
 
-/* ── Fonts ── */
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&family=Satisfy&family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+/* ── Fonts ──
+   Loaded via <link> in index.html (with preconnect) — not @import here,
+   which would be render-blocking and duplicate the request. */
 
 /* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -226,6 +227,8 @@ body {
 .kb-select {
   cursor: pointer;
   appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='currentColor' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 16px center;
@@ -422,4 +425,57 @@ body {
     height: 40px;
     font-size: 18px;
   }
+}
+
+/* -- Fatal Error Boundary -- */
+.kb-fatal-error {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--kb-bg);
+  font-family: var(--kb-font-body);
+}
+
+.kb-error-card {
+  max-width: 480px;
+  width: 100%;
+  padding: 48px 32px;
+  background: var(--kb-surface);
+  border-radius: var(--kb-radius-lg);
+  box-shadow: var(--kb-shadow-lg);
+  text-align: center;
+  animation: kb-fade-up 0.5s ease-out;
+}
+
+.kb-error-emoji {
+  font-size: 4rem;
+  margin-bottom: 24px;
+  display: inline-block;
+  animation: kb-bounce 2s infinite ease-in-out;
+}
+
+.kb-error-card h1 {
+  font-family: var(--kb-font-display);
+  font-size: 2rem;
+  margin-bottom: 12px;
+  color: var(--kb-text);
+}
+
+.kb-error-card p {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--kb-text-muted);
+  margin-bottom: 32px;
+}
+
+.kb-error-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kb-error-actions .kb-btn {
+  width: 100%;
 }

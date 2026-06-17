@@ -7,6 +7,8 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   updateProfile,
+  sendEmailVerification,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 
 const AuthContext = createContext(null);
@@ -31,13 +33,21 @@ export function AuthProvider({ children }) {
   const signUpWithEmail = async (email, password, displayName) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     if (displayName) await updateProfile(cred.user, { displayName });
+    // Non-blocking: send a verification email but don't gate access on it.
+    try {
+      await sendEmailVerification(cred.user);
+    } catch (e) {
+      console.error('sendEmailVerification failed', e);
+    }
     return cred;
   };
+
+  const resetPassword = (email) => sendPasswordResetEmail(auth, email);
 
   const logout = () => signOut(auth);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, logout }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, logout }}>
       {!loading && children}
     </AuthContext.Provider>
   );

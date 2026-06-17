@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function ThemeIllustration({ theme, themeColor = 'default', className = '', usePng = true }) {
+export default function ThemeIllustration({ theme, themeColor = 'default', className = '', usePng = true, styleOverride = {} }) {
   const [imgError, setImgError] = useState(false);
   const normTheme = theme && !theme.startsWith('kids-') ? `kids-${theme}` : theme;
 
@@ -11,6 +11,7 @@ export default function ThemeIllustration({ theme, themeColor = 'default', class
     maxHeight: '180px',
     margin: '0 auto',
     objectFit: 'contain',
+    ...styleOverride,
   };
 
   if (usePng && !imgError) {

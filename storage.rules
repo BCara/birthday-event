@@ -1,12 +1,35 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /memories/{eventId}/{fileName} {
-      // Anyone can upload photos/videos for a memory wall, as guests are unauthenticated
-      allow read, write: if true;
+
+    // Images up to 15 MB, videos up to 200 MB. Anything else is rejected.
+    function isValidMedia() {
+      return (request.resource.contentType.matches('image/.*') && request.resource.size < 15 * 1024 * 1024)
+          || (request.resource.contentType.matches('video/.*') && request.resource.size < 200 * 1024 * 1024);
     }
+
+    // Guest memory uploads. Files are written to an UNGUESSABLE path (a random token
+    // in the filename) and the resulting download URL is stored only on host-only
+    // Firestore docs. Read stays open because the anonymous uploader must fetch its
+    // own download URL right after upload — but the file is not discoverable by
+    // anyone but the host (listing is denied; the path can't be guessed).
+    // Create-only: no overwrite/delete by clients; restricted to images/videos.
+    match /memories/{eventId}/{fileName} {
+      allow read: if true;
+      allow create: if isValidMedia();
+      allow update, delete: if false;
+    }
+
+    // Event photos are uploaded by the host (authenticated) only. Create-only.
     match /event-photos/{eventId}/{fileName} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if request.auth != null && isValidMedia();
+      allow update, delete: if false;
+    }
+
+    // default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }

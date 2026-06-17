@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { trackEvent } from '../firebase';
 import toast from 'react-hot-toast';
+import SEO from '../components/SEO';
 
 export default function SignupPage() {
   const { signUpWithEmail, signInWithGoogle } = useAuth();
@@ -18,6 +20,7 @@ export default function SignupPage() {
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
+      trackEvent('sign_up', { method: 'google' });
       navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Google sign-up failed.');
@@ -30,13 +33,14 @@ export default function SignupPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
       return;
     }
     setLoading(true);
     try {
       await signUpWithEmail(email, password, name);
+      trackEvent('sign_up', { method: 'email' });
       toast.success('Account created! 🎉');
       navigate('/dashboard');
     } catch (err) {
@@ -53,6 +57,11 @@ export default function SignupPage() {
 
   return (
     <div style={styles.root}>
+      <SEO 
+        title="Sign Up" 
+        description="Create an account to start planning unforgettable birthday parties with Tiny Party Portal." 
+        url="https://tinypartyportal.com/signup"
+      />
       <div style={styles.card} className="kb-card">
         {/* Logo */}
         <div style={styles.logo}>
@@ -126,7 +135,7 @@ export default function SignupPage() {
               id="signup-password"
               type="password"
               className="kb-input"
-              placeholder="Min. 6 characters"
+              placeholder="Min. 8 characters"
               value={password}
               onChange={e => setPassword(e.target.value)}
               required

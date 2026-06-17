@@ -8,9 +8,10 @@ import { fetchEventBySlug } from '../../utils/fetchEvent';
 import { generateICS, downloadICS, getGoogleCalendarUrl } from '../../utils/calendarUtils';
 import './EventLandingPage.css';
 import { getDevSafeOrigin } from '../../utils/url';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { trackEvent } from '../../firebase';
 import { Cake, Wand2, Gamepad2, Car, Utensils, Gift, Hand, Music, Star, Tent } from 'lucide-react';
+import SEO from '../../components/SEO';
 
 const ICON_MAP = {
   cake: Cake,
@@ -114,10 +115,36 @@ export default function EventLandingPage() {
     }
   }, [event?.id, urlRsvpId, searchParams, setSearchParams]);
 
+  useEffect(() => {
+    if (event?.id) {
+      trackEvent('invite_viewed', { event_id: event.id, rsvp_enabled: !!event.rsvpEnabled });
+    }
+  }, [event?.id, event?.rsvpEnabled]);
+
   const isPostEvent = useMemo(() => {
     if (!event?.date) return false;
     return Date.now() > new Date(event.date + 'T23:59:59').getTime();
   }, [event?.date]);
+
+  // Memory capsule entry point: subtle before the event, prominent from the event
+  // day onwards (when guests are checking the site at the party). Respects the
+  // host's open/close window if they've set one.
+  const capsule = useMemo(() => {
+    if (!event?.memoriesEnabled) return { show: false };
+    const now = Date.now();
+    const open = event.memoriesOpenDate ? new Date(event.memoriesOpenDate + 'T00:00:00').getTime() : null;
+    const close = event.memoriesCloseDate ? new Date(event.memoriesCloseDate + 'T23:59:59').getTime() : null;
+    if (open && now < open) return { show: false };   // not open yet
+    if (close && now > close) return { show: false };  // capsule has closed
+    const dayStart = event.date ? new Date(event.date + 'T00:00:00').getTime() : null;
+    return {
+      show: true,
+      prominent: dayStart ? now >= dayStart : false,
+      title: (event.memoriesTitle || '').trim()
+        || `${event.childName ? event.childName + "'s" : 'Our'} Memory Capsule`,
+      message: (event.memoriesMessage || '').trim(),
+    };
+  }, [event]);
 
   const pageUrl = useMemo(() => {
     const base = `${getDevSafeOrigin()}/${slug}/portal`;
@@ -184,32 +211,14 @@ export default function EventLandingPage() {
     setLookupError('');
     setLookupLoading(true);
     try {
-      const q = query(
-        collection(db, 'rsvps'),
-        where('eventId', '==', event.id)
-      );
-      const querySnapshot = await getDocs(q);
-      if (querySnapshot.empty) {
-        setLookupError("No RSVPs found for this event yet.");
-        setLookupLoading(false);
-        return;
-      }
-
-      const inputChildClean = lookupChildName.trim().toLowerCase();
-      const inputContactClean = lookupContact.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-      let foundRsvp = null;
-
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        const storedChildClean = (data.childName || '').trim().toLowerCase();
-        const storedEmailClean = (data.email || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-        const storedPhoneClean = (data.phone || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-        
-        if (storedChildClean === inputChildClean && 
-            (storedEmailClean === inputContactClean || storedPhoneClean === inputContactClean)) {
-          foundRsvp = { id: doc.id, ...data };
-        }
+      const functions = getFunctions();
+      const lookup = httpsCallable(functions, 'lookupRsvp');
+      const res = await lookup({
+        eventId: event.id,
+        childName: lookupChildName,
+        contact: lookupContact,
       });
+      const foundRsvp = res.data?.found ? res.data.rsvp : null;
 
       if (foundRsvp) {
         localStorage.setItem(`rsvp_${event.id}`, foundRsvp.id);
@@ -247,8 +256,36 @@ export default function EventLandingPage() {
 
   const themeKey = event.theme?.startsWith('kids-') ? event.theme : `kids-${event.theme || 'generic'}`;
 
+  // Prominent (event-day) capsule card and subtle (pre-event) link. Only ever
+  // inserted into the tree when `capsule.show` is true.
+  const capsuleCard = (
+    <Link to={`/${slug}/memories/new`} className="elp-capsule-card">
+      <span className="elp-capsule-emoji" aria-hidden="true">📸</span>
+      <span className="elp-capsule-card-body">
+        <span className="elp-capsule-card-title">{capsule.title}</span>
+        <span className="elp-capsule-card-sub">
+          {capsule.message || 'Share a photo or a message from the day 💝'}
+        </span>
+      </span>
+      <span className="elp-capsule-arrow" aria-hidden="true">→</span>
+    </Link>
+  );
+  const capsuleLink = (
+    <div className="elp-capsule-subtle-wrap">
+      <Link to={`/${slug}/memories/new`} className="elp-capsule-link">
+        <span aria-hidden="true">📸</span> Add to the memory capsule
+      </Link>
+    </div>
+  );
+
   return (
-    <ThemedPage themeKey={themeKey} themeColor={event.themeColor} themeMode={event.themeMode}>
+    <ThemedPage themeKey={themeKey} themeColor={event.themeColor}>
+      <SEO 
+        title={`${event.childName ? event.childName + "'s " : ""}${event.name}`} 
+        description={`Join us for ${event.childName ? event.childName + "'s " : "a "} birthday party! Click for details and to RSVP.`}
+        url={pageUrl}
+        noindex={true}
+      />
       <div className={hasRsvped ? "elp-portal-root" : "elp-container"}>
 
         {hasRsvped ? (
@@ -268,8 +305,8 @@ export default function EventLandingPage() {
             <div className="elp-p2-header">
               
               <div className="elp-p2-banner-wrap">
-                <div className="elp-p2-status-banner">
-                  🤍 YOU'RE GOING! 🤍
+                <div className={`elp-p2-status-banner ${rsvpStatus === 'no' ? 'elp-status-no' : ''}`}>
+                  {rsvpStatus === 'no' ? '🤍 NOT ATTENDING 🤍' : '🤍 YOU\'RE GOING! 🤍'}
                 </div>
               </div>
 
@@ -302,15 +339,14 @@ export default function EventLandingPage() {
 
               {/* Details Block */}
               <div className="elp-p2-header-details">
-                <div className="elp-p2-header-details-row" style={{ flexWrap: 'wrap', justifyContent: 'center' }}>
+                <div className="elp-p2-header-details-row" style={{ flexWrap: 'wrap', justifyContent: 'center', gap: '24px', marginBottom: '16px' }}>
                   {formattedDate && (
-                    <div className="elp-p2-h-detail">
+                    <div className="elp-p2-h-detail" style={{ fontSize: '1.25rem', fontWeight: 800 }}>
                       <span className="elp-p2-h-icon">📅</span> {formattedDate}
                     </div>
                   )}
-                  {formattedDate && (formattedTime || event.location) && <div className="elp-p2-h-divider">|</div>}
                   {formattedTime && (
-                    <div className="elp-p2-h-detail">
+                    <div className="elp-p2-h-detail" style={{ fontSize: '1.15rem', fontWeight: 700 }}>
                       <span className="elp-p2-h-icon">🕒</span> {formattedTime} – {(() => { 
                         if (!event.endTime) return '2:00 PM';
                         const [h,m] = event.endTime.split(':'); 
@@ -319,33 +355,64 @@ export default function EventLandingPage() {
                       })()}
                     </div>
                   )}
-                  {formattedTime && event.location && <div className="elp-p2-h-divider">|</div>}
-                  {event.location && (
-                    <div className="elp-p2-h-detail elp-p2-h-location">
-                      <span className="elp-p2-h-icon">📍</span> {event.location}
-                    </div>
-                  )}
                 </div>
+
+                {event.location && (
+                  <div className="elp-p2-h-location-block" style={{ textAlign: 'center', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--t-accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      📍 {event.location}
+                    </div>
+                    {event.address && event.address !== event.location && (
+                      <div style={{ fontSize: '1.05rem', fontWeight: 600, color: '#333', marginTop: '4px', lineHeight: 1.2 }}>
+                        {event.address}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {event.hostContact && (
-                  <div className="elp-p2-h-detail" style={{ marginTop: '8px', justifyContent: 'center', width: '100%' }}>
-                    <span className="elp-p2-h-icon">📞</span> Contact Host: {event.hostContact}
+                  <div className="elp-p2-h-detail" style={{ marginTop: '8px', justifyContent: 'center', width: '100%', opacity: 0.8, fontSize: '0.85rem' }}>
+                    <span className="elp-p2-h-icon">📞</span> Contact {event.hostName || 'Cara'}: {event.hostContact}
                   </div>
                 )}
               </div>
 
               {/* Action Buttons */}
               <div className="elp-p2-actions">
-                <div className="elp-p2-btn-going">
-                  <span className="elp-p2-check">✓</span> YOU'RE GOING!
+                <div className={`elp-p2-btn-going ${rsvpStatus === 'no' ? 'elp-status-no' : ''}`}>
+                  <span className="elp-p2-check">{rsvpStatus === 'no' ? '✕' : '✓'}</span> 
+                  {rsvpStatus === 'no' ? 'NOT ATTENDING' : "YOU'RE GOING!"}
                 </div>
                 <Link to={`/${slug}/rsvp?edit=true`} className="elp-p2-btn-change">
                   <span>📝</span> CHANGE RSVP
                 </Link>
               </div>
+
+              {/* Scroll Indicator (Mobile only) */}
+              <div 
+                className="elp-p2-scroll-indicator"
+                onClick={() => {
+                  const grid = document.getElementById('portal-grid');
+                  if (grid) {
+                    grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="elp-p2-scroll-text">More Info</div>
+                <svg className="elp-p2-scroll-arrow" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </div>
             </div>
 
+            {/* Memory capsule — prominent on the day */}
+            {capsule.show && capsule.prominent && (
+              <div className="elp-capsule-prominent-wrap">{capsuleCard}</div>
+            )}
+
             {/* 2. Grid Content */}
-            <div className="elp-p2-grid">
+            <div id="portal-grid" className="elp-p2-grid" style={{ scrollMarginTop: '16px' }}>
               
               {/* Left Column: Schedule */}
               {(() => {
@@ -476,7 +543,7 @@ export default function EventLandingPage() {
                         })()}
                       </div>
                       <div className="elp-card-cal-wrap" ref={portalCalRef} data-open={portalCalOpen} style={{ marginTop: '12px' }}>
-                        <button className="elp-p2-btn-maps" onClick={() => setPortalCalOpen(!portalCalOpen)}>
+                        <button className="elp-p2-btn-maps" onClick={(e) => { e.stopPropagation(); setPortalCalOpen(!portalCalOpen); }}>
                           📅 ADD TO CALENDAR
                           <svg className="elp-cal-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 4 }}><path d="m6 9 6 6 6-6"/></svg>
                         </button>
@@ -518,7 +585,16 @@ export default function EventLandingPage() {
                         <h2 className="elp-p2-card-title-small">Location</h2>
                       </div>
                       <div className="elp-p2-card-val-main">{event.location || 'Myuna Farm'}</div>
-                      <div className="elp-p2-card-val-sub">{event.address || '400 Myuna Farm Rd, Dural NSW 2158'}</div>
+                      <div className="elp-p2-card-val-sub">
+                        {(() => {
+                          const loc = (event.location || '').trim().toLowerCase();
+                          const addr = (event.address || '').trim();
+                          if (loc && addr.toLowerCase().startsWith(loc)) {
+                            return addr.slice(loc.length).replace(/^[,\s]+/, '');
+                          }
+                          return addr || '400 Myuna Farm Rd, Dural NSW 2158';
+                        })()}
+                      </div>
                       <button 
                         className="elp-p2-btn-maps"
                         onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address || event.location)}`, '_blank')}
@@ -636,6 +712,43 @@ export default function EventLandingPage() {
                   </div>
                 )}
 
+                {/* Contact Host Card */}
+                {event.hostContact && (
+                  <div className="elp-p2-card">
+                    <div className="elp-p2-card-split">
+                      <div className="elp-p2-card-text">
+                        <div className="elp-p2-card-header">
+                          <span className="elp-p2-card-icon-small">📞</span>
+                          <h2 className="elp-p2-card-title-small">Questions?</h2>
+                        </div>
+                        <div className="elp-p2-card-val-text" style={{ marginBottom: '12px' }}>
+                          Contact {event.hostName || 'Cara'} if you need anything.
+                        </div>
+                        {(() => {
+                          const contact = event.hostContact;
+                          const isEmail = contact.includes('@');
+                          const phoneDigits = contact.replace(/\D/g, '');
+                          let href = '';
+                          if (isEmail) {
+                            href = `mailto:${contact.trim()}`;
+                          } else if (phoneDigits.length >= 8) {
+                            href = `sms:${phoneDigits}`;
+                          }
+                          
+                          if (href) {
+                            return (
+                              <a href={href} className="elp-p2-btn-maps" style={{ display: 'inline-flex', background: 'var(--t-accent)', color: '#fff', textDecoration: 'none' }}>
+                                💬 MESSAGE {event.hostName ? event.hostName.toUpperCase() : 'CARA'}
+                              </a>
+                            );
+                          }
+                          return <div className="elp-p2-card-val-main" style={{ fontSize: '1rem' }}>{contact}</div>;
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* General Info Card */}
                 {event.generalInfo && (
                   <div className="elp-p2-card">
@@ -657,7 +770,8 @@ export default function EventLandingPage() {
               <div className="elp-p2-footer-msg" style={{ whiteSpace: 'pre-wrap' }}>
                 💕 {event.description || "We can't wait to celebrate with you!"} 💕
               </div>
-              <p className="elp-p2-powered">Powered by <a href="/">Tiny Party <span style={{ fontSize: '0.8em' }}>Portal</span></a></p>
+              {capsule.show && !capsule.prominent && capsuleLink}
+              <p className="elp-p2-powered">Powered by <a href="/?utm_source=invite&utm_medium=referral&utm_campaign=powered_by">Tiny Party <span style={{ fontSize: '0.8em' }}>Portal</span></a></p>
             </div>
 
           </div>
@@ -666,6 +780,11 @@ export default function EventLandingPage() {
              INVITATION VIEW (Pre-RSVP)
              ========================================= */
           <>
+            {/* Memory capsule — prominent on the day */}
+            {capsule.show && capsule.prominent && (
+              <div className="elp-capsule-prominent-wrap">{capsuleCard}</div>
+            )}
+
             {/* Invitation Card */}
             <div className="elp-card-invitation">
               <div className="elp-card-border-inner">
@@ -715,8 +834,8 @@ export default function EventLandingPage() {
                     <div className="elp-detail-item elp-detail-datetime" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                       <div className="elp-detail-content-clean" style={{ textAlign: 'center' }}>
                         <div className="elp-detail-value-clean">
-                          {formattedDate && <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--t-text)' }}>📅 {formattedDate}</div>}
-                          {formattedTime && <div style={{ fontWeight: 600, fontSize: '1.05rem', opacity: 0.9, marginTop: '4px', color: 'var(--t-text)' }}>🕛 {formattedTime}{event.endTime && ` – ${(() => { const [h,m] = event.endTime.split(':'); const hr=parseInt(h,10); return `${hr%12||12}:${m} ${hr>=12?'PM':'AM'}`; })()}`}</div>}
+                          {formattedDate && <div style={{ fontWeight: 800, fontSize: '1.4rem', color: 'var(--t-text)' }}>📅 {formattedDate}</div>}
+                          {formattedTime && <div style={{ fontWeight: 700, fontSize: '1.25rem', opacity: 0.9, marginTop: '4px', color: 'var(--t-text)' }}>🕛 {formattedTime}{event.endTime && ` – ${(() => { const [h,m] = event.endTime.split(':'); const hr=parseInt(h,10); return `${hr%12||12}:${m} ${hr>=12?'PM':'AM'}`; })()}`}</div>}
                         </div>
                       </div>
                       {event.date && (
@@ -752,8 +871,20 @@ export default function EventLandingPage() {
                     <div className="elp-detail-item elp-detail-location" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address || event.location)}`, '_blank')} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                       <div className="elp-detail-content-clean" style={{ textAlign: 'center' }}>
                         <div className="elp-detail-value-clean">
-                          <div style={{ fontWeight: 700, fontSize: '1.05rem', textDecoration: 'underline', textUnderlineOffset: '2px', color: 'var(--t-text)' }}>📍 {event.location}</div>
-                          {event.address && <div style={{ fontSize: '0.95rem', opacity: 0.8, marginTop: '4px', color: 'var(--t-text)' }}>{event.address.split(',').pop().trim()}</div>}
+                          <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--t-accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📍 {event.location}</div>
+                          {event.address && (
+                            <div style={{ fontSize: '1.05rem', fontWeight: 600, marginTop: '4px', color: 'var(--t-text)', lineHeight: 1.2 }}>
+                              {(() => {
+                                // If address starts with location name, strip it for cleaner look
+                                const loc = (event.location || '').trim().toLowerCase();
+                                const addr = (event.address || '').trim();
+                                if (loc && addr.toLowerCase().startsWith(loc)) {
+                                  return addr.slice(loc.length).replace(/^[,\s]+/, '');
+                                }
+                                return addr;
+                              })()}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -943,7 +1074,8 @@ export default function EventLandingPage() {
 
             {/* Footer */}
             <div className="elp-footer">
-              <p>Powered by <a href="/">Tiny Party <span style={{ fontSize: '0.8em' }}>Portal</span></a></p>
+              {capsule.show && !capsule.prominent && capsuleLink}
+              <p>Powered by <a href="/?utm_source=invite&utm_medium=referral&utm_campaign=powered_by">Tiny Party <span style={{ fontSize: '0.8em' }}>Portal</span></a></p>
             </div>
           </>
         )}

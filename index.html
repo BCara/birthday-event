@@ -1,15 +1,75 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-AU">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Tiny Party Portal — The fun way to plan your child's birthday party. Beautiful themed invitations and instant RSVPs." />
-    <title>Tiny Party Portal — Birthday Party Invites & RSVP</title>
+    <meta name="description" content="Tiny Party Portal — The fun way to plan your child's birthday party. Beautiful themed invitations, instant RSVPs, and guest list management all in one place." />
+    <meta name="theme-color" content="#ff6b6b" />
+
+    <title>Tiny Party Portal — Birthday Party Invites &amp; RSVP</title>
+
+    <!-- Fallback Open Graph (overridden per-page by react-helmet-async) -->
+    <meta property="og:site_name" content="Tiny Party Portal" />
+    <meta property="og:locale" content="en_AU" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://tinypartyportal.com" />
+    <meta property="og:title" content="Tiny Party Portal — Birthday Party Invites &amp; RSVP" />
+    <meta property="og:description" content="The fun way to plan your child's birthday party. Beautiful themed invitations, instant RSVPs, and guest list management all in one place." />
+    <meta property="og:image" content="https://tinypartyportal.com/og-image.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://tinypartyportal.com/#organization",
+          "name": "Tiny Party Portal",
+          "url": "https://tinypartyportal.com",
+          "logo": {
+            "@type": "ImageObject",
+            "@id": "https://tinypartyportal.com/#logo",
+            "url": "https://tinypartyportal.com/og-image.jpg",
+            "contentUrl": "https://tinypartyportal.com/og-image.jpg"
+          },
+          "description": "The fun way to plan your child's birthday party. Beautiful themed invitations, instant RSVPs, and guest list management all in one place."
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://tinypartyportal.com/#website",
+          "url": "https://tinypartyportal.com",
+          "name": "Tiny Party Portal",
+          "description": "The fun way to plan your child's birthday party. Beautiful themed invitations, instant RSVPs, and guest list management all in one place.",
+          "publisher": { "@id": "https://tinypartyportal.com/#organization" },
+          "inLanguage": "en-AU"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://tinypartyportal.com/#app",
+          "name": "Tiny Party Portal",
+          "applicationCategory": "LifestyleApplication",
+          "operatingSystem": "Web",
+          "url": "https://tinypartyportal.com",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "AUD"
+          },
+          "description": "Plan your child's birthday party with themed invitations, online RSVP, and guest management.",
+          "publisher": { "@id": "https://tinypartyportal.com/#organization" }
+        }
+      ]
+    }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&family=Satisfy&family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Only the weights actually used. Fredoka (theme headings) is loaded on demand by themes.js. -->
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Satisfy&family=Quicksand:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>

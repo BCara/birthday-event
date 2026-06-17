@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /dev/
+
+Sitemap: https://tinypartyportal.com/sitemap.xml

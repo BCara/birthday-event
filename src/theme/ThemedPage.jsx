@@ -5,7 +5,7 @@ import React, { useEffect } from 'react';
 import { getTheme } from './themes';
 import './ThemedPage.css';
 
-export default function ThemedPage({ themeKey, themeColor, themeMode = 'system', children }) {
+export default function ThemedPage({ themeKey, themeColor, children }) {
   const theme = getTheme(themeKey, themeColor);
 
   // Determine active mode (light/dark)

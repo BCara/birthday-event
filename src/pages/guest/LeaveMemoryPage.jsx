@@ -6,7 +6,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import ThemedPage from '../../theme/ThemedPage';
 import ThemeIllustration from '../../theme/ThemeIllustration';
 import { fetchEventBySlug } from '../../utils/fetchEvent';
-import { db, storage } from '../../firebase';
+import { db, storage, trackEvent } from '../../firebase';
 import './LeaveMemoryPage.css';
 
 function Spinner() {
@@ -85,8 +85,11 @@ export default function LeaveMemoryPage() {
       let mediaType = null;
 
       if (file) {
-        const timestamp = Date.now();
-        const storageRef = ref(storage, `memories/${event.id}/${timestamp}_${file.name}`);
+        // Unguessable filename: a random token means the file can't be discovered by
+        // path-guessing, so reads stay effectively private to whoever holds the URL.
+        const token = crypto.randomUUID();
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80);
+        const storageRef = ref(storage, `memories/${event.id}/${token}_${safeName}`);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
         await new Promise((resolve, reject) => {
@@ -113,10 +116,10 @@ export default function LeaveMemoryPage() {
         message: message.trim(),
         mediaUrl,
         mediaType,
-        approved: true,
         createdAt: serverTimestamp(),
       });
 
+      trackEvent('memory_uploaded', { has_media: !!file, media_type: mediaType || 'text' });
       setSuccess(true);
     } catch (err) {
       console.error(err);

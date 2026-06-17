@@ -2,6 +2,28 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function eventPublished(eventId) {
+      return get(/databases/$(database)/documents/events/$(eventId)).data.published == true;
+    }
+
+    function isEventHost(eventId) {
+      return request.auth != null
+        && get(/databases/$(database)/documents/events/$(eventId)).data.hostId == request.auth.uid;
+    }
+
+    // Caps payload sizes on guest-writable docs to limit abuse / doc bloat.
+    // Lenient on shape (fields may be absent) so legitimate writes aren't blocked.
+    function rsvpWithinLimits() {
+      return request.resource.data.eventId is string
+        && (!('parentName' in request.resource.data) || request.resource.data.parentName.size() <= 200)
+        && (!('childName' in request.resource.data)  || request.resource.data.childName.size() <= 200)
+        && (!('email' in request.resource.data)      || request.resource.data.email.size() <= 320)
+        && (!('phone' in request.resource.data)      || request.resource.data.phone.size() <= 50)
+        && (!('dietary' in request.resource.data)    || request.resource.data.dietary.size() <= 2000)
+        && (!('comments' in request.resource.data)   || request.resource.data.comments.size() <= 4000)
+        && (!('siblings' in request.resource.data)   || request.resource.data.siblings.size() <= 30);
+    }
+
     // ---- users ----
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
@@ -20,24 +42,41 @@ service cloud.firestore {
 
     // ---- rsvps ----
     match /rsvps/{rsvpId} {
-      // Host has full access to all RSVPs for their event, and guests can list/query RSVPs for published events
-      allow list: if (request.auth != null
-        && get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.hostId
-           == request.auth.uid) || (
-             resource.data.eventId != null &&
-             get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.published == true
-           );
-      
-      allow get, update, delete: if (request.auth != null
-        && get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.hostId
-           == request.auth.uid) || true; 
-           // Note: guests can 'get' and 'update' if they have the document ID. 
-           // We allow 'true' for get/update/delete here because Firestore document IDs 
-           // act as a private key for unauthenticated guest access.
+      // Only the event host may list/enumerate RSVPs. Guests must use the
+      // `lookupRsvp` Cloud Function (which requires name + matching contact)
+      // to find their own RSVP — this prevents bulk PII harvesting.
+      allow list: if isEventHost(resource.data.eventId);
 
-      // Anyone can create an RSVP if the event is published
-      allow create: if
-        get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data.published == true;
+      // Bearer-token model: the document ID is an unguessable 20-char key.
+      // A guest who holds it (their own localStorage / edit link) may read and
+      // update that single RSVP. Hosts can always read/update their event's RSVPs.
+      allow get:    if true;
+      allow update: if rsvpWithinLimits();
+
+      // Guests may NOT delete; only the host can.
+      allow delete: if isEventHost(resource.data.eventId);
+
+      // Anyone can create an RSVP for a published event (size-validated).
+      allow create: if eventPublished(request.resource.data.eventId)
+        && rsvpWithinLimits();
+    }
+
+    // ---- memories (private capsule — host only) ----
+    match /memories/{memoryId} {
+      // Private capsule: ONLY the event host can read submissions. Guests submit
+      // blind (create-only) and never see other guests' memories. The media files
+      // live in Storage behind unguessable URLs whose only copy is stored on these
+      // host-only docs — so a guest cannot enumerate or read others' photos.
+      allow read: if isEventHost(resource.data.eventId);
+
+      // Guests can submit a memory for a published event (size-validated).
+      allow create: if eventPublished(request.resource.data.eventId)
+        && request.resource.data.eventId is string
+        && (!('message' in request.resource.data)    || request.resource.data.message.size() <= 2000)
+        && (!('authorName' in request.resource.data) || request.resource.data.authorName.size() <= 100);
+
+      // Only the host can edit or delete memories.
+      allow update, delete: if isEventHost(resource.data.eventId);
     }
 
     // default deny

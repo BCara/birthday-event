@@ -1,6 +1,7 @@
 // src/pages/HomePage.jsx
 import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
+import SEO from '../components/SEO';
 import './HomePage.css';
 
 const THEMES = [
@@ -25,11 +26,55 @@ const FEATURES = [
   { emoji: '📊', title: 'Host Dashboard', desc: 'See every RSVP at a glance, track dietary alerts, and export the list as CSV.' },
 ];
 
+const FAQS = [
+  {
+    q: 'Is Tiny Party Portal free to use?',
+    a: 'Yes — you can create a party page, send themed invitations and collect RSVPs for free. Paid upgrades add extra features when you need them.',
+  },
+  {
+    q: 'Do my guests need to download an app to RSVP?',
+    a: 'No. Guests just tap your link or scan the QR code and RSVP in their browser in seconds — no app download and no account required.',
+  },
+  {
+    q: 'What party themes can I choose from?',
+    a: 'Five fully-designed themes: Dinosaur Adventure, Unicorn Magic, Royal Princess, Racing Cars and a classic Birthday bash. Each comes with its own fonts, colours and backgrounds.',
+  },
+  {
+    q: 'How do I share my invitation?',
+    a: 'You get a unique link and QR code you can send via WhatsApp, text or email — or print onto physical invitations.',
+  },
+  {
+    q: 'Can I see who is coming and any dietary needs?',
+    a: 'Yes. Your host dashboard shows every RSVP at a glance, flags dietary alerts, and lets you export the full guest list as a CSV.',
+  },
+  {
+    q: 'What is the Memory Capsule?',
+    a: 'A private collection where guests can add photos and messages from the day. Everything stays private to you as the host, so you can keep the memories for your child.',
+  },
+];
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQS.map(({ q, a }) => ({
+    '@type': 'Question',
+    name: q,
+    acceptedAnswer: { '@type': 'Answer', text: a },
+  })),
+};
+
 export default function HomePage() {
   const howRef = useRef(null);
 
   return (
     <div className="hp-page">
+      <SEO
+        title="Tiny Party Portal — Birthday Party Invites & RSVP"
+        description="The fun way to plan your child's birthday party. Beautiful themed invitations, instant RSVPs, and guest list management all in one place."
+        url="https://tinypartyportal.com"
+        keywords="kids birthday party invitations, online RSVP, birthday party planner, children's party invites, themed party invitations, free RSVP management"
+        jsonLd={faqJsonLd}
+      />
 
       {/* ── HERO ── */}
       <section className="hp-hero">
@@ -170,6 +215,24 @@ export default function HomePage() {
         </div>
       </section>
 
+
+      {/* ── FAQ ── */}
+      <section className="kb-section hp-faq-section" id="faq">
+        <div className="kb-container">
+          <div className="hp-section-header">
+            <h2 className="hp-section-title kb-heading">Questions, answered</h2>
+            <p className="hp-section-sub kb-body">Everything you need to know before your first party.</p>
+          </div>
+          <div className="hp-faq-list">
+            {FAQS.map((f, i) => (
+              <details key={i} className="hp-faq-item">
+                <summary className="hp-faq-q">{f.q}</summary>
+                <p className="hp-faq-a">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ── FINAL CTA ── */}
       <section className="hp-cta-section">

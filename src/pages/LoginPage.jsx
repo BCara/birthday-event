@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { trackEvent } from '../firebase';
 import toast from 'react-hot-toast';
+import SEO from '../components/SEO';
 
 export default function LoginPage() {
-  const { signInWithGoogle, signInWithEmail } = useAuth();
+  const { signInWithGoogle, signInWithEmail, resetPassword } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +19,7 @@ export default function LoginPage() {
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
+      trackEvent('login', { method: 'google' });
       navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Google sign-in failed.');
@@ -26,12 +29,30 @@ export default function LoginPage() {
     }
   }
 
+  async function handleForgotPassword() {
+    setError('');
+    if (!email.trim()) {
+      setError('Enter your email above, then tap "Forgot password?" again.');
+      toast.error('Enter your email first.');
+      return;
+    }
+    try {
+      await resetPassword(email.trim());
+      toast.success('Password reset email sent. Check your inbox.');
+    } catch (err) {
+      // Don't reveal whether an account exists — show a neutral confirmation.
+      console.error('resetPassword error:', err);
+      toast.success('If an account exists for that email, a reset link is on its way.');
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
       await signInWithEmail(email, password);
+      trackEvent('login', { method: 'email' });
       navigate('/dashboard');
     } catch (err) {
       const msg =
@@ -47,6 +68,12 @@ export default function LoginPage() {
 
   return (
     <div style={styles.root}>
+      <SEO
+        title="Log In"
+        description="Sign in to Tiny Party Portal to manage your events, track RSVPs, and plan the perfect birthday party."
+        url="https://tinypartyportal.com/login"
+        noindex
+      />
       <div style={styles.card} className="kb-card">
         {/* Logo */}
         <div style={styles.logo}>
@@ -113,6 +140,14 @@ export default function LoginPage() {
               autoComplete="current-password"
             />
           </div>
+
+          <button
+            type="button"
+            onClick={handleForgotPassword}
+            style={styles.forgotBtn}
+          >
+            Forgot password?
+          </button>
 
           {error && <p style={styles.error}>{error}</p>}
 
@@ -247,6 +282,18 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+  },
+  forgotBtn: {
+    alignSelf: 'flex-end',
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    marginTop: -8,
+    color: 'var(--kb-coral)',
+    fontFamily: 'var(--kb-font-body)',
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
   },
   switchLink: {
     textAlign: 'center',

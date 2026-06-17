@@ -88,7 +88,6 @@ const phoneStyles = {
 function MiniPreview({ 
   themeKey, 
   themeColor, 
-  themeMode,
   name, 
   childName, 
   date, 
@@ -143,32 +142,43 @@ function MiniPreview({
           overflowY: 'hidden'
         }} 
         className="elp-container-preview tp-root"
-        data-theme={themeMode === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : themeMode}
+        data-theme="light"
       >
         <div style={{ ...phoneStyles.scrollContent, transform: 'scale(0.9)', transformOrigin: 'top center' }}>
           
           <div className="elp-card-invitation" style={{ width: '100%', boxSizing: 'border-box' }}>
             <div className="elp-card-border-inner" style={{ padding: '24px 16px' }}>
               
+              {/* Header Badge */}
               <div className="elp-invitation-intro">
                 <span className="elp-invitation-badge">You're Invited!</span>
               </div>
 
-              <div className="elp-hero" style={{ padding: '4px 0' }}>
-                <h1 className="elp-title" style={{ fontSize: '1.35rem', margin: '0 0 4px' }}>{name || 'Party Name'}</h1>
-                {childName && <p className="elp-subtitle" style={{ fontSize: '0.85rem' }}>Celebrating {childName}'s special day!</p>}
-              </div>
-
-              <div className="elp-illustration-container" style={{ margin: '8px 0', display: 'flex', justifyContent: 'center' }}>
+              {/* Photo OR Illustration */}
+              <div className="elp-illustration-container" style={{ margin: '-8px auto -12px', zIndex: 1, position: 'relative' }}>
                 {photoUrl ? (
-                  <div className="elp-photo-wrap" style={{ width: '100px', height: '100px' }}>
+                  <div className="elp-photo-wrap" style={{ width: '100px', height: '100px', margin: '0 auto' }}>
                     <img src={photoUrl} alt="Event" className="elp-photo" />
                   </div>
                 ) : (
-                  <div className="elp-illustration-wrap" style={{ maxWidth: '120px', animation: 'none' }}>
+                  <div className="elp-illustration-wrap" style={{ maxWidth: '140px', margin: '0 auto', transform: 'scale(1.15)', animation: 'none' }}>
                     <ThemeIllustration theme={normalizedThemeKey} themeColor={themeColor} />
                   </div>
                 )}
+              </div>
+
+              <div className="elp-hero" style={{ zIndex: 2, position: 'relative', marginTop: 0, paddingTop: 0 }}>
+                <h1 className="elp-title" style={{ fontSize: '1.25rem', margin: '0 0 4px' }}>
+                  {childName ? (
+                    <>
+                      <span style={{ color: 'var(--t-accent)' }}>{childName}{childName.toLowerCase().endsWith('s') || childName.includes("'") ? '' : "'s"}</span><br />
+                      <span style={{ color: 'var(--t-text)', fontSize: '0.8em', display: 'block', marginTop: '4px' }}>{name || 'Party Name'}</span>
+                    </>
+                  ) : (
+                    <span style={{ color: 'var(--t-accent)' }}>{name || 'Party Name'}</span>
+                  )}
+                </h1>
+                <p className="elp-subtitle" style={{ marginTop: '12px', fontSize: '0.85rem' }}>✨ Join us for a magical {themeKey?.replace('kids-', '') || 'unicorn'} celebration! ✨</p>
               </div>
 
               <div className="elp-divider" style={{ margin: '10px 0' }}>
@@ -177,33 +187,42 @@ function MiniPreview({
                 <span className="elp-divider-dot"></span>
               </div>
 
+              {/* Centered Details */}
               <div className="elp-details-clean" style={{ gap: '12px' }}>
-                <div className="elp-detail-item">
-                  <span className="elp-detail-icon-clean" style={{ fontSize: '1.4rem' }}>📅</span>
-                  <div className="elp-detail-content-clean">
-                    <div className="elp-detail-label-clean">Date</div>
-                    <div className="elp-detail-value-clean" style={{ fontSize: '0.85rem' }}>{formattedDate}</div>
-                  </div>
-                </div>
-                <div className="elp-detail-item">
-                  <span className="elp-detail-icon-clean" style={{ fontSize: '1.4rem' }}>🕐</span>
-                  <div className="elp-detail-content-clean">
-                    <div className="elp-detail-label-clean">Time</div>
-                    <div className="elp-detail-value-clean" style={{ fontSize: '0.85rem' }}>{tStart} – {tEnd}</div>
-                  </div>
-                </div>
-                <div className="elp-detail-item">
-                  <span className="elp-detail-icon-clean" style={{ fontSize: '1.4rem' }}>📍</span>
-                  <div className="elp-detail-content-clean">
-                    <div className="elp-detail-label-clean">Location</div>
-                    <div className="elp-detail-value-clean" style={{ fontSize: '0.85rem' }}>
-                      <div style={{ fontWeight: 700 }}>{location || 'Party Location'}</div>
-                      {address && <div style={{ opacity: 0.8, marginTop: '2px' }}>{address}</div>}
+                {(formattedDate || tStart) && (
+                  <div className="elp-detail-item elp-detail-datetime" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div className="elp-detail-content-clean" style={{ textAlign: 'center' }}>
+                      <div className="elp-detail-value-clean">
+                        {formattedDate && <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--t-text)' }}>📅 {formattedDate}</div>}
+                        {tStart && <div style={{ fontWeight: 700, fontSize: '0.8rem', opacity: 0.9, marginTop: '2px', color: 'var(--t-text)' }}>🕛 {tStart}{tEnd && ` – ${tEnd}`}</div>}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
+                {location && (
+                  <div className="elp-detail-item elp-detail-location" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div className="elp-detail-content-clean" style={{ textAlign: 'center' }}>
+                      <div className="elp-detail-value-clean">
+                        <div style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--t-accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📍 {location}</div>
+                        {address && (
+                          <div style={{ fontSize: '0.75rem', fontWeight: 600, marginTop: '2px', color: 'var(--t-text)', lineHeight: 1.2 }}>
+                            {(() => {
+                              const loc = (location || '').trim().toLowerCase();
+                              const addr = (address || '').trim();
+                              if (loc && addr.toLowerCase().startsWith(loc)) {
+                                return addr.slice(loc.length).replace(/^[,\s]+/, '');
+                              }
+                              return addr;
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
+              {/* RSVP By Deadline */}
               {formattedRsvpBy && (
                 <div style={{ marginTop: '12px', textAlign: 'center' }}>
                   <span style={{ fontSize: '0.75rem', color: 'var(--t-accent)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -212,6 +231,7 @@ function MiniPreview({
                 </div>
               )}
 
+              {/* Message Description */}
               {description && (
                 <>
                   <div className="elp-divider" style={{ margin: '10px 0' }}>
@@ -225,6 +245,7 @@ function MiniPreview({
                 </>
               )}
 
+              {/* RSVP Now */}
               {rsvpEnabled && (
                 <div className="elp-card-rsvp-wrap" style={{ marginTop: '12px' }}>
                   <button className="elp-btn elp-btn-accent elp-btn-sm elp-card-rsvp-btn" style={{ padding: '8px 12px', fontSize: '0.8rem', width: '100%' }} onClick={(e) => e.preventDefault()}>
@@ -249,12 +270,14 @@ export default function RsvpSettingsModal({ event, onClose, onSave }) {
   const [askChildAge, setAskChildAge] = useState(event?.askChildAge !== false);
   const [askAdultCount, setAskAdultCount] = useState(event?.askAdultCount !== false);
   const [askDietary, setAskDietary] = useState(event?.askDietary !== false);
+  const [allowAdditionalChildren, setAllowAdditionalChildren] = useState(event?.allowAdditionalChildren !== false);
   const [kidsEstimate, setKidsEstimate] = useState(event?.kidsEstimate ?? (event?.guestEstimate ? Math.floor(event?.guestEstimate / 2) : 10));
   const [adultsEstimate, setAdultsEstimate] = useState(event?.adultsEstimate ?? (event?.guestEstimate ? Math.ceil(event?.guestEstimate / 2) : 10));
   const [rsvpByDate, setRsvpByDate] = useState(event?.rsvpByDate || '');
   const [requireGuestMatch, setRequireGuestMatch] = useState(event?.requireGuestMatch === true);
   const [authType, setAuthType] = useState(event?.authType || 'name');
   const [eventPassword, setEventPassword] = useState(event?.eventPassword || '');
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const handleSave = () => {
     onSave({
@@ -264,6 +287,7 @@ export default function RsvpSettingsModal({ event, onClose, onSave }) {
       askChildAge,
       askAdultCount,
       askDietary,
+      allowAdditionalChildren,
       kidsEstimate: kidsEstimate ? parseInt(kidsEstimate, 10) : 0,
       adultsEstimate: adultsEstimate ? parseInt(adultsEstimate, 10) : 0,
       rsvpByDate,
@@ -346,46 +370,72 @@ export default function RsvpSettingsModal({ event, onClose, onSave }) {
               />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 32 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
               <h3 style={{ fontSize: '1.1rem', margin: '0 0 -8px 0' }}>Form Questions</h3>
               <Toggle id="show-parent-attendance-modal" checked={showParentAttendance} onChange={setShowParentAttendance} label="Ask about parent attendance" />
               <Toggle id="ask-age-modal" checked={askChildAge} onChange={setAskChildAge} label="Ask for guest child's age" />
               <Toggle id="ask-adults-modal" checked={askAdultCount} onChange={setAskAdultCount} label="Ask for number of adults attending" />
               <Toggle id="ask-dietary-modal" checked={askDietary} onChange={setAskDietary} label="Ask for dietary requirements" />
+              <Toggle id="allow-additional-children-modal" checked={allowAdditionalChildren} onChange={setAllowAdditionalChildren} label="Allow guests to bring additional children" />
+            </div>
 
-              <h3 style={{ fontSize: '1.1rem', margin: '16px 0 -8px 0' }}>Security</h3>
-              <Toggle id="lock-rsvp-modal" checked={lockDownRSVP} onChange={setLockDownRSVP} label="Lock RSVP list (Require approval for guests not on your list)" />
-              <Toggle id="require-match-modal" checked={requireGuestMatch} onChange={setRequireGuestMatch} label="Require Guest List Match (only invited guests can RSVP)" />
+            {/* Advanced Settings accordion */}
+            <div style={{ marginBottom: 32 }}>
+              <button
+                onClick={() => setAdvancedOpen(o => !o)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                  background: 'var(--kb-surface-2)', border: '1px solid var(--kb-input-border)',
+                  borderRadius: advancedOpen ? '12px 12px 0 0' : '12px',
+                  padding: '12px 16px', cursor: 'pointer', color: 'var(--kb-text)',
+                  fontSize: '0.95rem', fontWeight: 600, textAlign: 'left', transition: 'border-radius 0.2s'
+                }}
+              >
+                <span style={{ fontSize: '0.8rem', color: 'var(--kb-text-muted)', transition: 'transform 0.2s', display: 'inline-block', transform: advancedOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+                Advanced Settings
+              </button>
 
-              <div style={{ marginTop: 8 }}>
-                <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: 600, color: 'var(--kb-text)', marginBottom: 8 }}>
-                  Cross-device Re-authentication Method
-                </label>
-                <select 
-                  className="kb-input" 
-                  value={authType} 
-                  onChange={e => setAuthType(e.target.value)}
-                  style={{ width: '100%', maxWidth: 300, marginBottom: 12 }}
-                >
-                  <option value="name">Name & Contact Lookup</option>
-                  <option value="password">Event Password</option>
-                </select>
-                {authType === 'password' && (
-                  <>
-                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--kb-text-muted)', marginBottom: 4 }}>
-                      Event Password
+              {advancedOpen && (
+                <div style={{
+                  background: 'var(--kb-surface-2)', border: '1px solid var(--kb-input-border)',
+                  borderTop: 'none', borderRadius: '0 0 12px 12px',
+                  padding: '16px 16px 20px', display: 'flex', flexDirection: 'column', gap: 16
+                }}>
+                  <p style={{ margin: '0 0 4px', fontSize: '0.8rem', color: 'var(--kb-text-muted)' }}>Security &amp; access control for your RSVP form.</p>
+                  <Toggle id="lock-rsvp-modal" checked={lockDownRSVP} onChange={setLockDownRSVP} label="Lock RSVP (require approval for unlisted guests)" />
+                  <Toggle id="require-match-modal" checked={requireGuestMatch} onChange={setRequireGuestMatch} label="Only invited guests can RSVP" />
+
+                  <div style={{ marginTop: 4 }}>
+                    <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: 600, color: 'var(--kb-text)', marginBottom: 8 }}>
+                      Cross-device Re-authentication
                     </label>
-                    <input 
-                      className="kb-input" 
-                      type="text" 
-                      placeholder="e.g. Birthday2026" 
-                      value={eventPassword} 
-                      onChange={e => setEventPassword(e.target.value)}
-                      style={{ width: '100%', maxWidth: 300 }}
-                    />
-                  </>
-                )}
-              </div>
+                    <select
+                      className="kb-input"
+                      value={authType}
+                      onChange={e => setAuthType(e.target.value)}
+                      style={{ width: '100%', maxWidth: 300, marginBottom: 12 }}
+                    >
+                      <option value="name">Name &amp; Contact Lookup</option>
+                      <option value="password">Event Password</option>
+                    </select>
+                    {authType === 'password' && (
+                      <>
+                        <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--kb-text-muted)', marginBottom: 4 }}>
+                          Event Password
+                        </label>
+                        <input
+                          className="kb-input"
+                          type="text"
+                          placeholder="e.g. Birthday2026"
+                          value={eventPassword}
+                          onChange={e => setEventPassword(e.target.value)}
+                          style={{ width: '100%', maxWidth: 300 }}
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>
@@ -403,7 +453,6 @@ export default function RsvpSettingsModal({ event, onClose, onSave }) {
           <MiniPreview 
             themeKey={event?.theme}
             themeColor={event?.themeColor}
-            themeMode={event?.themeMode}
             name={event?.name}
             childName={event?.childName}
             date={event?.date}

@@ -1,19 +1,34 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { db } from '../../firebase';
-import { collection, query, where, orderBy, onSnapshot, doc, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { db, functions } from '../../firebase';
+import { collection, query, where, orderBy, onSnapshot, doc, addDoc, serverTimestamp, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import toast from 'react-hot-toast';
 import { getDevSafeOrigin } from '../../utils/url';
 import RsvpSettingsModal from '../../components/RsvpSettingsModal';
 import { getTheme } from '../../theme/themes';
 import ThemeIllustration from '../../theme/ThemeIllustration';
 import EditGuestModal from '../../components/EditGuestModal';
+import './GuestListPage.css';
+
+const SparklesIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z"></path>
+  </svg>
+);
 
 // Inline SVGs for premium look
 const BackIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <line x1="19" y1="12" x2="5" y2="12" />
     <polyline points="12 19 5 12 12 5" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"></polyline>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
   </svg>
 );
 
@@ -222,6 +237,12 @@ export default function GuestListPage() {
   const [newGuestEmail, setNewGuestEmail] = useState('');
   const [newGuestPhone, setNewGuestPhone] = useState('');
 
+  // Magic Parse State
+  const [showMagicModal, setShowMagicModal] = useState(false);
+  const [magicText, setMagicText] = useState('');
+  const [isParsingRsvp, setIsParsingRsvp] = useState(false);
+  const [parsedRsvpPreview, setParsedRsvpPreview] = useState(null);
+
   // Estimate Edit States
   const [isEditingEstimates, setIsEditingEstimates] = useState(false);
   const [editKidsEst, setEditKidsEst] = useState('');
@@ -278,7 +299,7 @@ export default function GuestListPage() {
   const themeObj = getTheme(event?.theme || 'kids-dino', event?.themeColor || 'default');
   const eventTheme = event?.theme ? `${event.theme.charAt(0).toUpperCase() + event.theme.slice(1)} Theme` : 'Dino Theme';
 
-  const inviteUrl = event?.slug ? `${getDevSafeOrigin()}/${event.slug}` : `${getDevSafeOrigin()}/r/...`;
+  const inviteUrl = event?.slug ? `${getDevSafeOrigin()}/share/${event.slug}` : `${getDevSafeOrigin()}/share/...`;
 
   const copyLink = () => {
     navigator.clipboard.writeText(inviteUrl);
@@ -443,15 +464,50 @@ export default function GuestListPage() {
     }
   };
 
+  const handleDeleteGuest = async (guest) => {
+    const guestName = guest.childName || 'this guest';
+    const confirmMsg = guest.isSiblingRow 
+      ? `Remove sibling "${guestName}"?` 
+      : `Delete entire RSVP for "${guestName}"? This cannot be undone.`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      if (guest.isSiblingRow) {
+        const sibIndex = parseInt(guest.id.split('-sib-')[1], 10);
+        if (isNaN(sibIndex)) throw new Error('Invalid sibling row ID');
+
+        const parentDocRef = doc(db, 'rsvps', guest.mainGuestId);
+        const parentSnap = await getDoc(parentDocRef);
+        if (!parentSnap.exists()) throw new Error('Parent RSVP not found');
+
+        const newSiblings = [...(parentSnap.data().siblings || [])];
+        newSiblings.splice(sibIndex, 1);
+
+        await updateDoc(parentDocRef, { siblings: newSiblings });
+        toast.success('Sibling removed!');
+      } else {
+        await deleteDoc(doc(db, 'rsvps', guest.id));
+        toast.success('Guest deleted!');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to delete guest');
+    }
+  };
+
   const handleSaveGuest = async (updatedGuest) => {
     try {
       if (updatedGuest.isSiblingRow) {
-        const parentRsvp = rsvps.find(r => r.id === updatedGuest.mainGuestId);
-        if (!parentRsvp) throw new Error('Parent RSVP not found');
-
-        const newSiblings = [...(parentRsvp.siblings || [])];
         const sibIndex = parseInt(updatedGuest.id.split('-sib-')[1], 10);
-        
+        if (isNaN(sibIndex)) throw new Error('Invalid sibling row ID');
+
+        const parentDocRef = doc(db, 'rsvps', updatedGuest.mainGuestId);
+        const parentSnap = await getDoc(parentDocRef);
+        if (!parentSnap.exists()) throw new Error('Parent RSVP not found');
+
+        const newSiblings = [...(parentSnap.data().siblings || [])];
+
         if (newSiblings[sibIndex]) {
           newSiblings[sibIndex] = {
             ...newSiblings[sibIndex],
@@ -459,8 +515,8 @@ export default function GuestListPage() {
             age: updatedGuest.childAge,
             dietary: updatedGuest.dietary
           };
-          
-          await updateDoc(doc(db, 'rsvps', parentRsvp.id), { siblings: newSiblings });
+
+          await updateDoc(parentDocRef, { siblings: newSiblings });
         }
       } else {
         const guestDocRef = doc(db, 'rsvps', updatedGuest.id);
@@ -495,8 +551,48 @@ export default function GuestListPage() {
     }
   };
 
+  const handleMagicParse = async () => {
+    if (!magicText.trim()) return;
+    setIsParsingRsvp(true);
+    setParsedRsvpPreview(null);
+    try {
+      const parseRsvpMessage = httpsCallable(functions, 'parseRsvpMessage');
+      const result = await parseRsvpMessage({ text: magicText });
+      setParsedRsvpPreview(result.data);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to parse message. Please check logs.');
+    } finally {
+      setIsParsingRsvp(false);
+    }
+  };
+
+  const handleSaveParsedRsvp = async () => {
+    if (!parsedRsvpPreview) return;
+    try {
+      await addDoc(collection(db, 'rsvps'), {
+        eventId,
+        childName: parsedRsvpPreview.childName || 'Unknown Guest',
+        parentName: parsedRsvpPreview.parentName || '',
+        attending: parsedRsvpPreview.attending === true ? 'yes' : (parsedRsvpPreview.attending === false ? 'no' : 'maybe'),
+        dietary: parsedRsvpPreview.dietary || '',
+        adultsCount: parsedRsvpPreview.adultsCount !== undefined && parsedRsvpPreview.adultsCount !== null ? parsedRsvpPreview.adultsCount : null,
+        isImported: true,
+        createdAt: serverTimestamp(),
+        siblings: Array.isArray(parsedRsvpPreview.siblings) ? parsedRsvpPreview.siblings : []
+      });
+      toast.success('Guest added successfully!');
+      setShowMagicModal(false);
+      setMagicText('');
+      setParsedRsvpPreview(null);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to save parsed guest');
+    }
+  };
+
   return (
-    <div style={styles.root}>
+    <div className="gl-root" style={{ minHeight: '100vh', background: 'var(--kb-bg)', fontFamily: 'var(--kb-font-body)' }}>
       <div style={styles.inner}>
         
         {/* Top Header Row */}
@@ -516,7 +612,7 @@ export default function GuestListPage() {
         </div>
 
         {/* Banner */}
-        <div style={{
+        <div className="gl-banner" style={{
           ...styles.banner,
           background: `${themeObj.patternSvg(themeObj.vars['--t-accent'])}, linear-gradient(135deg, ${themeObj.vars['--t-bg-from']} 0%, ${themeObj.vars['--t-bg-to']} 100%)`,
           position: 'relative',
@@ -827,8 +923,8 @@ export default function GuestListPage() {
                 </span>
               )}
             </div>
-            <div style={styles.guestActions}>
-              <div style={{ display: 'flex', gap: 8, marginRight: 8, borderRight: '1px solid var(--kb-border)', paddingRight: 16 }}>
+            <div className="gl-guest-actions" style={styles.guestActions}>
+              <div className="gl-guest-btns" style={{ display: 'flex', gap: 8, marginRight: 8, borderRight: '1px solid var(--kb-border)', paddingRight: 16 }}>
                 <div style={{ position: 'relative', display: 'inline-block' }}>
                   <button 
                     onClick={() => handleToggleLock()} 
@@ -844,6 +940,9 @@ export default function GuestListPage() {
                 <button onClick={() => setAddingGuest(true)} style={{...styles.actionBtn, background: 'var(--kb-mint)', color: 'white', border: 'none', padding: '8px 14px'}}>
                   + Add Guest
                 </button>
+                <button onClick={() => setShowMagicModal(true)} style={{...styles.actionBtn, background: '#3B82F6', color: 'white', border: 'none', padding: '8px 14px'}}>
+                  <SparklesIcon /> Magic Paste
+                </button>
                 <button onClick={() => setShowImportModal(true)} style={{...styles.actionBtn, background: 'var(--kb-purple)', color: 'white', border: 'none', padding: '8px 14px'}}>
                   📋 Import List
                 </button>
@@ -851,13 +950,13 @@ export default function GuestListPage() {
                   <ExportIcon /> Export CSV
                 </button>
               </div>
-              <div style={styles.searchWrapper}>
-                <input 
-                  type="text" 
-                  placeholder="Search guests..." 
+              <div className="gl-search-wrap" style={styles.searchWrapper}>
+                <input
+                  type="text"
+                  placeholder="Search guests..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  style={styles.searchInput} 
+                  style={styles.searchInput}
                 />
                 <div style={styles.searchIconPos}>
                   <SearchIcon />
@@ -895,7 +994,8 @@ export default function GuestListPage() {
               </div>
             </div>
           ) : (
-            <div style={styles.tableWrap}>
+            <>
+            <div className="gl-table-desktop" style={styles.tableWrap}>
               <table style={styles.table}>
                 <thead>
                   <tr>
@@ -939,13 +1039,15 @@ export default function GuestListPage() {
                             )}
                           </td>
                         )}
-                        <td style={styles.td}>
-                          {r.isSiblingRow ? (
-                            <span style={{ fontSize: 13, color: 'var(--kb-text-muted)' }}>—</span>
-                          ) : (
-                            r.isImported && r.attending === 'pending' ? '—' : displayAdults
-                          )}
-                        </td>
+                        {askAdultCount && (
+                          <td style={styles.td}>
+                            {r.isSiblingRow ? (
+                              <span style={{ fontSize: 13, color: 'var(--kb-text-muted)' }}>—</span>
+                            ) : (
+                              r.isImported && r.attending === 'pending' ? '—' : displayAdults
+                            )}
+                          </td>
+                        )}
                         <td style={{ ...styles.td, maxWidth: 200, wordBreak: 'break-word' }}>
                           {r.dietary && r.dietary.trim() ? (
                             <div style={{ color: 'var(--kb-coral)', fontWeight: '600', fontSize: 13 }}>{r.dietary}</div>
@@ -970,9 +1072,14 @@ export default function GuestListPage() {
                               </button>
                             </>
                           ) : (
-                            <button onClick={() => setEditingGuest(r)} className="kb-btn kb-btn-secondary kb-btn-sm" style={{ padding: '6px 10px', fontSize: 12, whiteSpace: 'nowrap', color: 'var(--kb-text)', border: '1px solid var(--kb-border)' }}>
-                              ✏️ Edit
-                            </button>
+                            <>
+                              <button onClick={() => setEditingGuest(r)} className="kb-btn kb-btn-secondary kb-btn-sm" style={{ padding: '6px 10px', fontSize: 12, whiteSpace: 'nowrap', color: 'var(--kb-text)', border: '1px solid var(--kb-border)' }}>
+                                ✏️ Edit
+                              </button>
+                              <button onClick={() => handleDeleteGuest(r)} className="kb-btn kb-btn-secondary kb-btn-sm" style={{ padding: '6px 10px', fontSize: 12, whiteSpace: 'nowrap', color: '#EF4444', border: '1px solid rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.05)' }} title="Delete">
+                                <TrashIcon />
+                              </button>
+                            </>
                           )}
                         </td>
                       </tr>
@@ -981,6 +1088,58 @@ export default function GuestListPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Card View */}
+            <div className="gl-cards-mobile">
+              {flattenedRsvps.map(r => {
+                const dateStr = r.createdAt?.toDate?.()?.toLocaleDateString('en-AU') ?? null;
+                return (
+                  <div key={r.id} className={`gl-guest-card${r.isSiblingRow ? ' gl-sibling-card' : ''}`}>
+                    <div className="gl-card-top">
+                      <div className="gl-card-identity">
+                        {r.isSiblingRow && <span className="gl-sib-label">↳</span>}
+                        <strong className="gl-card-name">{r.childName ?? '—'}</strong>
+                        {(r.childAge != null && r.childAge !== '') && (
+                          <span className="gl-card-age">{r.childAge}yo</span>
+                        )}
+                      </div>
+                      <div>
+                        {r.attending === 'pending' ? (
+                          <span className="gl-card-status-pending">Pending</span>
+                        ) : r.attending === 'needs_approval' ? (
+                          <span className="gl-card-status-approval">Needs Approval</span>
+                        ) : (
+                          <AttendingBadge attending={r.attending || r.isAttending} />
+                        )}
+                      </div>
+                    </div>
+                    {(r.parentName || r.dietary?.trim()) && (
+                      <div className="gl-card-details">
+                        {r.parentName && <span className="gl-card-parent">{r.parentName}</span>}
+                        {r.dietary?.trim() && <span className="gl-card-dietary">⚠️ {r.dietary}</span>}
+                      </div>
+                    )}
+                    <div className="gl-card-footer">
+                      {dateStr && <span className="gl-card-date">{dateStr}</span>}
+                      <div className="gl-card-actions">
+                        {r.attending === 'needs_approval' ? (
+                          <>
+                            <button onClick={() => handleApproveGuest(r)} className="kb-btn kb-btn-secondary kb-btn-sm" style={{ padding: '6px 12px', fontSize: 12, color: 'white', background: 'var(--kb-mint)', border: 'none' }}>✓ Approve</button>
+                            <button onClick={() => handleDeclineGuest(r)} className="kb-btn kb-btn-secondary kb-btn-sm" style={{ padding: '6px 12px', fontSize: 12, color: 'white', background: 'var(--kb-coral)', border: 'none' }}>✕ Decline</button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => setEditingGuest(r)} className="kb-btn kb-btn-secondary kb-btn-sm" style={{ padding: '6px 10px', fontSize: 12, color: 'var(--kb-text)', border: '1px solid var(--kb-border)' }}>✏️ Edit</button>
+                            <button onClick={() => handleDeleteGuest(r)} className="kb-btn kb-btn-secondary kb-btn-sm" style={{ padding: '6px 10px', fontSize: 12, color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }} title="Delete"><TrashIcon /></button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            </>
           )}
         </div>
 
@@ -1019,6 +1178,81 @@ export default function GuestListPage() {
                 <button onClick={() => setShowImportModal(false)} className="kb-btn kb-btn-secondary">Cancel</button>
                 <button onClick={handleImportList} className="kb-btn kb-btn-primary" style={{ background: 'var(--kb-purple)', border: 'none' }}>Import</button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Magic Parse Modal */}
+        {showMagicModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 24 }}>
+            <div style={{ background: 'var(--kb-surface)', padding: 32, borderRadius: 24, width: '100%', maxWidth: 500, border: '1px solid var(--kb-border)', boxShadow: '0 24px 48px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
+              <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--kb-font-display)', color: 'var(--kb-text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <SparklesIcon /> Magic Paste RSVP
+              </h2>
+              
+              {!parsedRsvpPreview ? (
+                <>
+                  <p style={{ color: 'var(--kb-text-muted)', fontSize: 14, marginBottom: 16 }}>
+                    Paste a text message or email reply here, and our AI will automatically extract the guest's RSVP details.
+                  </p>
+                  <textarea
+                    value={magicText}
+                    onChange={e => setMagicText(e.target.value)}
+                    placeholder="e.g. Hi! Thanks for the invite, Timmy and I will be there! No allergies."
+                    style={{ width: '100%', height: 160, padding: 16, borderRadius: 12, border: '1px solid var(--kb-input-border)', background: 'var(--kb-input-bg)', color: 'var(--kb-text)', fontFamily: 'var(--kb-font-body)', resize: 'vertical', marginBottom: 24 }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                    <button onClick={() => setShowMagicModal(false)} className="kb-btn kb-btn-secondary" disabled={isParsingRsvp}>Cancel</button>
+                    <button onClick={handleMagicParse} className="kb-btn kb-btn-primary" style={{ background: '#3B82F6', border: 'none', display: 'flex', alignItems: 'center', gap: 8 }} disabled={isParsingRsvp || !magicText.trim()}>
+                      {isParsingRsvp ? <div style={styles.spinner} /> : <SparklesIcon />}
+                      {isParsingRsvp ? 'Parsing...' : 'Parse Message'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p style={{ color: 'var(--kb-text-muted)', fontSize: 14, marginBottom: 16 }}>
+                    Here's what we found. Review and edit before saving:
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--kb-text-muted)', textTransform: 'uppercase' }}>Child Name</label>
+                      <input type="text" value={parsedRsvpPreview.childName || ''} onChange={e => setParsedRsvpPreview({...parsedRsvpPreview, childName: e.target.value})} className="kb-input" />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--kb-text-muted)', textTransform: 'uppercase' }}>Parent Name</label>
+                      <input type="text" value={parsedRsvpPreview.parentName || ''} onChange={e => setParsedRsvpPreview({...parsedRsvpPreview, parentName: e.target.value})} className="kb-input" />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--kb-text-muted)', textTransform: 'uppercase' }}>Attending</label>
+                      <select value={parsedRsvpPreview.attending === true ? 'yes' : (parsedRsvpPreview.attending === false ? 'no' : 'maybe')} onChange={e => {
+                        const val = e.target.value;
+                        setParsedRsvpPreview({...parsedRsvpPreview, attending: val === 'yes' ? true : (val === 'no' ? false : null)});
+                      }} className="kb-input">
+                        <option value="yes">Yes, Attending</option>
+                        <option value="no">No, Declined</option>
+                        <option value="maybe">Unsure / Maybe</option>
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--kb-text-muted)', textTransform: 'uppercase' }}>Dietary / Notes</label>
+                      <input type="text" value={parsedRsvpPreview.dietary || ''} onChange={e => setParsedRsvpPreview({...parsedRsvpPreview, dietary: e.target.value})} className="kb-input" />
+                    </div>
+                    {askAdultCount && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--kb-text-muted)', textTransform: 'uppercase' }}>Adults Count</label>
+                        <input type="number" min="0" value={parsedRsvpPreview.adultsCount ?? ''} onChange={e => setParsedRsvpPreview({...parsedRsvpPreview, adultsCount: e.target.value === '' ? null : Number(e.target.value)})} className="kb-input" />
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                    <button onClick={() => setParsedRsvpPreview(null)} className="kb-btn kb-btn-secondary">Back</button>
+                    <button onClick={handleSaveParsedRsvp} className="kb-btn kb-btn-primary" style={{ background: 'var(--kb-mint)', border: 'none' }}>
+                      ✓ Save to List
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
