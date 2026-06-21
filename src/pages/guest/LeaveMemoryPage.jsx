@@ -9,6 +9,8 @@ import { fetchEventBySlug } from '../../utils/fetchEvent';
 import { db, storage, trackEvent } from '../../firebase';
 import './LeaveMemoryPage.css';
 
+const MAX_FILES = 10;
+
 function Spinner() {
   return (
     <div className="lm-center">
@@ -25,107 +27,103 @@ export default function LeaveMemoryPage() {
 
   const [authorName, setAuthorName] = useState('');
   const [message, setMessage] = useState('');
-  const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [previewType, setPreviewType] = useState(null); // 'image' | 'video'
+
+  // Each entry: { file, previewUrl, type: 'image'|'video' }
+  const [files, setFiles] = useState([]);
 
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState(null); // { index, total, pct }
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    console.log("Fetching event for LeaveMemory, slug:", slug);
     fetchEventBySlug(slug)
-      .then(e => {
-        console.log("Fetched event for LeaveMemory:", e);
-        setEvent(e);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("fetchEventBySlug failed in LeaveMemoryPage:", err);
-        setLoading(false);
-      });
+      .then(e => { setEvent(e); setLoading(false); })
+      .catch(() => setLoading(false));
   }, [slug]);
 
-  const handleFileChange = (e) => {
-    const selected = e.target.files[0];
-    if (!selected) return;
-    setFile(selected);
+  // Revoke object URLs on unmount to avoid memory leaks.
+  useEffect(() => {
+    return () => files.forEach(f => URL.revokeObjectURL(f.previewUrl));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const objectUrl = URL.createObjectURL(selected);
-    setPreviewUrl(objectUrl);
-    setPreviewType(selected.type.startsWith('video/') ? 'video' : 'image');
-  };
-
-  const clearFile = () => {
-    setFile(null);
-    setPreviewUrl(null);
-    setPreviewType(null);
+  const addFiles = (selected) => {
+    const incoming = Array.from(selected).slice(0, MAX_FILES - files.length);
+    const entries = incoming.map(f => ({
+      file: f,
+      previewUrl: URL.createObjectURL(f),
+      type: f.type.startsWith('video/') ? 'video' : 'image',
+    }));
+    setFiles(prev => [...prev, ...entries]);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const handleFileChange = (e) => {
+    if (e.target.files?.length) addFiles(e.target.files);
+  };
+
+  const removeFile = (i) => {
+    setFiles(prev => {
+      URL.revokeObjectURL(prev[i].previewUrl);
+      return prev.filter((_, idx) => idx !== i);
+    });
+  };
+
+  const uploadOne = (entry, index, total) =>
+    new Promise((resolve, reject) => {
+      const token = crypto.randomUUID();
+      const safeName = entry.file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80);
+      const storageRef = ref(storage, `memories/${event.id}/${token}_${safeName}`);
+      const task = uploadBytesResumable(storageRef, entry.file);
+      task.on(
+        'state_changed',
+        snap => {
+          const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+          setUploadProgress({ index: index + 1, total, pct });
+        },
+        reject,
+        async () => {
+          const url = await getDownloadURL(task.snapshot.ref);
+          resolve({ url, type: entry.type });
+        },
+      );
+    });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!authorName.trim()) {
-      setError('Please enter your name.');
-      return;
-    }
-    if (!file && !message.trim()) {
-      setError('Please add a message or upload a photo/video.');
-      return;
-    }
+    if (!authorName.trim()) { setError('Please enter your name.'); return; }
+    if (!files.length && !message.trim()) { setError('Please add a message or upload a photo/video.'); return; }
     setError('');
     setUploading(true);
 
     try {
-      let mediaUrl = null;
-      let mediaType = null;
-
-      if (file) {
-        // Unguessable filename: a random token means the file can't be discovered by
-        // path-guessing, so reads stay effectively private to whoever holds the URL.
-        const token = crypto.randomUUID();
-        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80);
-        const storageRef = ref(storage, `memories/${event.id}/${token}_${safeName}`);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-
-        await new Promise((resolve, reject) => {
-          uploadTask.on(
-            'state_changed',
-            (snapshot) => {
-              const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-              setUploadProgress(pct);
-            },
-            reject,
-            async () => {
-              mediaUrl = await getDownloadURL(uploadTask.snapshot.ref);
-              resolve();
-            }
-          );
-        });
-
-        mediaType = file.type.startsWith('video/') ? 'video' : 'image';
+      const media = [];
+      for (let i = 0; i < files.length; i++) {
+        const result = await uploadOne(files[i], i, files.length);
+        media.push(result);
       }
 
       await addDoc(collection(db, 'memories'), {
         eventId: event.id,
         authorName: authorName.trim(),
         message: message.trim(),
-        mediaUrl,
-        mediaType,
+        // Keep scalar fields for backward compat with existing dashboard/display code.
+        mediaUrl: media[0]?.url ?? null,
+        mediaType: media[0]?.type ?? null,
+        media,
         createdAt: serverTimestamp(),
       });
 
-      trackEvent('memory_uploaded', { has_media: !!file, media_type: mediaType || 'text' });
+      trackEvent('memory_uploaded', { has_media: media.length > 0, media_count: media.length });
       setSuccess(true);
     } catch (err) {
       console.error(err);
       setError('Something went wrong. Please try again.');
     } finally {
       setUploading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -146,6 +144,8 @@ export default function LeaveMemoryPage() {
   }
 
   const themeKey = event.theme?.startsWith('kids-') ? event.theme : `kids-${event.theme || 'generic'}`;
+  const ord = (n) => { const s = n % 100; if (s >= 11 && s <= 13) return `${n}th`; return `${n}${['th', 'st', 'nd', 'rd'][(n % 10 > 0 && n % 10 < 4) ? n % 10 : 0]}`; };
+  const birthdayLine = `${event.childAge ? ord(event.childAge) : '3rd'} Birthday`;
 
   if (success) {
     return (
@@ -166,18 +166,36 @@ export default function LeaveMemoryPage() {
     );
   }
 
+  const canAddMore = files.length < MAX_FILES;
+  const progressLabel = uploadProgress
+    ? `Uploading ${uploadProgress.index} of ${uploadProgress.total} — ${uploadProgress.pct}%`
+    : null;
+
   return (
     <ThemedPage themeKey={themeKey} themeColor={event.themeColor}>
       <div className="lm-container">
 
-        {/* Header */}
+        {/* Header — matches the invite / portal / display branding */}
         <div className="lm-header">
           <Link to={`/${slug}`} className="lm-back">← Back</Link>
-          <div style={{ width: '100%', maxWidth: '80px', margin: '0 auto 8px' }}>
-            <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
+
+          <div className="lm-brand-row">
+            <div className="lm-illus">
+              <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
+            </div>
+            <div className="lm-title-col">
+              <span className="lm-ev-name">{event.childName ? `${event.childName}'s` : event.name}</span>
+              {event.childName && <span className="lm-ev-rest">{birthdayLine}</span>}
+            </div>
           </div>
-          <h1 className="lm-page-title">Share a Memory</h1>
-          <p className="lm-page-sub">for {event.name}</p>
+
+          {event.photoUrl && (
+            <div className="lm-star-photo-wrap">
+              <img className="lm-star-photo" src={event.photoUrl} alt={event.childName || event.name} />
+            </div>
+          )}
+
+          <h2 className="lm-page-title">📸 Share a Memory</h2>
         </div>
 
         <form className="lm-card" onSubmit={handleSubmit} noValidate>
@@ -209,55 +227,69 @@ export default function LeaveMemoryPage() {
             />
           </div>
 
-          {/* File upload */}
+          {/* File upload — multiple */}
           <div className="lm-field">
-            <label className="lm-label">Photo or Video</label>
+            <label className="lm-label">
+              Photos or Videos
+              {files.length > 0 && <span className="lm-file-count">{files.length}/{MAX_FILES}</span>}
+            </label>
 
-            {previewUrl ? (
-              <div className="lm-preview-wrap">
-                {previewType === 'video' ? (
-                  <video
-                    className="lm-preview"
-                    src={previewUrl}
-                    controls
-                    playsInline
-                  />
-                ) : (
-                  <img className="lm-preview" src={previewUrl} alt="Preview" />
+            {files.length > 0 && (
+              <div className="lm-thumb-grid">
+                {files.map((entry, i) => (
+                  <div key={i} className="lm-thumb">
+                    {entry.type === 'video' ? (
+                      <div className="lm-thumb-video">🎬</div>
+                    ) : (
+                      <img className="lm-thumb-img" src={entry.previewUrl} alt={`Photo ${i + 1}`} />
+                    )}
+                    <button
+                      type="button"
+                      className="lm-thumb-remove"
+                      onClick={() => removeFile(i)}
+                      aria-label="Remove"
+                    >✕</button>
+                  </div>
+                ))}
+
+                {canAddMore && (
+                  <label className="lm-thumb lm-thumb-add" htmlFor="lm-file-input" aria-label="Add more photos">
+                    <span className="lm-thumb-add-icon">+</span>
+                    <span className="lm-thumb-add-text">Add more</span>
+                  </label>
                 )}
-                <button
-                  type="button"
-                  className="lm-clear-file"
-                  onClick={clearFile}
-                  aria-label="Remove file"
-                >
-                  ✕ Remove
-                </button>
               </div>
-            ) : (
+            )}
+
+            {files.length === 0 && (
               <label className="lm-file-drop" htmlFor="lm-file-input">
                 <span className="lm-file-icon">📷</span>
-                <span className="lm-file-text">Click to add a photo or video</span>
-                <span className="lm-file-hint">JPG, PNG, GIF, MP4, MOV accepted</span>
-                <input
-                  id="lm-file-input"
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,video/*"
-                  className="lm-file-input-hidden"
-                  onChange={handleFileChange}
-                />
+                <span className="lm-file-text">Click to add photos or videos</span>
+                <span className="lm-file-hint">Select multiple at once — JPG, PNG, GIF, MP4, MOV</span>
               </label>
             )}
+
+            <input
+              id="lm-file-input"
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,video/*"
+              multiple
+              className="lm-file-input-hidden"
+              onChange={handleFileChange}
+            />
           </div>
 
           {/* Upload progress */}
-          {uploading && (
+          {uploading && uploadProgress && (
             <div className="lm-progress-wrap">
               <div className="lm-progress-bar-bg">
-                <div className="lm-progress-bar" style={{ width: `${uploadProgress}%` }} />
+                <div
+                  className="lm-progress-bar"
+                  style={{ width: `${uploadProgress.pct}%` }}
+                />
               </div>
-              <span className="lm-progress-label">Uploading… {uploadProgress}%</span>
+              <span className="lm-progress-label">{progressLabel}</span>
             </div>
           )}
 
@@ -269,7 +301,7 @@ export default function LeaveMemoryPage() {
             disabled={uploading}
             id="lm-submit"
           >
-            {uploading ? `Uploading ${uploadProgress}%…` : '💌 Share Memory'}
+            {uploading ? progressLabel || 'Uploading…' : '💌 Share Memory'}
           </button>
         </form>
 

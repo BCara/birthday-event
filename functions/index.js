@@ -1,7 +1,7 @@
-const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentUpdated, onDocumentDeleted } = require("firebase-functions/v2/firestore");
 const { initializeApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
-const { getFirestore } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const logger = require("firebase-functions/logger");
 const functionsV1 = require("firebase-functions/v1");
 const { GoogleGenAI } = require("@google/genai");
@@ -122,7 +122,7 @@ exports.onEventCreated = onDocumentCreated(
             }
             
             // Send notification to admin for logging purposes
-            const adminEmail = "clb.bertram@gmail.com";
+            const adminEmail = "codebertcreations@gmail.com";
             const adminSubject = `New Event Created: ${eventName}`;
             const adminHtml = `
               <div style="font-family: sans-serif; padding: 20px;">
@@ -504,7 +504,7 @@ exports.onUserCreated = functionsV1
     .onCreate(async (user) => {
         const API_KEY = process.env.RESEND_API_KEY;
         const FROM = "hello@tinypartyportal.com";
-        const adminEmail = "clb.bertram@gmail.com";
+        const adminEmail = "codebertcreations@gmail.com";
 
         if (!API_KEY) {
             logger.error("onUserCreated: RESEND_API_KEY not set");
@@ -552,47 +552,135 @@ exports.onUserCreated = functionsV1
             const displayName = escapeHtml(user.displayName || 'there');
             const welcomeHtml = `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <style>
-    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #334155; margin: 0; padding: 0; }
-    .wrapper { width: 100%; padding: 20px 0; }
-    .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; }
-    .header { background: linear-gradient(135deg, #FF6B6B, #FFE66D); padding: 32px 20px; text-align: center; }
-    .header h1 { margin: 0; font-size: 28px; color: #fff; }
-    .content { padding: 40px; line-height: 1.7; }
-    .content h2 { color: #0f172a; margin-top: 0; }
-    .steps { list-style: none; padding: 0; margin: 20px 0; display: flex; flex-direction: column; gap: 12px; }
-    .steps li { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; }
-    .step-icon { font-size: 20px; flex-shrink: 0; }
-    .btn { display: inline-block; background: #10B981; color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: bold; font-size: 16px; margin-top: 24px; }
-    .footer { padding: 20px 40px; font-size: 13px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome to Tiny Party Portal</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Quicksand:wght@400;500;700&display=swap');
+  body { margin:0; padding:0; background:#FFF9F2; }
+  a { text-decoration:none; }
+  @media (max-width:620px){
+    .container{ width:100% !important; border-radius:0 !important; }
+    .pad{ padding-left:24px !important; padding-right:24px !important; }
+  }
+</style>
 </head>
-<body>
-  <div class="wrapper">
-    <div class="container">
-      <div class="header">
-        <h1>🎂 Tiny Party Portal</h1>
-      </div>
-      <div class="content">
-        <h2>Welcome, ${displayName}! 🎉</h2>
-        <p>You're all set to create your first birthday party. Here's what you can do:</p>
-        <ul class="steps">
-          <li><span class="step-icon">🎨</span><span><strong>Create your event page</strong> — pick a theme, add details, and get a shareable invite link in minutes.</span></li>
-          <li><span class="step-icon">📩</span><span><strong>Share with guests</strong> — send your link by WhatsApp, message, or email. No app required for guests.</span></li>
-          <li><span class="step-icon">👥</span><span><strong>Track RSVPs in real time</strong> — see who's coming, dietary needs, and sibling counts as responses come in.</span></li>
-          <li><span class="step-icon">📸</span><span><strong>Collect memories</strong> — guests can upload photos and messages that you can display live at the party.</span></li>
-        </ul>
-        <p style="text-align: center;">
-          <a href="https://tinypartyportal.com/dashboard" class="btn">Create Your First Party →</a>
-        </p>
-      </div>
-      <div class="footer">
-        <p>Questions? Reply to this email or contact us at <a href="mailto:support@tinypartyportal.com" style="color: #10B981;">support@tinypartyportal.com</a></p>
-      </div>
-    </div>
-  </div>
+<body style="margin:0; padding:0; background:#FFF9F2;">
+  <!-- preheader (hidden) -->
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0;">Your party-planning HQ is ready — create your first invite in minutes.</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF9F2;">
+    <tr>
+      <td align="center" style="padding:28px 12px;">
+
+        <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" style="width:600px; max-width:600px; background:#FFFFFF; border-radius:20px; overflow:hidden; border:1px solid #F0E6DA;">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background-color:#FF6B6B; background-image:linear-gradient(135deg,#FF6B6B 0%,#FFD166 100%); padding:40px 24px;">
+              <div style="font-family:Merriweather,Georgia,serif; font-size:30px; font-weight:700; color:#ffffff; letter-spacing:-0.3px;">
+                🎂 Tiny Party <span style="font-weight:400;">Portal</span>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Greeting -->
+          <tr>
+            <td class="pad" style="padding:40px 48px 8px;">
+              <h1 style="margin:0 0 10px; font-family:Merriweather,Georgia,serif; font-size:26px; line-height:1.25; color:#2D3748;">Welcome, ${displayName}! 🎉</h1>
+              <p style="margin:0; font-family:Quicksand,'Trebuchet MS','Segoe UI',sans-serif; font-size:16px; line-height:1.7; color:#5A6473;">
+                You're all set to plan something brilliant. Here's everything Tiny Party Portal does for you:
+              </p>
+            </td>
+          </tr>
+
+          <!-- Feature rows -->
+          <tr>
+            <td class="pad" style="padding:24px 48px 8px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <!-- item -->
+                <tr><td style="padding:10px 0;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+                    <td valign="top" width="52">
+                      <div style="width:40px; height:40px; line-height:40px; text-align:center; font-size:20px; background:#FFE3E3; border-radius:12px;">🎨</div>
+                    </td>
+                    <td valign="top" style="font-family:Quicksand,'Trebuchet MS','Segoe UI',sans-serif;">
+                      <div style="font-size:15px; font-weight:700; color:#2D3748;">Create your event page</div>
+                      <div style="font-size:14px; line-height:1.6; color:#6B7280;">Pick a theme, add the details, and get a shareable invite link in minutes.</div>
+                    </td>
+                  </tr></table>
+                </td></tr>
+                <!-- item -->
+                <tr><td style="padding:10px 0;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+                    <td valign="top" width="52">
+                      <div style="width:40px; height:40px; line-height:40px; text-align:center; font-size:20px; background:#FFF3D6; border-radius:12px;">📩</div>
+                    </td>
+                    <td valign="top" style="font-family:Quicksand,'Trebuchet MS','Segoe UI',sans-serif;">
+                      <div style="font-size:15px; font-weight:700; color:#2D3748;">Share with guests</div>
+                      <div style="font-size:14px; line-height:1.6; color:#6B7280;">Send your link by WhatsApp, message or email. No app needed for guests.</div>
+                    </td>
+                  </tr></table>
+                </td></tr>
+                <!-- item -->
+                <tr><td style="padding:10px 0;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+                    <td valign="top" width="52">
+                      <div style="width:40px; height:40px; line-height:40px; text-align:center; font-size:20px; background:#D7F8EE; border-radius:12px;">👥</div>
+                    </td>
+                    <td valign="top" style="font-family:Quicksand,'Trebuchet MS','Segoe UI',sans-serif;">
+                      <div style="font-size:15px; font-weight:700; color:#2D3748;">Track RSVPs in real time</div>
+                      <div style="font-size:14px; line-height:1.6; color:#6B7280;">See who's coming, dietary needs and sibling counts as replies arrive.</div>
+                    </td>
+                  </tr></table>
+                </td></tr>
+                <!-- item -->
+                <tr><td style="padding:10px 0;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+                    <td valign="top" width="52">
+                      <div style="width:40px; height:40px; line-height:40px; text-align:center; font-size:20px; background:#EDE6FF; border-radius:12px;">📸</div>
+                    </td>
+                    <td valign="top" style="font-family:Quicksand,'Trebuchet MS','Segoe UI',sans-serif;">
+                      <div style="font-size:15px; font-weight:700; color:#2D3748;">Collect memories</div>
+                      <div style="font-size:14px; line-height:1.6; color:#6B7280;">Guests upload photos and messages you can display live at the party.</div>
+                    </td>
+                  </tr></table>
+                </td></tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- CTA (bulletproof) -->
+          <tr>
+            <td align="center" style="padding:24px 48px 40px;">
+              <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+                <td align="center" bgcolor="#FF6B6B" style="border-radius:999px;">
+                  <a href="https://tinypartyportal.com/dashboard" style="display:inline-block; padding:15px 34px; font-family:Quicksand,'Trebuchet MS','Segoe UI',sans-serif; font-size:16px; font-weight:700; color:#ffffff; border-radius:999px;">Create your first party →</a>
+                </td>
+              </tr></table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 48px; background:#FCF6EF; border-top:1px solid #F0E6DA;">
+              <p style="margin:0; font-family:Quicksand,'Trebuchet MS','Segoe UI',sans-serif; font-size:13px; line-height:1.6; color:#9AA1AC;">
+                Questions? Just reply to this email or reach us at
+                <a href="mailto:support@tinypartyportal.com" style="color:#FF6B6B; font-weight:600;">support@tinypartyportal.com</a>.
+              </p>
+              <p style="margin:10px 0 0; font-family:Quicksand,'Trebuchet MS','Segoe UI',sans-serif; font-size:12px; color:#C2B8AC;">
+                🎂 Tiny Party Portal · Making little celebrations effortless
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 
@@ -1135,4 +1223,36 @@ exports.lookupRsvp = functionsV1.https.onCall(async (data, context) => {
             comments: d.comments ?? '',
         },
     };
+});
+
+// Maintain a public memoryCount on the event doc so the day-of display can show a
+// live "N memories shared!" count. Memories themselves are host-only/private, so the
+// public display can't count them directly — this counter on the (public) event doc
+// is the only thing it reads.
+exports.onMemoryCreated = onDocumentCreated("memories/{memoryId}", async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+    const eventId = snap.data().eventId;
+    if (!eventId) return;
+    try {
+        await getFirestore().doc(`events/${eventId}`).update({
+            memoryCount: FieldValue.increment(1),
+        });
+    } catch (e) {
+        logger.error("onMemoryCreated: failed to increment memoryCount", e);
+    }
+});
+
+exports.onMemoryDeleted = onDocumentDeleted("memories/{memoryId}", async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+    const eventId = snap.data().eventId;
+    if (!eventId) return;
+    try {
+        await getFirestore().doc(`events/${eventId}`).update({
+            memoryCount: FieldValue.increment(-1),
+        });
+    } catch (e) {
+        logger.error("onMemoryDeleted: failed to decrement memoryCount", e);
+    }
 });

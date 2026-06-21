@@ -144,6 +144,7 @@ export default function MemoriesPage() {
   }
 
   const submissionUrl = event?.slug ? `${getDevSafeOrigin()}/${event.slug}/memories/new` : null;
+  const displayUrl = event?.slug ? `${getDevSafeOrigin()}/${event.slug}/display` : null;
   const qrUrl = submissionUrl
     ? `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(submissionUrl)}&bgcolor=ffffff&color=2d1b69&margin=12`
     : null;
@@ -188,6 +189,22 @@ export default function MemoriesPage() {
                   Copy
                 </button>
               </div>
+              {displayUrl && (
+                <div style={styles.displayRow}>
+                  <button
+                    onClick={() => window.open(displayUrl, '_blank', 'noopener')}
+                    className="kb-btn kb-btn-primary kb-btn-sm"
+                  >
+                    📺 Open day-of display
+                  </button>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(displayUrl); toast.success('Display link copied!'); }}
+                    className="kb-btn kb-btn-secondary kb-btn-sm"
+                  >
+                    Copy display link
+                  </button>
+                </div>
+              )}
               {event?.memoriesMessage && (
                 <p style={styles.qrMessage}>"{event.memoriesMessage}"</p>
               )}
@@ -312,6 +329,7 @@ const styles = {
   qrInfo: { flex: 1, minWidth: 200 },
   qrLabel: { fontFamily: 'var(--kb-font-ui)', fontSize: 13, fontWeight: 600, color: 'var(--kb-text-muted)', margin: '0 0 10px' },
   qrLinkRow: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' },
+  displayRow: { display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' },
   qrLink: {
     fontFamily: 'monospace', fontSize: 13, color: 'var(--kb-text)',
     background: 'var(--kb-surface-2)', padding: '6px 10px', borderRadius: 8,

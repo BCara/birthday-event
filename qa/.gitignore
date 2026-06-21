@@ -1,0 +1,4 @@
+# QA e2e runtime artifacts (browser profile, screenshots, credentials)
+.profile/
+screenshots/
+creds.local.json

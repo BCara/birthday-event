@@ -185,6 +185,44 @@
   object-fit: contain;
   display: block;
 }
+/* Theme illustration + title side by side; photo as an avatar under the title */
+.elp-hero-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin: 4px auto 0;
+}
+.elp-hero-illustration {
+  flex: 0 0 auto;
+  width: clamp(140px, 46%, 240px);
+  margin-right: -12px;       /* tuck the title in so they read as one unit */
+  filter: drop-shadow(0 12px 24px rgba(0,0,0,0.12));
+}
+.elp-hero-illustration > svg, .elp-hero-illustration img { width: 100%; height: auto; display: block; }
+.elp-hero-titlecol {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.elp-hero-titlecol .elp-title { font-size: clamp(1.9rem, 7vw, 3rem); }
+.elp-star-avatar-wrap { display: flex; justify-content: center; margin-top: 16px; }
+.elp-star-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 5px solid #fff;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.2);
+}
+@media (max-width: 520px) {
+  .elp-hero-row { gap: 10px; }
+  .elp-star-avatar { width: 96px; height: 96px; }
+}
 .elp-title {
   font-family: 'Satisfy', cursive;
   font-size: clamp(3.2rem, 10vw, 4.5rem);
@@ -668,6 +706,8 @@
   display: block;
   margin-top: 10px;
 }
+/* Keep the theme illustration tucked close to the title (display-style) */
+.elp-p2-illus-col { margin-right: clamp(-48px, -3.5vw, -22px); }
 
 .elp-p2-main-illus {
   width: 260px;

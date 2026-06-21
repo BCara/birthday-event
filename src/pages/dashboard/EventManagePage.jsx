@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { db, storage, trackEvent } from '../../firebase';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
+import ImageCropModal from '../../components/ImageCropModal';
 import html2canvas from 'html2canvas';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -284,6 +285,7 @@ export default function EventManagePage() {
   const [giftRegistryLink, setGiftRegistryLink] = useState('');
   
   const [photoUrl, setPhotoUrl] = useState('');
+  const [cropSrc, setCropSrc] = useState(null);
   const [invitePreviewUrl, setInvitePreviewUrl] = useState('');
   
   const ogPreviewRef = React.useRef(null);
@@ -435,33 +437,36 @@ export default function EventManagePage() {
     setScheduleItems(scheduleItems.filter((_, i) => i !== index));
   };
 
-  async function handlePhotoUpload(e) {
+  function handlePhotoUpload(e) {
     const file = e.target.files[0];
+    e.target.value = ''; // allow re-selecting the same file later
     if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image is too large. Max 5MB.');
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('Image is too large. Max 20MB.');
       return;
     }
+    // Open the crop/zoom modal; the actual (compressed) upload happens on save.
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(reader.result);
+    reader.readAsDataURL(file);
+  }
 
+  async function handleCroppedUpload(blob) {
     setUploading(true);
-    const storageRef = ref(storage, `event-photos/${eventId}/${Date.now()}_${file.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
-
-    uploadTask.on('state_changed', 
-      null, 
-      (err) => {
-        console.error(err);
-        toast.error('Failed to upload image.');
-        setUploading(false);
-      }, 
-      async () => {
-        const url = await getDownloadURL(uploadTask.snapshot.ref);
-        setPhotoUrl(url);
-        setUploading(false);
-        toast.success('Photo uploaded!');
-      }
-    );
+    try {
+      const storageRef = ref(storage, `event-photos/${eventId}/${Date.now()}_star.jpg`);
+      const task = uploadBytesResumable(storageRef, blob, { contentType: 'image/jpeg' });
+      await task;
+      const url = await getDownloadURL(task.snapshot.ref);
+      setPhotoUrl(url);
+      toast.success('Photo updated!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to upload image.');
+    } finally {
+      setUploading(false);
+      setCropSrc(null);
+    }
   }
 
   async function handleRemovePhoto() {
@@ -637,6 +642,13 @@ export default function EventManagePage() {
                   <input type="file" ref={fileInputRef} onChange={handlePhotoUpload} accept="image/*" style={{ display: 'none' }} />
                 </div>
               </div>
+              {cropSrc && (
+                <ImageCropModal
+                  imageSrc={cropSrc}
+                  onCancel={() => setCropSrc(null)}
+                  onSave={handleCroppedUpload}
+                />
+              )}
 
               <div style={styles.row}>
                 <div className="kb-field" style={{ flex: 1 }}>
@@ -932,6 +944,17 @@ export default function EventManagePage() {
                     </code>
                     <button type="button" onClick={() => { navigator.clipboard.writeText(`${getDevSafeOrigin()}/${event.slug}/memories/new`); toast.success('Copied!'); }} className="kb-btn kb-btn-secondary kb-btn-sm">Copy link</button>
                     <Link to={`/dashboard/event/${eventId}/capsule`} className="kb-btn kb-btn-secondary kb-btn-sm" style={{ color: 'var(--kb-coral)', borderColor: 'var(--kb-coral)' }}>View Capsule →</Link>
+                  </div>
+                )}
+
+                {event?.slug && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--kb-surface-2)', borderRadius: 12, padding: '12px 14px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--kb-text)', whiteSpace: 'nowrap' }}>📺 Day-of display</span>
+                    <code style={{ flex: 1, fontSize: '0.8rem', color: 'var(--kb-text-muted)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {getDevSafeOrigin()}/{event.slug}/display
+                    </code>
+                    <button type="button" onClick={() => { navigator.clipboard.writeText(`${getDevSafeOrigin()}/${event.slug}/display`); toast.success('Display link copied!'); }} className="kb-btn kb-btn-secondary kb-btn-sm">Copy link</button>
+                    <a href={`${getDevSafeOrigin()}/${event.slug}/display`} target="_blank" rel="noopener noreferrer" className="kb-btn kb-btn-secondary kb-btn-sm" style={{ color: 'var(--kb-coral)', borderColor: 'var(--kb-coral)' }}>Open display →</a>
                   </div>
                 )}
 

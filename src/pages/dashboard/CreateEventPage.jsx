@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { db, trackEvent } from '../../firebase';
-import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { THEME_COLOR_SCHEMES, getTheme } from '../../theme/themes';
 import LocationInput from '../../components/LocationInput';
@@ -104,21 +104,11 @@ export default function CreateEventPage() {
     }
     setLoading(true);
     try {
-      let slug = generateSlug(childName);
-      
-      // Slug collision check
-      let collision = true;
-      let attempts = 0;
-      while (collision && attempts < 5) {
-        const q = query(collection(db, 'events'), where('slug', '==', slug));
-        const snap = await getDocs(q);
-        if (snap.empty) {
-          collision = false;
-        } else {
-          slug = generateSlug(childName); // Try a new random suffix
-          attempts++;
-        }
-      }
+      // Uniqueness comes from the random suffix in generateSlug(). We intentionally
+      // do NOT query existing events to check for collisions: Firestore rules forbid
+      // enumerating events you don't own, so that query throws "Missing or insufficient
+      // permissions" and breaks event creation entirely.
+      const slug = generateSlug(childName);
 
       const docRef = await addDoc(collection(db, 'events'), {
         hostId: user.uid,

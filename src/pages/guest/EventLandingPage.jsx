@@ -264,7 +264,7 @@ export default function EventLandingPage() {
       <span className="elp-capsule-card-body">
         <span className="elp-capsule-card-title">{capsule.title}</span>
         <span className="elp-capsule-card-sub">
-          {capsule.message || 'Share a photo or a message from the day 💝'}
+          {capsule.message || `Help us fill ${event.childName ? `${event.childName}'s` : 'our'} memory keepsake with photos and notes from today 💝`}
         </span>
       </span>
       <span className="elp-capsule-arrow" aria-hidden="true">→</span>
@@ -273,7 +273,7 @@ export default function EventLandingPage() {
   const capsuleLink = (
     <div className="elp-capsule-subtle-wrap">
       <Link to={`/${slug}/memories/new`} className="elp-capsule-link">
-        <span aria-hidden="true">📸</span> Add to the memory capsule
+        <span aria-hidden="true">📸</span> Share a memory to treasure 💝
       </Link>
     </div>
   );
@@ -286,9 +286,10 @@ export default function EventLandingPage() {
         url={pageUrl}
         noindex={true}
       />
-      <div className={hasRsvped ? "elp-portal-root" : "elp-container"}>
+      <div className="elp-portal-root">
 
-        {hasRsvped ? (
+        {/* Portal shown to everyone for now (acts as the main RSVP page) */}
+        {true ? (
           /* =========================================
              EVENT PORTAL VIEW (Post-RSVP)
              ========================================= */
@@ -306,22 +307,24 @@ export default function EventLandingPage() {
               
               <div className="elp-p2-banner-wrap">
                 <div className={`elp-p2-status-banner ${rsvpStatus === 'no' ? 'elp-status-no' : ''}`}>
-                  {rsvpStatus === 'no' ? '🤍 NOT ATTENDING 🤍' : '🤍 YOU\'RE GOING! 🤍'}
+                  {!hasRsvped ? '🎉 YOU\'RE INVITED! 🎉' : (rsvpStatus === 'no' ? '🤍 NOT ATTENDING 🤍' : '🤍 YOU\'RE GOING! 🤍')}
                 </div>
               </div>
 
-              <div className="elp-p2-header-main">
-                {/* Left: Child Photo */}
-                {event.photoUrl && (
-                  <div className="elp-p2-photo-col">
-                    <div className="elp-p2-photo-frame">
-                      <img src={event.photoUrl} alt={event.childName} className="elp-p2-child-img" />
-                      <div className="elp-p2-photo-heart">💖</div>
-                    </div>
-                  </div>
-                )}
+              {/* Memory capsule — under the banner, above event info */}
+              {capsule.show && capsule.prominent && (
+                <div className="elp-capsule-prominent-wrap" style={{ margin: '4px auto 8px' }}>{capsuleCard}</div>
+              )}
 
-                {/* Center: Title */}
+              <div className="elp-p2-header-main">
+                {/* Left: Theme Illustration */}
+                <div className="elp-p2-illus-col">
+                  <div className="elp-p2-main-illus">
+                    <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
+                  </div>
+                </div>
+
+                {/* Center: Title — kept close to the illustration */}
                 <div className="elp-p2-title-col">
                   <h1 className="elp-p2-title">
                     <span className="elp-p2-name">{event.childName || 'Robin'}'s</span><br/>
@@ -329,12 +332,14 @@ export default function EventLandingPage() {
                   </h1>
                 </div>
 
-                {/* Right: Theme Illustration */}
-                <div className="elp-p2-illus-col">
-                  <div className="elp-p2-main-illus">
-                    <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
+                {/* Right: Child Photo (birthday star) */}
+                {event.photoUrl && (
+                  <div className="elp-p2-photo-col">
+                    <div className="elp-p2-photo-frame">
+                      <img src={event.photoUrl} alt={event.childName} className="elp-p2-child-img" />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Details Block */}
@@ -379,13 +384,21 @@ export default function EventLandingPage() {
 
               {/* Action Buttons */}
               <div className="elp-p2-actions">
-                <div className={`elp-p2-btn-going ${rsvpStatus === 'no' ? 'elp-status-no' : ''}`}>
-                  <span className="elp-p2-check">{rsvpStatus === 'no' ? '✕' : '✓'}</span> 
-                  {rsvpStatus === 'no' ? 'NOT ATTENDING' : "YOU'RE GOING!"}
-                </div>
-                <Link to={`/${slug}/rsvp?edit=true`} className="elp-p2-btn-change">
-                  <span>📝</span> CHANGE RSVP
-                </Link>
+                {hasRsvped ? (
+                  <>
+                    <div className={`elp-p2-btn-going ${rsvpStatus === 'no' ? 'elp-status-no' : ''}`}>
+                      <span className="elp-p2-check">{rsvpStatus === 'no' ? '✕' : '✓'}</span>
+                      {rsvpStatus === 'no' ? 'NOT ATTENDING' : "YOU'RE GOING!"}
+                    </div>
+                    <Link to={`/${slug}/rsvp?edit=true`} className="elp-p2-btn-change">
+                      <span>📝</span> CHANGE RSVP
+                    </Link>
+                  </>
+                ) : (
+                  <Link to={`/${slug}/rsvp`} className="elp-p2-btn-going" style={{ textDecoration: 'none' }}>
+                    <span className="elp-p2-check">🎉</span> RSVP NOW
+                  </Link>
+                )}
               </div>
 
               {/* Scroll Indicator (Mobile only) */}
@@ -405,11 +418,6 @@ export default function EventLandingPage() {
                 </svg>
               </div>
             </div>
-
-            {/* Memory capsule — prominent on the day */}
-            {capsule.show && capsule.prominent && (
-              <div className="elp-capsule-prominent-wrap">{capsuleCard}</div>
-            )}
 
             {/* 2. Grid Content */}
             <div id="portal-grid" className="elp-p2-grid" style={{ scrollMarginTop: '16px' }}>
@@ -794,33 +802,30 @@ export default function EventLandingPage() {
                   <span className="elp-invitation-badge">You're Invited!</span>
                 </div>
 
-                {/* Photo OR Illustration */}
-                <div className="elp-illustration-container" style={{ margin: '-8px auto -12px', zIndex: 1, position: 'relative' }}>
-                  {event.photoUrl ? (
-                    <div className="elp-photo-wrap">
-                      <img src={event.photoUrl} alt={event.name} className="elp-photo" />
-                    </div>
-                  ) : (
-                    <div className="elp-illustration-wrap" style={{ maxWidth: '240px', margin: '0 auto', transform: 'scale(1.15)' }}>
-                      <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
-                    </div>
-                  )}
+                {/* Theme illustration + title side by side; photo avatar under the title */}
+                <div className="elp-hero-row" style={{ zIndex: 2, position: 'relative' }}>
+                  <div className="elp-hero-illustration">
+                    <ThemeIllustration theme={themeKey} themeColor={event.themeColor} />
+                  </div>
+                  <div className="elp-hero-titlecol">
+                    <h1 className="elp-title" style={{ margin: 0 }}>
+                      {event.childName ? (
+                        <>
+                          <span style={{ color: 'var(--t-accent)' }}>{event.childName}{event.childName.toLowerCase().endsWith('s') || event.childName.includes("'") ? '' : "'s"}</span><br />
+                          <span style={{ color: 'var(--t-text)', fontSize: '0.8em', display: 'block', marginTop: '4px' }}>{event.name}</span>
+                        </>
+                      ) : (
+                        <span style={{ color: 'var(--t-accent)' }}>{event.name}</span>
+                      )}
+                    </h1>
+                  </div>
                 </div>
-
-                {/* Celebration details above illustration */}
-                <div className="elp-hero" style={{ zIndex: 2, position: 'relative', marginTop: 0, paddingTop: 0 }}>
-                  <h1 className="elp-title">
-                    {event.childName ? (
-                      <>
-                        <span style={{ color: 'var(--t-accent)' }}>{event.childName}{event.childName.toLowerCase().endsWith('s') || event.childName.includes("'") ? '' : "'s"}</span><br />
-                        <span style={{ color: 'var(--t-text)', fontSize: '0.8em', display: 'block', marginTop: '4px' }}>{event.name}</span>
-                      </>
-                    ) : (
-                      <span style={{ color: 'var(--t-accent)' }}>{event.name}</span>
-                    )}
-                  </h1>
-                  <p className="elp-subtitle" style={{ marginTop: '12px' }}>✨ Join us for a magical {event.theme?.replace('kids-', '') || 'unicorn'} celebration! ✨</p>
-                </div>
+                {event.photoUrl && (
+                  <div className="elp-star-avatar-wrap">
+                    <img src={event.photoUrl} alt={event.childName || event.name} className="elp-star-avatar" />
+                  </div>
+                )}
+                <p className="elp-subtitle" style={{ marginTop: '14px', textAlign: 'center' }}>✨ Join us for a magical {event.theme?.replace('kids-', '') || 'unicorn'} celebration! ✨</p>
 
                 <div className="elp-divider">
                   <span className="elp-divider-dot"></span>

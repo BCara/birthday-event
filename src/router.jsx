@@ -3,6 +3,7 @@ import { createBrowserRouter, useParams } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import GuestLayout from './layouts/GuestLayout';
 import RequireAuth from './components/RequireAuth';
+import RedirectIfAuth from './components/RedirectIfAuth';
 import RootErrorBoundary from './components/RootErrorBoundary';
 
 // Loader fallback
@@ -49,6 +50,7 @@ const PrintableInvitePage = React.lazy(() => import('./pages/dashboard/Printable
 const EventLandingPage = React.lazy(() => import('./pages/guest/EventLandingPage'));
 const RSVPPage         = React.lazy(() => import('./pages/guest/RSVPPage'));
 const LeaveMemoryPage  = React.lazy(() => import('./pages/guest/LeaveMemoryPage'));
+const CapsuleDisplayPage = React.lazy(() => import('./pages/guest/CapsuleDisplayPage'));
 
 // ── Developer routes ──
 const ThemeDebugPage   = React.lazy(() => import('./pages/ThemeDebugPage'));
@@ -61,8 +63,14 @@ const router = createBrowserRouter([
     errorElement: <RootErrorBoundary />,
     children: [
       { path: '/',       element: <Lazy><HomePage /></Lazy> },
-      { path: '/login',  element: <Lazy><LoginPage /></Lazy> },
-      { path: '/signup', element: <Lazy><SignupPage /></Lazy> },
+      // Auth pages: bounce already-logged-in users to the dashboard.
+      {
+        element: <RedirectIfAuth />,
+        children: [
+          { path: '/login',  element: <Lazy><LoginPage /></Lazy> },
+          { path: '/signup', element: <Lazy><SignupPage /></Lazy> },
+        ],
+      },
       { path: '/contact',element: <Lazy><ContactPage /></Lazy> },
       { path: '/privacy',element: <Lazy><PrivacyPolicyPage /></Lazy> },
       { path: '/terms',  element: <Lazy><TermsOfServicePage /></Lazy> },
@@ -103,6 +111,7 @@ const router = createBrowserRouter([
       { path: '/:slug/portal',  element: <Lazy><EventLandingPage /></Lazy> },
       { path: '/:slug/rsvp',    element: <Lazy><RSVPPage /></Lazy> },
       { path: '/:slug/memories/new', element: <Lazy><LeaveMemoryPage /></Lazy> },
+      { path: '/:slug/display', element: <Lazy><CapsuleDisplayPage /></Lazy> },
       { path: '/share/:slug',   element: <ShareRedirect /> },
     ],
   },
