@@ -216,7 +216,7 @@ export default function LeaveMemoryPage() {
 
           {/* Message */}
           <div className="lm-field">
-            <label className="lm-label" htmlFor="lm-message">Your Message</label>
+            <label className="lm-label" htmlFor="lm-message">Your Message <span className="lm-optional">optional</span></label>
             <textarea
               id="lm-message"
               className="lm-textarea"
@@ -230,7 +230,7 @@ export default function LeaveMemoryPage() {
           {/* File upload — multiple */}
           <div className="lm-field">
             <label className="lm-label">
-              Photos or Videos
+              Photos or Videos <span className="lm-optional">optional</span>
               {files.length > 0 && <span className="lm-file-count">{files.length}/{MAX_FILES}</span>}
             </label>
 
