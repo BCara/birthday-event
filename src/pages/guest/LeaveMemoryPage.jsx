@@ -9,7 +9,7 @@ import { fetchEventBySlug } from '../../utils/fetchEvent';
 import { db, storage, trackEvent } from '../../firebase';
 import './LeaveMemoryPage.css';
 
-const MAX_FILES = 10;
+const MAX_FILES = 30;
 
 function Spinner() {
   return (
