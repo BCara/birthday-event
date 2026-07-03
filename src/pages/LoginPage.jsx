@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { trackEvent } from '../firebase';
 import toast from 'react-hot-toast';
@@ -8,6 +8,8 @@ import SEO from '../components/SEO';
 export default function LoginPage() {
   const { signInWithGoogle, signInWithEmail, resetPassword } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || '/dashboard';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -20,7 +22,7 @@ export default function LoginPage() {
     try {
       await signInWithGoogle();
       trackEvent('login', { method: 'google' });
-      navigate('/dashboard');
+      navigate(from, { replace: true });
     } catch (err) {
       setError(err.message || 'Google sign-in failed.');
       toast.error('Google sign-in failed.');
@@ -53,7 +55,7 @@ export default function LoginPage() {
     try {
       await signInWithEmail(email, password);
       trackEvent('login', { method: 'email' });
-      navigate('/dashboard');
+      navigate(from, { replace: true });
     } catch (err) {
       const msg =
         err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password'

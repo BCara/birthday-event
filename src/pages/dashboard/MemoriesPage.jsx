@@ -37,9 +37,28 @@ async function downloadFile(url, filename) {
   }
 }
 
+// Normalise a memory's media into an array of { url, type } items,
+// falling back to the legacy single mediaUrl/photoUrl for older docs.
+function getMediaItems(memory) {
+  if (Array.isArray(memory.media) && memory.media.length) {
+    return memory.media.filter(m => m && m.url);
+  }
+  const legacyUrl = memory.mediaUrl || memory.photoUrl;
+  return legacyUrl ? [{ url: legacyUrl, type: memory.mediaType }] : [];
+}
+
 function MemoryCard({ memory, onDelete }) {
   const [deleting, setDeleting] = useState(false);
-  const mediaUrl = memory.mediaUrl || memory.photoUrl;
+  const mediaItems = getMediaItems(memory);
+
+  function handleSaveAll() {
+    const safeAuthor = (memory.authorName || 'guest').replace(/\s+/g, '_');
+    mediaItems.forEach((item, i) => {
+      const ext = item.type === 'video' ? 'mp4' : 'jpg';
+      const suffix = mediaItems.length > 1 ? `_${i + 1}` : '';
+      downloadFile(item.url, `memory_${safeAuthor}${suffix}.${ext}`);
+    });
+  }
 
   async function handleDelete() {
     if (!window.confirm('Remove this memory? This cannot be undone.')) return;
@@ -55,12 +74,16 @@ function MemoryCard({ memory, onDelete }) {
 
   return (
     <div style={cardStyles.card}>
-      {mediaUrl && (
-        memory.mediaType === 'video' ? (
-          <video src={mediaUrl} controls style={cardStyles.media} />
-        ) : (
-          <img src={mediaUrl} alt="Memory" style={cardStyles.media} loading="lazy" />
-        )
+      {mediaItems.length > 0 && (
+        <div style={mediaItems.length > 1 ? cardStyles.mediaGrid : undefined}>
+          {mediaItems.map((item, i) => (
+            item.type === 'video' ? (
+              <video key={i} src={item.url} controls style={cardStyles.media} />
+            ) : (
+              <img key={i} src={item.url} alt={`Memory ${i + 1}`} style={cardStyles.media} loading="lazy" />
+            )
+          ))}
+        </div>
       )}
       {memory.message && <p style={cardStyles.message}>{memory.message}</p>}
       <div style={cardStyles.footer}>
@@ -68,16 +91,13 @@ function MemoryCard({ memory, onDelete }) {
         <span style={cardStyles.time}>{timeAgo(memory.createdAt)}</span>
       </div>
       <div style={cardStyles.actions}>
-        {mediaUrl && (
+        {mediaItems.length > 0 && (
           <button
-            onClick={() => downloadFile(
-              mediaUrl,
-              `memory_${(memory.authorName || 'guest').replace(/\s+/g, '_')}.${memory.mediaType === 'video' ? 'mp4' : 'jpg'}`
-            )}
+            onClick={handleSaveAll}
             className="kb-btn"
             style={cardStyles.downloadBtn}
           >
-            ⬇ Save
+            ⬇ {mediaItems.length > 1 ? `Save all (${mediaItems.length})` : 'Save'}
           </button>
         )}
         <button onClick={handleDelete} disabled={deleting} className="kb-btn" style={cardStyles.deleteBtn}>
@@ -125,11 +145,15 @@ export default function MemoriesPage() {
   function handleExport() {
     const lines = memories.map(m => {
       const date = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleDateString('en-AU') : '';
+      const items = getMediaItems(m);
+      const mediaLines = items.length === 1
+        ? [`Media: ${items[0].url}`]
+        : items.map((item, i) => `Media ${i + 1}: ${item.url}`);
       return [
         `From: ${m.authorName || 'Anonymous'}`,
         `Date: ${date}`,
         `Message: ${m.message || '(no message)'}`,
-        m.mediaUrl || m.photoUrl ? `Media: ${m.mediaUrl || m.photoUrl}` : null,
+        ...mediaLines,
       ].filter(Boolean).join('\n');
     });
     const childLabel = event?.childName ? `${event.childName}'s ` : '';
@@ -259,6 +283,11 @@ const cardStyles = {
     objectFit: 'cover',
     display: 'block',
     maxHeight: 320,
+  },
+  mediaGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: 8,
   },
   message: {
     fontFamily: 'var(--kb-font-body)',

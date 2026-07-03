@@ -21,7 +21,7 @@ export function generateICS({ title, date, time, endTime, location, description,
     dtEnd = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
   }
   let fullDesc = description || '';
-  if (url) { if (fullDesc) fullDesc += '\\n\\n'; fullDesc += `View event details: ${url}`; }
+  if (url) { if (fullDesc) fullDesc += '\n\n'; fullDesc += `View event details: ${url}`; }
   const esc = s => (s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
   const uid = `${Date.now()}-${Math.random().toString(36).slice(2)}@tinypartyportal.app`;
   const now = new Date();
@@ -61,7 +61,12 @@ export function getGoogleCalendarUrl({ title, date, time, endTime, location, des
     const e = endTime ? `${d}T${endTime.replace(':', '')}00` : `${d}T${String(Math.min(h+3,23)).padStart(2,'0')}${time.split(':')[1]||'00'}00`;
     dates = `${s}/${e}`;
   } else {
-    dates = `${d}/${d}`;
+    // All-day events: Google treats the end date as exclusive, so the end must be
+    // the day after the start or the event renders as zero-length / missing.
+    const dt = new Date(date + 'T00:00:00');
+    dt.setDate(dt.getDate() + 1);
+    const dEnd = `${dt.getFullYear()}${String(dt.getMonth()+1).padStart(2,'0')}${String(dt.getDate()).padStart(2,'0')}`;
+    dates = `${d}/${dEnd}`;
   }
   let desc = description || '';
   if (url) { if (desc) desc += '\n\n'; desc += `View event: ${url}`; }

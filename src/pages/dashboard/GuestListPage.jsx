@@ -95,29 +95,10 @@ const InfoIcon = () => (
   </svg>
 );
 
-const PaperPlaneIcon = ({ color = 'currentColor' }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="22" y1="2" x2="11" y2="13" />
-    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-  </svg>
-);
-
 const SearchIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8" />
     <line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
-);
-
-const FilterIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-  </svg>
-);
-
-const StarIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ color: '#F59E0B' }}>
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
   </svg>
 );
 
@@ -177,14 +158,25 @@ function exportCSV(rsvps, event) {
   headers.push('Siblings', 'Dietary Notes', 'Comments', 'Date');
 
   const rows = rsvps.map(r => {
+    // Match the on-screen classification (see filteredRsvps / status badges)
     const isAttending = r.attending === true || r.attending === 'yes' || r.isAttending === true || r.isAttending === 'yes';
+    const isDeclined = r.attending === false || r.attending === 'no' || r.isAttending === false || r.isAttending === 'no';
+    const isMaybe = r.attending === 'maybe' || r.isAttending === 'maybe';
+    const isNeedsApproval = r.attending === 'needs_approval';
+    const isPending = r.attending === 'pending';
+    let attendingLabel = 'No';
+    if (isAttending) attendingLabel = 'Yes';
+    else if (isMaybe) attendingLabel = 'Maybe';
+    else if (isNeedsApproval) attendingLabel = 'Needs Approval';
+    else if (isPending) attendingLabel = 'Pending';
+    else if (isDeclined) attendingLabel = 'No';
     const row = [
       r.childName ?? '',
       r.childAge ?? '',
       r.parentName ?? '',
       r.email ?? '',
       r.phone ?? '',
-      isAttending ? 'Yes' : 'No',
+      attendingLabel,
     ];
 
     if (showParentAttendance) {
@@ -294,10 +286,11 @@ export default function GuestListPage() {
     return acc + 1;
   }, 0);
 
-  const eventDateStr = event?.date ? new Date(event.date).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'}) : '21 June 2026';
-  const eventLocation = event?.location || 'Myuna Farm';
+  // Append T00:00:00 so bare 'YYYY-MM-DD' dates parse in local time, not UTC
+  const eventDateStr = event?.date ? new Date(event.date + 'T00:00:00').toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'}) : '';
+  const eventLocation = event?.location || '';
   const themeObj = getTheme(event?.theme || 'kids-dino', event?.themeColor || 'default');
-  const eventTheme = event?.theme ? `${event.theme.charAt(0).toUpperCase() + event.theme.slice(1)} Theme` : 'Dino Theme';
+  const eventTheme = event?.theme ? `${event.theme.charAt(0).toUpperCase() + event.theme.slice(1)} Theme` : '';
 
   const inviteUrl = event?.slug ? `${getDevSafeOrigin()}/share/${event.slug}` : `${getDevSafeOrigin()}/share/...`;
 
@@ -392,31 +385,36 @@ export default function GuestListPage() {
     
     const lines = importText.split('\n').map(l => l.trim()).filter(Boolean);
     let importedCount = 0;
-    
+
     // Simple CSV parser: Name, Email, Phone
-    for (const line of lines) {
-      const parts = line.split(',').map(p => p.trim());
-      const name = parts[0];
-      const email = parts[1] || '';
-      const phone = parts[2] || '';
-      
-      if (name) {
-        await addDoc(collection(db, 'rsvps'), {
-          eventId,
-          childName: name,
-          email,
-          phone,
-          isImported: true,
-          attending: 'pending',
-          createdAt: serverTimestamp(),
-        });
-        importedCount++;
+    try {
+      for (const line of lines) {
+        const parts = line.split(',').map(p => p.trim());
+        const name = parts[0];
+        const email = parts[1] || '';
+        const phone = parts[2] || '';
+
+        if (name) {
+          await addDoc(collection(db, 'rsvps'), {
+            eventId,
+            childName: name,
+            email,
+            phone,
+            isImported: true,
+            attending: 'pending',
+            createdAt: serverTimestamp(),
+          });
+          importedCount++;
+        }
       }
+
+      toast.success(`Imported ${importedCount} guests!`);
+      setImportText('');
+      setShowImportModal(false);
+    } catch (err) {
+      console.error(err);
+      toast.error(`Import failed after adding ${importedCount} guest${importedCount === 1 ? '' : 's'}. Please try again.`);
     }
-    
-    toast.success(`Imported ${importedCount} guests!`);
-    setImportText('');
-    setShowImportModal(false);
   };
 
   const handleSaveSettings = async (settings) => {
@@ -520,7 +518,9 @@ export default function GuestListPage() {
         }
       } else {
         const guestDocRef = doc(db, 'rsvps', updatedGuest.id);
-        await updateDoc(guestDocRef, updatedGuest);
+        // Strip client-only fields so we don't persist UI junk to Firestore
+        const { id, isSiblingRow, mainGuestId, ...guestData } = updatedGuest;
+        await updateDoc(guestDocRef, guestData);
       }
       toast.success('Guest updated!');
       setEditingGuest(null);
@@ -591,10 +591,19 @@ export default function GuestListPage() {
     }
   };
 
+  // Avoid a flash of empty/placeholder content before the event snapshot loads
+  if (!event) {
+    return (
+      <div className="gl-root" style={{ minHeight: '100vh', background: 'var(--kb-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={styles.spinner} />
+      </div>
+    );
+  }
+
   return (
     <div className="gl-root" style={{ minHeight: '100vh', background: 'var(--kb-bg)', fontFamily: 'var(--kb-font-body)' }}>
       <div style={styles.inner}>
-        
+
         {/* Top Header Row */}
         <div style={styles.headerRow}>
           <div style={{display: 'flex', alignItems: 'center', gap: 16}}>
@@ -623,19 +632,19 @@ export default function GuestListPage() {
              <ThemeIllustration theme={event?.theme || 'kids-dino'} themeColor={event?.themeColor || 'default'} />
           </div>
           <div style={{...styles.bannerContent, position: 'relative', zIndex: 1}}>
-            <h2 style={{...styles.bannerTitle, color: themeObj.vars['--t-text']}}>{event?.name || 'Robins 3rd Birthday'} {themeObj.emoji}</h2>
+            <h2 style={{...styles.bannerTitle, color: themeObj.vars['--t-text']}}>{event?.name || ''} {themeObj.emoji}</h2>
             <div style={{...styles.bannerDetails, color: themeObj.vars['--t-text-light']}}>
-              <span>📅 {eventDateStr}</span>
-              <span>•</span>
-              <span>📍 {eventLocation}</span>
+              {eventDateStr && <span>📅 {eventDateStr}</span>}
+              {eventDateStr && eventLocation && <span>•</span>}
+              {eventLocation && <span>📍 {eventLocation}</span>}
               {(event?.hostName || event?.hostContact) && (
                 <>
                   <span>•</span>
                   <span>👤 {[event.hostName, event.hostContact].filter(Boolean).join(' - ')}</span>
                 </>
               )}
-              <span>•</span>
-              <span style={{...styles.themeTag, background: themeObj.vars['--t-soft-bg'], color: themeObj.vars['--t-primary']}}>{eventTheme}</span>
+              {eventTheme && <span>•</span>}
+              {eventTheme && <span style={{...styles.themeTag, background: themeObj.vars['--t-soft-bg'], color: themeObj.vars['--t-primary']}}>{eventTheme}</span>}
             </div>
           </div>
           {isEditingEstimates ? (
@@ -867,7 +876,7 @@ export default function GuestListPage() {
             <div style={styles.actionIcon}>🎉</div>
             <div>
               <div style={styles.actionTitle}>Get more responses!</div>
-              <div style={styles.actionSub}>Share your invite link or send a reminder to guests.</div>
+              <div style={styles.actionSub}>Share your invite link with your guests.</div>
             </div>
           </div>
           <div style={styles.actionRight}>
@@ -877,10 +886,6 @@ export default function GuestListPage() {
             <button onClick={copyLink} style={styles.actionBtn}>
               <LinkIcon /> Copy Link
             </button>
-            <button style={styles.actionBtn}>
-              <PaperPlaneIcon /> Send Reminder
-            </button>
-            <button style={{...styles.actionBtn, padding: '10px 14px'}}>•••</button>
           </div>
         </div>
 
@@ -962,9 +967,6 @@ export default function GuestListPage() {
                   <SearchIcon />
                 </div>
               </div>
-              <button style={styles.filterBtn}>
-                <FilterIcon /> Filter ⌄
-              </button>
             </div>
           </div>
 
@@ -1141,17 +1143,6 @@ export default function GuestListPage() {
             </div>
             </>
           )}
-        </div>
-
-        {/* Tip Bar */}
-        <div style={styles.tipBar}>
-          <div style={styles.tipContent}>
-            <StarIcon />
-            <span><strong>Tip:</strong> Personalize your reminder to get better response rates!</span>
-          </div>
-          <button style={styles.tipBtn}>
-            <PaperPlaneIcon color="#EF4444" /> Send Reminder
-          </button>
         </div>
 
         {/* Import Modal */}

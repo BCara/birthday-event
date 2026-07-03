@@ -58,6 +58,7 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [existingStatus, setExistingStatus] = useState(null); // current 'attending' value of a loaded RSVP (e.g. 'needs_approval')
   const [currentStep, setCurrentStep] = useState(1);
   const [canSubmitFinal, setCanSubmitFinal] = useState(false);
 
@@ -155,6 +156,7 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
             setSiblings(data.siblings ?? []);
             setDietary(data.dietary ?? '');
             setComments(data.comments ?? '');
+            setExistingStatus(data.attending ?? null);
             if (!isEditMode) {
               setSuccess(true);
             }
@@ -178,10 +180,8 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
       }
       setLoading(false);
     } else {
-      console.log("Fetching event for RSVP, slug:", slug);
       fetchEventBySlug(slug)
         .then(async (e) => {
-          console.log("Fetched event for RSVP:", e);
           setEvent(e);
           
           if (e) {
@@ -221,6 +221,7 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
                   setSiblings(data.siblings ?? []);
                   setDietary(data.dietary ?? '');
                   setComments(data.comments ?? '');
+                  setExistingStatus(data.attending ?? null);
 
                   // Only show success screen if NOT in edit mode
                   if (!isEditMode) {
@@ -289,6 +290,7 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
         setSiblings(foundRsvp.siblings ?? []);
         setDietary(foundRsvp.dietary ?? '');
         setComments(foundRsvp.comments ?? '');
+        setExistingStatus(foundRsvp.attending ?? null);
 
         setMatchFound(true);
         setSuccess(true);
@@ -397,11 +399,22 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
         }
         if (matchedId) {
           existingDocId = matchedId;
-        } else {
+        } else if (isAttending) {
+          // Only attending guests need host approval under lockdown.
+          // A declining guest should never be routed into the approval queue.
           requiresApproval = true;
           finalAttending = 'needs_approval';
         }
       }
+
+      // Guard: a guest editing an RSVP that is still pending approval must not
+      // silently self-approve it. If they remain attending, keep it pending.
+      if (existingDocId && existingStatus === 'needs_approval' && isAttending) {
+        requiresApproval = true;
+        finalAttending = 'needs_approval';
+      }
+
+      const isUpdate = !!existingDocId;
 
       const rsvpData = {
         eventId: event.id,
@@ -418,7 +431,8 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
         siblings: isAttending ? siblings.map(s => ({ ...s, dietary: askDietary ? (s.dietary ?? '') : '' })) : [],
         dietary: (isAttending && askDietary) ? dietary.trim() : '',
         comments: comments.trim(),
-        createdAt: serverTimestamp(),
+        // Preserve the original createdAt on edits; only stamp it on create.
+        ...(isUpdate ? { updatedAt: serverTimestamp() } : { createdAt: serverTimestamp() }),
       };
 
       let rsvpId = existingDocId;
@@ -477,13 +491,33 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
 
 
   const themeKey = event.theme?.startsWith('kids-') ? event.theme : `kids-${event.theme || 'generic'}`;
+
+  if (event.rsvpEnabled === false) {
+    return (
+      <ThemedPage themeKey={themeKey} themeColor={event.themeColor}>
+        <div className="rsvp-center">
+          <div className="rsvp-notfound">
+            <div className="rsvp-nf-emoji">📭</div>
+            <h1 className="rsvp-nf-title">RSVPs aren't being collected for this event</h1>
+            <p className="rsvp-nf-sub">The host isn't taking RSVPs right now. Please check with them for details.</p>
+            <div style={{ marginTop: '16px' }}>
+              <Link to={`/${slug}/portal`} className="rsvp-btn rsvp-btn-outline">
+                ← View Event Details
+              </Link>
+            </div>
+          </div>
+        </div>
+      </ThemedPage>
+    );
+  }
+
   const askChildAge = event.askChildAge !== false;
   const askAdultCount = event.askAdultCount !== false;
   const askDietary = event.askDietary !== false;
   const siblingsAllowed = true;
   const stayOrDropOffAllowed = event.showParentAttendance !== false && (event.stayOrDropOffMode === 'ask' || !event.stayOrDropOffMode);
 
-  const formattedRsvpBy = event?.rsvpByDate ? new Date(event.rsvpByDate + 'T00:00:00').toLocaleDateString('en-US', {
+  const formattedRsvpBy = event?.rsvpByDate ? new Date(event.rsvpByDate + 'T00:00:00').toLocaleDateString('en-AU', {
     month: 'long', day: 'numeric'
   }) : null;
 
@@ -496,7 +530,7 @@ export default function RSVPPage({ event: propEvent, onRsvpSuccess, embedded = f
     url: pageUrl,
   } : null;
 
-  const formattedDate = event?.date ? new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', {
+  const formattedDate = event?.date ? new Date(event.date + 'T00:00:00').toLocaleDateString('en-AU', {
     month: 'long', day: 'numeric', year: 'numeric'
   }) : null;
 

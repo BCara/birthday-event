@@ -287,6 +287,7 @@ exports.onRsvpCreated = onDocumentCreated(
         // --- Send Email to Guest (if email provided) ---
         if (data.email) {
             const portalUrl = eventData.slug ? `https://tinypartyportal.com/${eventData.slug}` : '';
+            const editUrl = portalUrl ? `${portalUrl}?rsvpId=${event.params.rsvpId}` : '';
             const guestSubject = needsApproval
                 ? `RSVP Received — Awaiting Approval: ${eventData.name || 'Birthday Event'}`
                 : `RSVP Confirmed: ${eventData.name || 'Birthday Event'}`;
@@ -318,6 +319,8 @@ exports.onRsvpCreated = onDocumentCreated(
                 ? `<div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;padding:14px 18px;margin:20px 0;font-size:15px;">⏳ <strong>Your RSVP is pending approval.</strong> The host will review and confirm your spot shortly.</div>`
                 : isAttending
                 ? `<div style="background:#D1FAE5;border:1px solid #6EE7B7;border-radius:10px;padding:14px 18px;margin:20px 0;font-size:15px;">✅ <strong>You're confirmed — see you there!</strong></div>`
+                : isMaybe
+                ? `<div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;padding:14px 18px;margin:20px 0;font-size:15px;">🤔 <strong>Thanks — we've marked you as a maybe.</strong> Just let us know if your plans firm up. We'd love to see you there!</div>`
                 : `<div style="background:#F1F5F9;border:1px solid #CBD5E1;border-radius:10px;padding:14px 18px;margin:20px 0;font-size:15px;">😢 <strong>Sorry you can't make it.</strong> Thanks for letting us know.</div>`;
 
             const guestHtml = `
@@ -362,11 +365,11 @@ exports.onRsvpCreated = onDocumentCreated(
           ${commentsHtml}
         </div>
 
-        ${portalUrl && isAttending ? `<p>You can view the full event details — schedule, location, and more — anytime from the event portal:</p>
-        <p style="text-align: center;"><a href="${portalUrl}" class="btn">View Event Portal</a></p>` : ''}
+        ${editUrl && isAttending ? `<p>You can view the full event details — schedule, location, and more — anytime from the event portal:</p>
+        <p style="text-align: center;"><a href="${editUrl}" class="btn">View Event Portal</a></p>` : ''}
       </div>
       <div class="footer">
-        <p>Need to make changes? Visit the invite page and use the "Already RSVP'd?" lookup to find and edit your response.</p>
+        <p>Need to make changes? <a href="${editUrl}" style="color:#10B981;">View or edit your RSVP</a></p>
       </div>
     </div>
   </div>
@@ -477,7 +480,7 @@ exports.contactOrganiser = functionsV1
 </html>`;
 
         try {
-            await fetch("https://api.resend.com/emails", {
+            const r = await fetch("https://api.resend.com/emails", {
                 method: "POST",
                 headers: {
                     Authorization: `Bearer ${API_KEY}`,
@@ -491,8 +494,14 @@ exports.contactOrganiser = functionsV1
                     reply_to: guestContact.includes('@') ? guestContact : undefined
                 })
             });
+            if (!r.ok) {
+                const bodyText = await r.text();
+                logger.error("contactOrganiser: Resend failed", { status: r.status, body: bodyText });
+                throw new functionsV1.https.HttpsError('internal', 'Failed to send email.');
+            }
             return { success: true };
         } catch (e) {
+            if (e instanceof functionsV1.https.HttpsError) throw e;
             logger.error("contactOrganiser: Resend threw", e);
             throw new functionsV1.https.HttpsError('internal', 'Failed to send email.');
         }
@@ -1123,22 +1132,28 @@ exports.submitGlobalContactForm = functionsV1
 </html>`;
 
         try {
-            await fetch("https://api.resend.com/emails", {
+            const r = await fetch("https://api.resend.com/emails", {
                 method: "POST",
-                headers: { 
-                    Authorization: `Bearer ${API_KEY}`, 
-                    "Content-Type": "application/json" 
+                headers: {
+                    Authorization: `Bearer ${API_KEY}`,
+                    "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ 
-                    from: `Tiny Party Portal <${FROM}>`, 
-                    to: TO, 
-                    subject: subject, 
+                body: JSON.stringify({
+                    from: `Tiny Party Portal <${FROM}>`,
+                    to: TO,
+                    subject: subject,
                     html: html,
                     reply_to: email
                 })
             });
+            if (!r.ok) {
+                const bodyText = await r.text();
+                logger.error("submitGlobalContactForm: Resend failed", { status: r.status, body: bodyText });
+                throw new functionsV1.https.HttpsError('internal', 'Failed to send email.');
+            }
             return { success: true };
         } catch (e) {
+            if (e instanceof functionsV1.https.HttpsError) throw e;
             logger.error("submitGlobalContactForm: Resend threw", e);
             throw new functionsV1.https.HttpsError('internal', 'Failed to send email.');
         }
@@ -1210,7 +1225,10 @@ exports.lookupRsvp = functionsV1.https.onCall(async (data, context) => {
         found: true,
         rsvp: {
             id: match.id,
-            isAttending: d.isAttending ?? true,
+            // Only genuinely-confirmed guests are "attending". Imported ('pending'),
+            // needs_approval, maybe and declined RSVPs must NOT show "YOU'RE GOING!".
+            isAttending: d.attending === true || d.attending === 'yes',
+            // Raw status so the client can distinguish pending/needs_approval/maybe/declined.
             attending: d.attending ?? null,
             parentName: d.parentName ?? '',
             email: d.email ?? '',

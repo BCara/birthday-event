@@ -102,12 +102,7 @@ export default function CapsuleDisplayPage() {
   const themeKey = event.theme?.startsWith('kids-') ? event.theme : `kids-${event.theme || 'generic'}`;
   const submissionUrl = `${getDevSafeOrigin()}/${slug}/memories/new`;
   const eyebrow = event.memoriesTitle || `${event.childName ? `${event.childName}'s ` : ''}Memory Capsule`;
-  const ord = (n) => {
-    const s = n % 100;
-    if (s >= 11 && s <= 13) return `${n}th`;
-    return `${n}${['th', 'st', 'nd', 'rd'][(n % 10 > 0 && n % 10 < 4) ? n % 10 : 0]}`;
-  };
-  const birthdayLine = `${event.childAge ? ord(event.childAge) : '3rd'} Birthday`;
+  const birthdayLine = event.name || 'Birthday';
   const helpText = event.memoriesMessage
     || `Help fill ${event.childName ? `${event.childName}'s` : 'the'} Memories with photos from today – this won't be shared on social media!`;
 

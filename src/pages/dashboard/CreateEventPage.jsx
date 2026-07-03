@@ -249,7 +249,7 @@ export default function CreateEventPage() {
                       ...styles.themeCard,
                       ...(theme === t.key ? styles.themeCardActive : {}),
                     }}
-                    onClick={() => setTheme(t.key)}
+                    onClick={() => { setTheme(t.key); setThemeColor('default'); }}
                   >
                     <span style={styles.themeEmoji}>{t.emoji}</span>
                     <span style={styles.themeLabel}>{t.label}</span>
@@ -261,7 +261,7 @@ export default function CreateEventPage() {
             <div className="kb-field">
               <span className="kb-label">Accent Color</span>
               <div style={styles.colorPicker}>
-                {Object.entries(THEME_COLOR_SCHEMES).map(([key, scheme]) => (
+                {Object.entries(THEME_COLOR_SCHEMES[`kids-${theme}`] || {}).map(([key, scheme]) => (
                   <button
                     key={key}
                     type="button"

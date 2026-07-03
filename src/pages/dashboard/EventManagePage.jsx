@@ -294,6 +294,10 @@ export default function EventManagePage() {
   const [printSize, setPrintSize] = useState('A5');
   const [printBg, setPrintBg] = useState('white');
   const fileInputRef = React.useRef(null);
+  // Only hydrate the form fields from the snapshot on first load. Later remote
+  // updates (e.g. memoryCount bumps from guest uploads, settings saved
+  // elsewhere) must NOT clobber the host's in-progress edits.
+  const hydratedRef = useRef(false);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'events', eventId), snap => {
@@ -303,8 +307,17 @@ export default function EventManagePage() {
       }
       const data = snap.data();
       setEvent({ id: snap.id, ...data });
+
+      // After the first hydration, keep `event` fresh (above) but leave the
+      // form fields alone so unsaved edits survive external writes.
+      if (hydratedRef.current) {
+        setLoading(false);
+        return;
+      }
+      hydratedRef.current = true;
+
       setName(data.name ?? '');
-      childName === '' && setChildName(data.childName ?? '');
+      setChildName(data.childName ?? '');
       setTheme(data.theme ?? 'generic');
       setThemeColor(data.themeColor ?? 'default');
       setDate(data.date ?? '');
@@ -339,7 +352,7 @@ export default function EventManagePage() {
       setAuthType(data.authType ?? 'name');
       setEventPassword(data.eventPassword ?? '');
       setKidsEstimate(data.kidsEstimate ?? (data.guestEstimate ? Math.floor(data.guestEstimate / 2) : 10));
-      setAdultsEstimate(data.adultsEstimate ?? (data.guestEstimate ? Math.floor(data.guestEstimate / 2) : 10)); // Fixed: adultsEstimate should use ceil or keep consistent
+      setAdultsEstimate(data.adultsEstimate ?? (data.guestEstimate ? Math.ceil(data.guestEstimate / 2) : 10));
       setGiftRegistryNote(data.giftRegistryNote ?? '');
       setGiftRegistryLink(data.giftRegistryLink ?? '');
       setPhotoUrl(data.photoUrl ?? '');

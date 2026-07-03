@@ -57,10 +57,11 @@ export default function SignupPage() {
 
   return (
     <div style={styles.root}>
-      <SEO 
-        title="Sign Up" 
-        description="Create an account to start planning unforgettable birthday parties with Tiny Party Portal." 
+      <SEO
+        title="Sign Up"
+        description="Create an account to start planning unforgettable birthday parties with Tiny Party Portal."
         url="https://tinypartyportal.com/signup"
+        noindex
       />
       <div style={styles.card} className="kb-card">
         {/* Logo */}

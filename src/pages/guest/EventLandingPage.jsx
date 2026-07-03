@@ -79,10 +79,8 @@ export default function EventLandingPage() {
   }, []);
 
   useEffect(() => {
-    console.log("Fetching event for slug:", slug);
     fetchEventBySlug(slug)
       .then(e => {
-        console.log("Fetched event result:", e);
         setEvent(e);
         setLoading(false);
       })
@@ -154,14 +152,14 @@ export default function EventLandingPage() {
 
   const formattedDate = useMemo(() => {
     if (!event?.date) return null;
-    return new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', {
+    return new Date(event.date + 'T00:00:00').toLocaleDateString('en-AU', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     });
   }, [event?.date]);
 
   const formattedRsvpBy = useMemo(() => {
     if (!event?.rsvpByDate) return null;
-    return new Date(event.rsvpByDate + 'T00:00:00').toLocaleDateString('en-US', {
+    return new Date(event.rsvpByDate + 'T00:00:00').toLocaleDateString('en-AU', {
       month: 'short', day: 'numeric'
     });
   }, [event?.rsvpByDate]);
@@ -327,8 +325,9 @@ export default function EventLandingPage() {
                 {/* Center: Title — kept close to the illustration */}
                 <div className="elp-p2-title-col">
                   <h1 className="elp-p2-title">
-                    <span className="elp-p2-name">{event.childName || 'Robin'}'s</span><br/>
-                    <span className="elp-p2-title-age">{event.childAge ? `${event.childAge}${event.childAge === 1 ? 'st' : (event.childAge === 2 ? 'nd' : (event.childAge === 3 ? 'rd' : 'th'))}` : '3rd'} Birthday</span>
+                    {event.childName
+                      ? <><span className="elp-p2-name">{event.childName}'s</span><br/><span className="elp-p2-title-age">{event.name || 'Birthday'}</span></>
+                      : <span className="elp-p2-name">{event.name}</span>}
                   </h1>
                 </div>
 
@@ -352,11 +351,10 @@ export default function EventLandingPage() {
                   )}
                   {formattedTime && (
                     <div className="elp-p2-h-detail" style={{ fontSize: '1.15rem', fontWeight: 700 }}>
-                      <span className="elp-p2-h-icon">🕒</span> {formattedTime} – {(() => { 
-                        if (!event.endTime) return '2:00 PM';
-                        const [h,m] = event.endTime.split(':'); 
-                        const hr=parseInt(h,10); 
-                        return `${hr%12||12}:${m} ${hr>=12?'PM':'AM'}`; 
+                      <span className="elp-p2-h-icon">🕒</span> {formattedTime}{event.endTime && (() => {
+                        const [h,m] = event.endTime.split(':');
+                        const hr=parseInt(h,10);
+                        return ` – ${hr%12||12}:${m} ${hr>=12?'PM':'AM'}`;
                       })()}
                     </div>
                   )}
@@ -377,12 +375,13 @@ export default function EventLandingPage() {
 
                 {event.hostContact && (
                   <div className="elp-p2-h-detail" style={{ marginTop: '8px', justifyContent: 'center', width: '100%', opacity: 0.8, fontSize: '0.85rem' }}>
-                    <span className="elp-p2-h-icon">📞</span> Contact {event.hostName || 'Cara'}: {event.hostContact}
+                    <span className="elp-p2-h-icon">📞</span> Contact {event.hostName || 'the host'}: {event.hostContact}
                   </div>
                 )}
               </div>
 
               {/* Action Buttons */}
+              {event.rsvpEnabled && (
               <div className="elp-p2-actions">
                 {hasRsvped ? (
                   <>
@@ -400,6 +399,7 @@ export default function EventLandingPage() {
                   </Link>
                 )}
               </div>
+              )}
 
               {/* Scroll Indicator (Mobile only) */}
               <div 
@@ -542,14 +542,15 @@ export default function EventLandingPage() {
                         <h2 className="elp-p2-card-title-small">Date & Time</h2>
                       </div>
                       <div className="elp-p2-card-val-main">{formattedDate}</div>
-                      <div className="elp-p2-card-val-sub">
-                        {formattedTime} – {(() => { 
-                          if (!event.endTime) return '2:00 PM';
-                          const [h,m] = event.endTime.split(':'); 
-                          const hr=parseInt(h,10); 
-                          return `${hr%12||12}:${m} ${hr>=12?'PM':'AM'}`; 
-                        })()}
-                      </div>
+                      {formattedTime && (
+                        <div className="elp-p2-card-val-sub">
+                          {formattedTime}{event.endTime && (() => {
+                            const [h,m] = event.endTime.split(':');
+                            const hr=parseInt(h,10);
+                            return ` – ${hr%12||12}:${m} ${hr>=12?'PM':'AM'}`;
+                          })()}
+                        </div>
+                      )}
                       <div className="elp-card-cal-wrap" ref={portalCalRef} data-open={portalCalOpen} style={{ marginTop: '12px' }}>
                         <button className="elp-p2-btn-maps" onClick={(e) => { e.stopPropagation(); setPortalCalOpen(!portalCalOpen); }}>
                           📅 ADD TO CALENDAR
@@ -585,6 +586,7 @@ export default function EventLandingPage() {
                 </div>
                 
                 {/* Location Card */}
+                {(event.location || event.address) && (
                 <div className="elp-p2-card">
                   <div className="elp-p2-card-split">
                     <div className="elp-p2-card-text">
@@ -592,17 +594,19 @@ export default function EventLandingPage() {
                         <span className="elp-p2-card-icon-small">📍</span>
                         <h2 className="elp-p2-card-title-small">Location</h2>
                       </div>
-                      <div className="elp-p2-card-val-main">{event.location || 'Myuna Farm'}</div>
-                      <div className="elp-p2-card-val-sub">
-                        {(() => {
-                          const loc = (event.location || '').trim().toLowerCase();
-                          const addr = (event.address || '').trim();
-                          if (loc && addr.toLowerCase().startsWith(loc)) {
-                            return addr.slice(loc.length).replace(/^[,\s]+/, '');
-                          }
-                          return addr || '400 Myuna Farm Rd, Dural NSW 2158';
-                        })()}
-                      </div>
+                      <div className="elp-p2-card-val-main">{event.location || event.address}</div>
+                      {event.location && (
+                        <div className="elp-p2-card-val-sub">
+                          {(() => {
+                            const loc = (event.location || '').trim().toLowerCase();
+                            const addr = (event.address || '').trim();
+                            if (loc && addr.toLowerCase().startsWith(loc)) {
+                              return addr.slice(loc.length).replace(/^[,\s]+/, '');
+                            }
+                            return addr;
+                          })()}
+                        </div>
+                      )}
                       <button 
                         className="elp-p2-btn-maps"
                         onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address || event.location)}`, '_blank')}
@@ -642,6 +646,7 @@ export default function EventLandingPage() {
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* Parking Card */}
                 {event.parkingInfo && (
@@ -730,7 +735,7 @@ export default function EventLandingPage() {
                           <h2 className="elp-p2-card-title-small">Questions?</h2>
                         </div>
                         <div className="elp-p2-card-val-text" style={{ marginBottom: '12px' }}>
-                          Contact {event.hostName || 'Cara'} if you need anything.
+                          Contact {event.hostName || 'the host'} if you need anything.
                         </div>
                         {(() => {
                           const contact = event.hostContact;
@@ -746,7 +751,7 @@ export default function EventLandingPage() {
                           if (href) {
                             return (
                               <a href={href} className="elp-p2-btn-maps" style={{ display: 'inline-flex', background: 'var(--t-accent)', color: '#fff', textDecoration: 'none' }}>
-                                💬 MESSAGE {event.hostName ? event.hostName.toUpperCase() : 'CARA'}
+                                💬 MESSAGE {event.hostName ? event.hostName.toUpperCase() : 'THE HOST'}
                               </a>
                             );
                           }

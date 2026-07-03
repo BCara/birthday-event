@@ -116,11 +116,11 @@ const router = createBrowserRouter([
     ],
   },
 
-  // ── Developer / QA routes ──
-  {
+  // ── Developer / QA routes (dev builds only) ──
+  ...(import.meta.env.DEV ? [{
     path: '/dev/themes',
     element: <Lazy><ThemeDebugPage /></Lazy>
-  }
+  }] : [])
 ]);
 
 export default router;

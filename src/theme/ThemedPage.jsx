@@ -17,12 +17,15 @@ export default function ThemedPage({ themeKey, themeColor, children }) {
     const urls = [theme.fonts.headingUrl, theme.fonts.bodyUrl];
 
     ids.forEach((id, i) => {
-      if (document.getElementById(id)) return;
-      const link = document.createElement('link');
-      link.id = id;
-      link.rel = 'stylesheet';
-      link.href = urls[i];
-      document.head.appendChild(link);
+      let link = document.getElementById(id);
+      if (!link) {
+        link = document.createElement('link');
+        link.id = id;
+        link.rel = 'stylesheet';
+        document.head.appendChild(link);
+      }
+      // Update the href if the theme changed while a ThemedPage stays mounted.
+      if (link.href !== urls[i]) link.href = urls[i];
     });
 
     // Cleanup: remove on unmount

@@ -11,6 +11,15 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/events/$(eventId)).data.hostId == request.auth.uid;
     }
 
+    function eventRequiresApproval(eventId) {
+      return get(/databases/$(database)/documents/events/$(eventId)).data.lockDownRSVP == true;
+    }
+
+    // A confirmed-attending value in either the boolean or string form the client uses.
+    function isConfirmedAttending(attending) {
+      return attending == true || attending == 'yes';
+    }
+
     // Caps payload sizes on guest-writable docs to limit abuse / doc bloat.
     // Lenient on shape (fields may be absent) so legitimate writes aren't blocked.
     function rsvpWithinLimits() {
@@ -31,13 +40,18 @@ service cloud.firestore {
 
     // ---- events ----
     match /events/{eventId} {
-      // host can do anything to their own events
-      allow read, update, delete: if request.auth != null
+      // host can read/delete their own events
+      allow read, delete: if request.auth != null
         && resource.data.hostId == request.auth.uid;
+      // host can update their own event, but may not reassign it to another host
+      allow update: if request.auth != null
+        && resource.data.hostId == request.auth.uid
+        && request.resource.data.hostId == resource.data.hostId;
       // anyone can read a published event (for the guest landing page)
       allow read: if resource.data.published == true;
-      // authenticated users can create
-      allow create: if request.auth != null;
+      // authenticated users can create, but only events they own (no hostId spoofing)
+      allow create: if request.auth != null
+        && request.resource.data.hostId == request.auth.uid;
     }
 
     // ---- rsvps ----
@@ -51,14 +65,33 @@ service cloud.firestore {
       // A guest who holds it (their own localStorage / edit link) may read and
       // update that single RSVP. Hosts can always read/update their event's RSVPs.
       allow get:    if true;
-      allow update: if rsvpWithinLimits();
+
+      // Updates must stay on the same event (no re-parenting an RSVP into a
+      // stranger's event) and a guest bearer-token edit may not self-approve a
+      // pending RSVP — only the host can move it out of needs_approval.
+      allow update: if rsvpWithinLimits()
+        && request.resource.data.eventId == resource.data.eventId
+        && (
+             isEventHost(resource.data.eventId)
+             || !(
+                  ('attending' in resource.data && resource.data.attending == 'needs_approval')
+                  && ('attending' in request.resource.data && isConfirmedAttending(request.resource.data.attending))
+                )
+           );
 
       // Guests may NOT delete; only the host can.
       allow delete: if isEventHost(resource.data.eventId);
 
-      // Anyone can create an RSVP for a published event (size-validated).
+      // Anyone can create an RSVP for a published event (size-validated). For
+      // approval-gated events, a new RSVP may not be created already-confirmed —
+      // it must land as needs_approval (or as a decline).
       allow create: if eventPublished(request.resource.data.eventId)
-        && rsvpWithinLimits();
+        && rsvpWithinLimits()
+        && (
+             !eventRequiresApproval(request.resource.data.eventId)
+             || !('attending' in request.resource.data)
+             || !isConfirmedAttending(request.resource.data.attending)
+           );
     }
 
     // ---- memories (private capsule — host only) ----
@@ -70,10 +103,20 @@ service cloud.firestore {
       allow read: if isEventHost(resource.data.eventId);
 
       // Guests can submit a memory for a published event (size-validated).
+      // The media array is capped to prevent doc bloat, and any scalar media URL
+      // must point at our own Storage bucket (guests can't stash arbitrary URLs
+      // that the host dashboard would later fetch/render). NOTE: Firestore rules
+      // can't iterate array elements, so per-item media[].url domains aren't
+      // enforced here — see follow-up F2 (validate on write via a Function/App Check).
       allow create: if eventPublished(request.resource.data.eventId)
         && request.resource.data.eventId is string
         && (!('message' in request.resource.data)    || request.resource.data.message.size() <= 2000)
-        && (!('authorName' in request.resource.data) || request.resource.data.authorName.size() <= 100);
+        && (!('authorName' in request.resource.data) || request.resource.data.authorName.size() <= 100)
+        && (!('media' in request.resource.data)       || request.resource.data.media.size() <= 30)
+        && (!('mediaUrl' in request.resource.data)    || (request.resource.data.mediaUrl is string
+              && request.resource.data.mediaUrl.matches('https://(firebasestorage|storage)[.]googleapis[.]com/.*')))
+        && (!('photoUrl' in request.resource.data)    || (request.resource.data.photoUrl is string
+              && request.resource.data.photoUrl.matches('https://(firebasestorage|storage)[.]googleapis[.]com/.*')));
 
       // Only the host can edit or delete memories.
       allow update, delete: if isEventHost(resource.data.eventId);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tiny Party Portal — Security &amp; Design Review</title>
+<title>Tiny Party Portal — Security, Bugs &amp; Design Review</title>
 <style>
   :root {
     --bg: #f6f7fb;
@@ -33,7 +33,7 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     line-height: 1.6; padding: 32px 16px;
   }
-  .wrap { max-width: 920px; margin: 0 auto; }
+  .wrap { max-width: 960px; margin: 0 auto; }
   header.page {
     background: linear-gradient(135deg, #6d5dfc, #8b7bff); color: #fff;
     border-radius: 16px; padding: 28px 32px; margin-bottom: 24px;
@@ -45,6 +45,16 @@
     font-size: 13px;
   }
   .legend span { background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; }
+  nav.toc { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 28px; }
+  nav.toc h2 { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+  nav.toc ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px 24px; }
+  nav.toc li a { font-size: 13px; color: var(--accent); text-decoration: none; }
+  nav.toc li a:hover { text-decoration: underline; }
+  .chapter-title {
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin: 40px 0 4px; padding-left: 4px;
+    border-top: 2px solid var(--border); padding-top: 20px;
+  }
   section.group { margin-bottom: 30px; }
   h2.grouph {
     font-size: 13px; letter-spacing: .08em; text-transform: uppercase;
@@ -79,6 +89,8 @@
   }
   .note { background: var(--med-bg); border: 1px solid var(--med-bd); color: var(--med-tx);
           border-radius: 10px; padding: 12px 16px; font-size: 14px; }
+  .warn { background: var(--high-bg); border: 1px solid var(--high-bd); color: var(--high-tx);
+          border-radius: 10px; padding: 12px 16px; font-size: 14px; margin-bottom: 20px; }
   footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 30px; }
   a { color: var(--accent); }
 </style>
@@ -87,16 +99,40 @@
 <div class="wrap">
 
   <header class="page">
-    <h1>🔐 Tiny Party Portal — Security &amp; Design Review</h1>
-    <p>Date: 2026-06-13 · Covers Firebase rules, Cloud Functions, host dashboard, guest flow, auth &amp; config.
-       Severity reflects impact given the app stores children's and parents' personal data.</p>
+    <h1>🔐 Tiny Party Portal — Security, Bugs &amp; Design Review</h1>
+    <p>Updated 2026-07-03 · Three-pass audit: Firebase rules + Cloud Functions security · Correctness bugs · UX &amp; requirements gaps.
+       Prior pass: 2026-06-13 (rules, auth, functions). New findings added below each prior section. Severity reflects impact given the app stores children's and parents' personal data.</p>
   </header>
 
   <div class="legend">
-    <span><strong style="color:var(--fix)">✅ fixed</strong> in this pass</span>
+    <span><strong style="color:var(--fix)">✅ fixed</strong></span>
     <span><strong style="color:var(--part)">🟡 partial</strong> — follow-up needed</span>
-    <span><strong style="color:var(--todo)">⬜ documented</strong>, not yet actioned</span>
+    <span><strong style="color:var(--todo)">⬜ to do</strong></span>
   </div>
+
+  <nav class="toc">
+    <h2>Sections</h2>
+    <ul>
+      <li><a href="#sec-security">A — Security</a></li>
+      <li><a href="#sec-bugs">B — Correctness Bugs</a></li>
+      <li><a href="#sec-ux">C — UX &amp; Requirements</a></li>
+      <li><a href="#sec-followups">Follow-ups</a></li>
+      <li><a href="#sec-deploy">Deployment notes</a></li>
+    </ul>
+  </nav>
+
+  <div class="warn">
+    <strong>🛠️ Fix pass — 2026-07-03.</strong> A round of fixes has landed in the working tree (production build passes). <br><br>
+    <strong>Fixed:</strong> A-H2, A-H3, A-M1 (media caps + URL domain; see note), A-M2, A-M9 · B-H1 (display — bogus "3rd"/"Robin" removed), B-H2, B-H3, B-H4, B-H5, B-H6, B-M1, B-M2, B-M3, B-M4, B-M5, B-M6, B-M7, B-M8, B-M9, B-L3, B-L4, B-L5, B-L6, B-L7, B-L8, L4, L5, L6 · C-H1 (email edit link), C-H2, C-H3, C-M3.<br><br>
+    <strong>Deferred — needs console access:</strong> A-C4 &amp; A-M3 &amp; A-H1 (Firebase App Check + rate limiting), A-M8 (Maps key referrer restriction), A-M10 (move admin emails to Secret Manager).<br>
+    <strong>Deferred — needs a product/design decision:</strong> A-M6 (event password: remove vs implement), B-H1 (capture child's age — add a field?), A-M7 (slug reservation), L1/L2 (token-in-URL, third-party QR), B-L1 (delete dead invitation branch), B-L2/C-H6 (Stripe), C-H4 (cancel/delete/reschedule + notifications), C-H5 (post-event journey), C-M1 (one-tap decline), C-M2 (duplicate detection), C-M4 (dietary panel), C-M5 (stale docs).<br><br>
+    Individual status badges below have <em>not</em> all been re-flipped — this banner is the authoritative fix-pass summary. Deploy order for the rules/headers changes is in the <a href="#sec-deploy">Deployment notes</a>.
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- A — SECURITY                                    -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <p id="sec-security" class="chapter-title">A — Security</p>
 
   <!-- CRITICAL -->
   <section class="group">
@@ -104,42 +140,36 @@
 
     <div class="card">
       <h3><span class="sev crit">CRITICAL</span> C1 — Any guest could read/list/edit/delete every RSVP
-        <span class="status fix">✅ fixed</span></h3>
+        <span class="status fix">✅ fixed (Jun 2026)</span></h3>
       <div class="code">firestore.rules (rsvps block)</div>
       <ul>
-        <li>The <code>list</code> rule let any guest download <strong>all</strong> RSVP documents for a published event
-          (names, ages, emails, phones, dietary notes) — a bulk PII-harvesting hole. The "Already RSVP'd?" lookup
-          relied on this (downloaded the whole collection and filtered client-side).</li>
+        <li>The <code>list</code> rule let any guest download <strong>all</strong> RSVP documents for a published event (names, ages, emails, phones, dietary notes).</li>
         <li>The <code>get/update/delete</code> rule ended in <code>|| true</code>, so anyone could modify or delete any RSVP.</li>
       </ul>
-      <p><strong>Fix:</strong> <code>list</code> and <code>delete</code> are now host-only. Guest "find my RSVP" moved to a
-        server-side Cloud Function (<code>lookupRsvp</code>) that requires child name <strong>and</strong> matching
-        email/phone before returning anything. <code>get</code>/<code>update</code> remain open as a deliberate
-        bearer-token model (must know the unguessable 20-char document ID — e.g. own localStorage or edit link).</p>
-      <p><strong>Residual risk (documented):</strong> holding an RSVP's document ID grants read/edit of that one RSVP —
-        the intended "edit-link" design. A fully locked-down version routes all reads/writes through Cloud Functions (see F1).</p>
+      <p><strong>Fix:</strong> <code>list</code> and <code>delete</code> are now host-only. Guest lookup moved server-side to <code>lookupRsvp</code> (requires name + contact match). <code>get</code>/<code>update</code> use a bearer-token model on the unguessable doc ID.</p>
     </div>
 
     <div class="card">
       <h3><span class="sev crit">CRITICAL</span> C2 — Storage was world-readable AND world-writable
-        <span class="status fix">✅ fixed</span></h3>
+        <span class="status fix">✅ fixed (Jun 2026)</span></h3>
       <div class="code">storage.rules</div>
-      <p><code>allow read, write: if true</code> on <code>memories/**</code> and <code>event-photos/**</code> let anyone
-        upload unlimited files of any type/size, and <strong>overwrite or delete</strong> existing photos/memories.</p>
-      <p><strong>Fix:</strong> uploads are now create-only (no overwrite/delete by clients), restricted to image/* (&lt;15 MB)
-        and video/* (&lt;200 MB). Event-photo uploads additionally require an authenticated user. Host memory deletion still
-        works (it only removes the Firestore doc).</p>
+      <p>Unlimited uploads of any type/size; overwrite or delete by anyone. Fixed: create-only, image/video with size caps, host auth required for event photos.</p>
     </div>
 
     <div class="card">
       <h3><span class="sev crit">CRITICAL</span> C3 — <code>memories</code> collection had no Firestore rule
-        <span class="status fix">✅ fixed</span></h3>
+        <span class="status fix">✅ fixed (Jun 2026)</span></h3>
       <div class="code">firestore.rules</div>
-      <p>The repo ruleset defined <code>users</code>, <code>events</code>, <code>rsvps</code> then default-deny — the
-        <code>memories</code> collection had <strong>no rule</strong>, so under these rules every memory read/write is denied.
-        (The live deployment may differ from the repo, which is itself a risk.)</p>
-      <p><strong>Fix:</strong> added an explicit <code>memories</code> rule — public read, validated public create
-        (size caps on text), update/delete host-only.</p>
+      <p>No rule = default-deny blocked all guest memory submissions. Fixed: explicit rule with host-only read, validated guest create, host-only update/delete.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev crit">CRITICAL</span> C4 — Contact functions are an open spam relay
+        <span class="status todo">⬜ to do</span></h3>
+      <div class="code">functions/index.js — contactOrganiser (L390), submitGlobalContactForm (L1063)</div>
+      <p>Both are <code>https.onCall</code> with <strong>no auth check, no App Check, no rate limiting</strong>. A script loop of a few thousand calls drains the Resend sending quota (blocking all legitimate RSVP/host mail) and runs up cost. <code>contactOrganiser</code> additionally lets an attacker email any host with arbitrary content given any published <code>eventId</code> (all published events are queryable by slug).</p>
+      <p><strong>Note:</strong> This was previously listed as H2 (partial mitigations: field validation + length caps applied). Elevated to Critical because App Check was never added and the exploit path remains fully open. <code>parseRsvpMessage</code> is correctly gated with an auth check; these two should be too.</p>
+      <p><strong>Fix required:</strong> Add auth check (<code>context.auth</code>) + Firebase App Check (reCAPTCHA v3 or Enterprise) + per-IP/per-event rate limiting via a Firestore counter or Redis.</p>
     </div>
   </section>
 
@@ -149,33 +179,39 @@
 
     <div class="card">
       <h3><span class="sev high">HIGH</span> H1 — RSVP creation is an open email-sending oracle
-        <span class="status part">🟡 partial</span></h3>
+        <span class="status part">🟡 partial (Jun 2026)</span></h3>
       <div class="code">firestore.rules (rsvps create) + functions/index.js (onRsvpCreated)</div>
-      <p>Anyone can create an RSVP doc with an arbitrary <code>email</code>; the function then sends a styled email from the
-        Resend account to that address — usable to spam third parties and the host, and to burn sender reputation.</p>
-      <p><strong>Mitigated:</strong> create is now validated (event must be published; size caps on all text fields and the
-        siblings array) which limits payload abuse.</p>
-      <p><strong>Follow-up (F2):</strong> the real fix is <strong>Firebase App Check</strong> plus per-event rate limiting.
-        Requires Firebase console setup.</p>
+      <p>Anyone can create an RSVP doc with an arbitrary <code>email</code>; the function sends a styled email from the Resend account to that address.</p>
+      <p><strong>Mitigated:</strong> create is now validated (event must be published; size caps on all text fields and siblings array).</p>
+      <p><strong>Follow-up:</strong> Firebase App Check + per-event rate limiting (see F2).</p>
     </div>
 
     <div class="card">
-      <h3><span class="sev high">HIGH</span> H2 — Unauthenticated callable functions with no abuse controls
-        <span class="status part">🟡 partial</span></h3>
-      <div class="code">functions/index.js — contactOrganiser, submitGlobalContactForm</div>
-      <p>No auth, no captcha, no rate limit, no length caps → spam relays to host/admin inboxes.</p>
-      <p><strong>Mitigated:</strong> added field validation and length caps (name ≤100, contact ≤200, message ≤4000,
-        basic email shape) to both functions.</p>
-      <p><strong>Follow-up (F2):</strong> App Check + rate limiting.</p>
+      <h3><span class="sev high">HIGH</span> H2 — RSVP update rule allows self-approval and cross-event injection
+        <span class="status todo">⬜ to do</span></h3>
+      <div class="code">firestore.rules (rsvps update, L54) + RSVPPage.jsx:426</div>
+      <p>The <code>update</code> rule calls <code>rsvpWithinLimits()</code> which only checks field sizes — it does <strong>not</strong> pin <code>eventId</code> to its existing value, nor restrict <code>attending</code> or <code>status</code>. A guest holding their own bearer-token RSVP ID can directly call Firestore to:</p>
+      <ul>
+        <li><strong>Self-approve a lockdown RSVP:</strong> flip <code>attending: 'needs_approval'</code> → <code>true</code>. The client's lockdown guard is only enforced in <code>RSVPPage.jsx:383</code> for new submissions, not edits. This also triggers <code>onRsvpApproved</code> sending the guest a "You're confirmed!" email.</li>
+        <li><strong>Cross-event data poisoning:</strong> change <code>eventId</code> to any other published event's ID. That host's <code>GuestListPage</code> query now returns the attacker's doc, injecting arbitrary guest entries, dietary/comments into a stranger's list.</li>
+      </ul>
+      <p><strong>Fix in rules:</strong> add <code>request.resource.data.eventId == resource.data.eventId</code> on update, and validate that <code>attending</code> can only transition from <code>needs_approval</code> if <code>isEventHost(resource.data.eventId)</code>.</p>
     </div>
 
     <div class="card">
-      <h3><span class="sev high">HIGH</span> H3 — No email verification and no password reset
-        <span class="status fix">✅ fixed</span></h3>
+      <h3><span class="sev high">HIGH</span> H3 — <code>events</code> create doesn't bind <code>hostId</code> to the caller — identity spoofing
+        <span class="status todo">⬜ to do</span></h3>
+      <div class="code">firestore.rules (events create, L40) + CreateEventPage.jsx:114</div>
+      <p><code>allow create: if request.auth != null</code> — any signed-up user can create an event doc with <code>hostId</code> = a victim's UID. Consequences: <code>onEventCreated</code> (L16) emails the victim "Your Birthday Event is Ready!" (phishing), and ownership attributes content to their account. <code>published</code> is also unconstrained, enabling arbitrary public spam event pages.</p>
+      <p><strong>Fix:</strong> require <code>request.resource.data.hostId == request.auth.uid</code> on create. Also freeze <code>hostId</code> on update with <code>request.resource.data.hostId == resource.data.hostId</code>.</p>
+      <p><em>Was M1 in prior review; elevated to High now that the attack path is confirmed in detail.</em></p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev high">HIGH</span> H4 — No email verification; no password reset
+        <span class="status fix">✅ fixed (Jun 2026)</span></h3>
       <div class="code">AuthContext.jsx, SignupPage.jsx, LoginPage.jsx</div>
-      <p>Signup never verified emails; there was no "Forgot password?" path, so a locked-out host permanently lost their event.</p>
-      <p><strong>Fix:</strong> signup now sends a verification email (non-blocking — does not gate access), minimum password
-        length raised to 8, and a "Forgot password?" flow (<code>sendPasswordResetEmail</code>) added to the login page.</p>
+      <p>Signup never verified emails; no "Forgot password?" path. Fixed: verification email on signup (non-blocking), minimum password raised to 8 chars, password reset added via <code>sendPasswordResetEmail</code>.</p>
     </div>
   </section>
 
@@ -183,80 +219,325 @@
   <section class="group compact">
     <h2 class="grouph">Medium</h2>
 
-    <div class="card"><h3><span class="sev med">MED</span> M1 — <code>events</code> create doesn't bind <code>hostId</code> to the caller<span class="status todo">⬜ to do</span></h3>
-      <p>A user can create/alter events under another UID. Add <code>request.resource.data.hostId == request.auth.uid</code> on create and freeze it on update.</p></div>
+    <div class="card">
+      <h3><span class="sev med">MED</span> M1 — Memory docs accept arbitrary <code>mediaUrl</code> and uncapped <code>media</code> array
+        <span class="status todo">⬜ to do</span></h3>
+      <div class="code">firestore.rules (memories create, L73) + MemoriesPage.jsx:27,42,60</div>
+      <p>The memories create rule validates only <code>message</code> and <code>authorName</code> sizes. A crafted <code>addDoc</code> can set <code>mediaUrl</code>/<code>media[].url</code> to any URL — the host dashboard renders it in <code>&lt;img&gt;</code>/<code>&lt;video&gt;</code> and <code>fetch()</code>es it on "Save", enabling a tracking beacon / SSRF-from-host-browser vector. An unbounded <code>media</code> array can bloat docs to Firestore's 1 MB limit. A guest can also set <code>eventId</code> to any published event, injecting a memory into a stranger's capsule (and incrementing their <code>memoryCount</code>).</p>
+      <p><strong>Fix:</strong> whitelist <code>mediaUrl</code>/<code>media[].url</code> to your Storage bucket domain in rules; cap <code>media</code> array size (e.g. 30); pin <code>eventId</code> on create to a published event the doc is being submitted against.</p>
+    </div>
 
-    <div class="card"><h3><span class="sev med">MED</span> M2 — Admin/notification emails interpolated user input unescaped<span class="status fix">✅ fixed</span></h3>
-      <p><code>onEventCreated</code> / <code>onUserCreated</code> — HTML injection into our own inboxes. Now escaped.</p></div>
+    <div class="card">
+      <h3><span class="sev med">MED</span> M2 — No hosting security headers
+        <span class="status todo">⬜ to do</span></h3>
+      <div class="code">firebase.json (hosting block)</div>
+      <p>No <code>headers</code> array in <code>firebase.json</code>. Missing: <code>X-Frame-Options: DENY</code> (clickjacking of <code>/login</code> and dashboard), <code>Content-Security-Policy</code> (defence-in-depth against injected script), <code>Referrer-Policy: no-referrer</code> (the RSVP bearer token travels in the URL — a loose referrer policy exposes it via referrer headers and link history), <code>X-Content-Type-Options: nosniff</code>, and HSTS.</p>
+      <p><strong>Fix:</strong> add a <code>headers</code> glob to <code>firebase.json</code> hosting. No code deploy needed — rules-only change.</p>
+    </div>
 
-    <div class="card"><h3><span class="sev med">MED</span> M3 — <code>contactOrganiser</code> used <code>/\\n/g</code> instead of <code>/\n/g</code><span class="status fix">✅ fixed</span></h3>
-      <p>Newline-to-&lt;br&gt; conversion was matching a literal backslash-n. Fixed.</p></div>
+    <div class="card">
+      <h3><span class="sev med">MED</span> M3 — <code>lookupRsvp</code> has no rate limiting or App Check
+        <span class="status todo">⬜ to do</span></h3>
+      <div class="code">functions/index.js:1153</div>
+      <p>Public unauthenticated callable. Each call scans the full RSVP collection for the event (<code>db.collection('rsvps').where('eventId','==',…).get()</code>, L1186) and filters in-memory. Repeated unauthenticated calls drive Firestore read costs. An attacker knowing a child's name can brute-force the contact field (email/phone) with no lockout — a match returns full RSVP PII (parent name, email, phone, dietary, comments).</p>
+      <p><strong>Fix:</strong> App Check + per-event/IP rate limiting (Firestore counter or Redis). Also move to a server-side indexed query rather than full-collection scan.</p>
+    </div>
 
-    <div class="card"><h3><span class="sev med">MED</span> M4 — Event password stored in plaintext<span class="status todo">⬜ to do</span></h3>
-      <p><code>CreateEventPage</code>, <code>EventManagePage</code>. Hash server-side if the password gate is kept.</p></div>
+    <div class="card"><h3><span class="sev med">MED</span> M4 — Admin/notification emails interpolated user input unescaped<span class="status fix">✅ fixed (Jun 2026)</span></h3>
+      <p><code>onEventCreated</code> / <code>onUserCreated</code> — HTML injection into our own inboxes. Now escaped via <code>escapeHtml()</code>.</p></div>
 
-    <div class="card"><h3><span class="sev med">MED</span> M5 — Slug uniqueness is check-then-write (race)<span class="status todo">⬜ to do</span></h3>
-      <p>Use a <code>slugs/{slug}</code> reservation doc in a transaction, or a Cloud Function.</p></div>
+    <div class="card"><h3><span class="sev med">MED</span> M5 — <code>contactOrganiser</code> used <code>/\\n/g</code> instead of <code>/\n/g</code><span class="status fix">✅ fixed (Jun 2026)</span></h3>
+      <p>Newline-to-<code>&lt;br&gt;</code> conversion matched a literal backslash-n. Fixed.</p></div>
 
-    <div class="card"><h3><span class="sev med">MED</span> M6 — Google Maps API key shipped to the client<span class="status todo">⬜ verify</span></h3>
-      <p><code>LocationInput</code>. Acceptable only if HTTP-referrer-restricted in Google Cloud console — verify.</p></div>
+    <div class="card"><h3><span class="sev med">MED</span> M6 — Event password stored in plaintext on the public event doc<span class="status todo">⬜ to do</span></h3>
+      <p><code>CreateEventPage</code>, <code>EventManagePage</code>, <code>RsvpSettingsModal</code>: the <code>eventPassword</code> field is collected, saved, and sits on a publicly-readable event doc (all published events are readable by anyone). The guest-side code <strong>never checks it</strong> — the feature is UI-only. Either remove the UI and the field, or implement the check server-side and never expose the raw password to the client.</p></div>
 
-    <div class="card"><h3><span class="sev med">MED</span> M7 — <code>/dev/themes</code> route ships in production<span class="status todo">⬜ to do</span></h3>
-      <p><code>router.jsx</code>. Gate behind <code>import.meta.env.DEV</code>.</p></div>
+    <div class="card"><h3><span class="sev med">MED</span> M7 — Slug uniqueness is check-then-write (TOCTOU race)<span class="status todo">⬜ to do</span></h3>
+      <p>Use a <code>slugs/{slug}</code> reservation doc in a transaction, or enforce uniqueness in a Cloud Function.</p></div>
 
-    <div class="card"><h3><span class="sev med">MED</span> M8 — Hardcoded personal emails in functions<span class="status todo">⬜ to do</span></h3>
-      <p>Admin/notify addresses in <code>functions/index.js</code>. Move to config/secrets.</p></div>
+    <div class="card"><h3><span class="sev med">MED</span> M8 — Google Maps API key shipped to the client<span class="status todo">⬜ verify</span></h3>
+      <p><code>LocationInput.jsx</code>. Acceptable only if HTTP-referrer-restricted + API-scope-restricted in Google Cloud console — verify this is configured.</p></div>
 
-    <div class="card"><h3><span class="sev med">MED</span> M9 — Server-side validation generally absent<span class="status todo">⬜ to do</span></h3>
-      <p>RSVP deadline not enforced; approval/lockdown logic is client-side and bypassable. Durable fix = route guest writes through Cloud Functions (F1).</p></div>
+    <div class="card"><h3><span class="sev med">MED</span> M9 — <code>/dev/themes</code> route ships in production<span class="status todo">⬜ to do</span></h3>
+      <p><code>router.jsx:120</code>. The page renders only mock data so no real data leak, but it should be gated behind <code>import.meta.env.DEV</code>.</p></div>
 
-    <div class="card"><h3><span class="sev med">MED</span> M10 — Two god components<span class="status todo">⬜ to do</span></h3>
-      <p><code>EventManagePage.jsx</code> (~1340 lines) and <code>GuestListPage.jsx</code>. Extract sub-components.</p></div>
-
-    <div class="card"><h3><span class="sev med">MED</span> M11 — Scalability<span class="status todo">⬜ to do</span></h3>
-      <p>Guest list, memories and lookup load entire collections client-side. Add pagination past a few hundred docs.</p></div>
-
-    <div class="card"><h3><span class="sev med">MED</span> M12 — Stubbed/dead UI<span class="status todo">⬜ to do</span></h3>
-      <p><code>BillingPage</code> calls <code>createStripeCheckoutSession</code> which does not exist; "Send Reminder" button is unwired. Wire up or hide.</p></div>
+    <div class="card"><h3><span class="sev med">MED</span> M10 — Hardcoded personal emails in Cloud Functions<span class="status todo">⬜ to do</span></h3>
+      <p>Admin/notify addresses hard-coded in <code>functions/index.js</code>. Move to Firebase environment config or Secret Manager.</p></div>
   </section>
 
-  <!-- LOW -->
+  <!-- LOW SECURITY -->
   <section class="group compact">
     <h2 class="grouph">Low</h2>
-    <div class="card"><h3><span class="sev low">LOW</span> L1 — RSVP doc IDs (bearer tokens) live in localStorage<span class="status todo">⬜</span></h3><p>Shared-device leakage.</p></div>
-    <div class="card"><h3><span class="sev low">LOW</span> L2 — QR codes generated via third-party api.qrserver.com<span class="status todo">⬜</span></h3><p>Leaks invite URLs. Generate client-side instead.</p></div>
-    <div class="card"><h3><span class="sev low">LOW</span> L3 — Calendar export doesn't fully sanitise newlines/&amp; <span class="status todo">⬜</span></h3><p>For ICS / Google Calendar URLs.</p></div>
-    <div class="card"><h3><span class="sev low">LOW</span> L4 — <code>/login</code> &amp; <code>/signup</code> should set <code>noindex</code>; no CSP headers<span class="status todo">⬜</span></h3><p>Login already does.</p></div>
-    <div class="card"><h3><span class="sev low">LOW</span> L5 — <code>RequireAuth</code> renders <code>null</code> while auth resolves<span class="status todo">⬜</span></h3><p>Blank flash — return the loader.</p></div>
-    <div class="card"><h3><span class="sev low">LOW</span> L6 — Login doesn't preserve the originally-requested URL after redirect<span class="status todo">⬜</span></h3></div>
+    <div class="card"><h3><span class="sev low">LOW</span> L1 — RSVP bearer tokens live in <code>localStorage</code><span class="status todo">⬜</span></h3><p>Shared-device leakage. Acceptable design tradeoff given no-login guest flow, but document the risk.</p></div>
+    <div class="card"><h3><span class="sev low">LOW</span> L2 — QR codes generated via third-party <code>api.qrserver.com</code><span class="status todo">⬜</span></h3><p>Leaks the invite URL to a third party. Use the already-bundled <code>qrcode.react</code> (used in <code>CapsuleDisplayPage.jsx:9</code>) everywhere instead.</p></div>
+    <div class="card"><h3><span class="sev low">LOW</span> L3 — ICS calendar export doesn't sanitise newlines properly<span class="status todo">⬜</span></h3><p>See bug B-M9 below — literal <code>\n\n</code> appears in exported calendar descriptions.</p></div>
+    <div class="card"><h3><span class="sev low">LOW</span> L4 — No CSP / <code>noindex</code> on auth pages<span class="status todo">⬜</span></h3><p>Covered by M2 (hosting headers). <code>/login</code> already has <code>noindex</code>; <code>/signup</code> is missing it.</p></div>
+    <div class="card"><h3><span class="sev low">LOW</span> L5 — <code>RequireAuth</code> renders <code>null</code> while auth resolves<span class="status todo">⬜</span></h3><p>Causes a blank flash on dashboard load. Return a loading spinner instead.</p></div>
+    <div class="card"><h3><span class="sev low">LOW</span> L6 — Login doesn't preserve the originally-requested URL after redirect<span class="status todo">⬜</span></h3><p>Use React Router's <code>state.from</code> pattern to redirect back after login.</p></div>
   </section>
 
-  <!-- FOLLOW-UPS -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- B — CORRECTNESS BUGS                            -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <p id="sec-bugs" class="chapter-title">B — Correctness Bugs</p>
+  <p style="font-size:14px;color:var(--muted);margin:0 0 20px;">Bugs that cause wrong, broken, or data-corrupting behaviour. These are defects, not missing features.</p>
+
   <section class="group">
-    <h2 class="grouph">Follow-ups requiring console / product decisions</h2>
+    <h2 class="grouph">High — wrong in normal use</h2>
+
+    <div class="card">
+      <h3><span class="sev high">HIGH</span> B-H1 — Portal always says "3rd Birthday" regardless of child's real age<span class="status todo">⬜ to do</span></h3>
+      <div class="code">EventLandingPage.jsx:331, LeaveMemoryPage.jsx:148, CapsuleDisplayPage.jsx:110</div>
+      <p>All three render <code>event.childAge ? ord(event.childAge) : '3rd'</code>, but <code>childAge</code> is <strong>never written</strong> to the <code>events</code> collection — <code>CreateEventPage</code> and <code>EventManagePage</code> don't set it. Every published event shows "…'s 3rd Birthday" regardless of the child's actual age or whether it's a birthday at all.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev high">HIGH</span> B-H2 — Developer placeholder data shown to real guests when fields are blank<span class="status todo">⬜ to do</span></h3>
+      <div class="code">EventLandingPage.jsx:330,355,546,595,603,380,733,749,1000 · GuestListPage.jsx:297-298,626</div>
+      <p>When a host leaves optional fields blank, guests see another family's details as facts:</p>
+      <ul>
+        <li>Child name fallback: <strong>"Robin's"</strong></li>
+        <li>End time fallback: <strong>"2:00 PM"</strong> (invented time shown as scheduled)</li>
+        <li>Location fallback: <strong>"Myuna Farm"</strong></li>
+        <li>Address fallback: <strong>"400 Myuna Farm Rd, Dural NSW 2158"</strong> — a real street address sent to guests as if it's their venue</li>
+        <li>Host name fallback: <strong>"Cara"</strong> ("Contact Cara", "MESSAGE CARA")</li>
+      </ul>
+      <p>The dashboard also flashes these values while <code>event</code> is still <code>null</code> on load.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev high">HIGH</span> B-H3 — Editing a pending RSVP silently self-approves it and fires "You're confirmed!" email<span class="status todo">⬜ to do</span></h3>
+      <div class="code">RSVPPage.jsx:383,414,426 + functions/index.js:857</div>
+      <p>The <code>needs_approval</code> path (<code>RSVPPage.jsx:383</code>) only runs when <code>!existingDocId</code>. If a lockdown guest reopens the RSVP form, <code>finalAttending = isAttending = true</code> is written via <code>updateDoc</code>, flipping their status to confirmed without host action. <code>onRsvpApproved</code> then emails them "You're In!" — the host's approval gate is fully bypassed in the edit flow. (Also a security finding — requires both client fix and rules fix.)</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev high">HIGH</span> B-H4 — "Approve" on a declining guest sends an "at-capacity" rejection email<span class="status todo">⬜ to do</span></h3>
+      <div class="code">GuestListPage.jsx:448, RSVPPage.jsx:398-403, functions/index.js:972</div>
+      <p>Because <code>RSVPPage.jsx:398</code> routes <em>all</em> lockdown submissions into <code>needs_approval</code> — including guests who answered "No, can't make it" (<code>intendedAttending: false</code>) — the host's Approve action sets <code>attending: false</code>. This triggers <code>onRsvpDeclined</code> and emails the guest "the party has reached capacity." A declining guest should never enter the approval queue.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev high">HIGH</span> B-H5 — Accent colour picker on Create Event is broken (transparent swatches, writes wrong value)<span class="status todo">⬜ to do</span></h3>
+      <div class="code">CreateEventPage.jsx:264</div>
+      <p>Iterates <code>Object.entries(THEME_COLOR_SCHEMES)</code> at the wrong nesting level — keys are theme names (<code>'kids-dino'</code>…), not colour configs. Result: 5 transparent/invisible swatch buttons, and clicking one stores a theme key as the <code>themeColor</code> value. <code>getTheme()</code> silently falls back to <code>default</code>, so colour selection during creation has no effect. <code>EventManagePage</code> does this correctly (iterates the inner <code>THEME_COLOR_SCHEMES['kids-${theme}']</code> object).</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev high">HIGH</span> B-H6 — Dead "Send Reminder", "Filter", and "•••" buttons<span class="status todo">⬜ to do</span></h3>
+      <div class="code">GuestListPage.jsx:880-883, 965-967, 1152-1154</div>
+      <p>Rendered as normal clickable buttons with <strong>no <code>onClick</code> handler</strong>. Hosts click them and nothing happens — no loading state, no toast, no "coming soon" messaging. Wire up or replace with a disabled state and tooltip.</p>
+    </div>
+  </section>
+
+  <section class="group compact">
+    <h2 class="grouph">Medium — wrong in edge cases or silently broken</h2>
+
+    <div class="card">
+      <h3><span class="sev med">MED</span> B-M1 — EventManagePage form wipes unsaved edits when the event doc updates remotely<span class="status todo">⬜</span></h3>
+      <div class="code">EventManagePage.jsx:298-354</div>
+      <p>The <code>onSnapshot</code> callback unconditionally resets all form fields on every snapshot. External writes (e.g. a guest uploads a memory, bumping <code>memoryCount</code>; a sibling page saves RSVP settings) cause the host's in-progress edits to be silently discarded. The <code>childName === ''</code> guard at :307 uses a stale closure (deps <code>[eventId, navigate]</code>) and is always <code>true</code>, so it provides no protection.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev med">MED</span> B-M2 — Contact emails report success even when Resend rejects them<span class="status todo">⬜</span></h3>
+      <div class="code">functions/index.js:480-494, 1126-1140</div>
+      <p><code>contactOrganiser</code> and <code>submitGlobalContactForm</code> never check <code>r.ok</code> on the Resend API response. A 4xx/5xx (bad key, rate limit, unverified domain) still returns <code>{ success: true }</code> — guests see "Message sent!" while nothing was delivered. Given the domain-verification outage already experienced, this should be a monitored error.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev med">MED</span> B-M3 — Editing an RSVP overwrites its original <code>createdAt</code><span class="status todo">⬜</span></h3>
+      <div class="code">RSVPPage.jsx:421,426</div>
+      <p><code>rsvpData</code> includes <code>createdAt: serverTimestamp()</code> and is passed directly to <code>updateDoc</code>. Every edit resets the submission timestamp: the guest list (sorted by <code>createdAt</code>) reorders, and the "Date" column and CSV export show the last-edit date as the RSVP date.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev med">MED</span> B-M4 — <code>lookupRsvp</code> returns pending/imported guests as "YOU'RE GOING!"<span class="status todo">⬜</span></h3>
+      <div class="code">functions/index.js:1215 + EventLandingPage.jsx:225-227, RSVPPage.jsx:278</div>
+      <p><code>isAttending: d.isAttending ?? true</code> — imported guests (<code>attending: 'pending'</code>, no <code>isAttending</code> field) and lockdown-pending guests come back as <code>isAttending: true</code>. The client stores <code>rsvp_status = 'yes'</code> and the portal renders "🤍 YOU'RE GOING! 🤍" for a guest who is awaiting approval or never formally RSVPed.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev med">MED</span> B-M5 — 404 page text is invisible in the light theme<span class="status todo">⬜</span></h3>
+      <div class="code">NotFound.jsx (heading: #fff, body: rgba(255,255,255,0.5))</div>
+      <p><code>MainLayout</code> forces <code>data-theme="light"</code> where <code>--kb-bg</code> is <code>#FFF9F2</code>. White text on cream background — heading and body copy are effectively unreadable. Styles were written for the dark palette.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev med">MED</span> B-M6 — CSV export labels every non-yes status as "No"<span class="status todo">⬜</span></h3>
+      <div class="code">GuestListPage.jsx:180-187</div>
+      <p><code>isAttending ? 'Yes' : 'No'</code> — imported <code>'pending'</code>, <code>'maybe'</code>, and <code>'needs_approval'</code> guests all export as <strong>Attending: No</strong>, which is inaccurate data in the host's exported list (the on-screen table distinguishes these statuses).</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev med">MED</span> B-M7 — Bulk import has no error handling<span class="status todo">⬜</span></h3>
+      <div class="code">GuestListPage.jsx:390-420</div>
+      <p>Sequential <code>await addDoc</code> loop with no try/catch. A mid-import Firestore failure (offline, rule rejection) rejects unhandled — no error toast, modal stays open, partial import with no feedback or rollback.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev med">MED</span> B-M8 — ICS description renders literal <code>\n\n</code> instead of blank lines<span class="status todo">⬜</span></h3>
+      <div class="code">calendarUtils.js (generateICS)</div>
+      <p><code>fullDesc += '\\n\\n'</code> inserts literal backslash-n characters before <code>esc()</code> runs; <code>esc()</code> then doubles the backslashes. Calendar apps render the text <code>…description\n\nView event details: …</code> with visible "\n\n" when both a description and URL are present. Also: the Google Calendar all-day case uses <code>dates=${d}/${d}</code> — Google treats the end date as exclusive, so this produces a zero-length event.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev med">MED</span> B-M9 — <code>handleSaveGuest</code> writes UI-only fields into Firestore<span class="status todo">⬜</span></h3>
+      <div class="code">GuestListPage.jsx:522-523</div>
+      <p><code>updateDoc(guestDocRef, updatedGuest)</code> spreads the whole row object, persisting junk fields <code>id</code>, <code>isSiblingRow</code>, and <code>mainGuestId</code> into RSVP documents. Harmless today but pollutes documents and risks future field collisions.</p>
+    </div>
+  </section>
+
+  <section class="group compact">
+    <h2 class="grouph">Low — latent, edge-case, or minor</h2>
+
+    <div class="card"><h3><span class="sev low">LOW</span> B-L1 — Invitation branch dead code behind <code>{true ? … : …}</code><span class="status todo">⬜</span></h3>
+      <div class="code">EventLandingPage.jsx:292</div>
+      <p>~300 lines including the only general-purpose "Find your RSVP" lookup UI and the event countdown are unreachable. This is the root cause of UX gap C-H1 below. The countdown also has no <code>setInterval</code> — it would compute once per render and not tick even if re-enabled.</p></div>
+
+    <div class="card"><h3><span class="sev low">LOW</span> B-L2 — <code>createStripeCheckoutSession</code> referenced but not implemented<span class="status todo">⬜</span></h3>
+      <div class="code">stripe.js:19 + BillingPage.jsx</div>
+      <p>Latent because upgrade buttons are <code>disabled</code>. Enabling them will fail with <code>functions/not-found</code>. No Stripe secret in repo — no security risk, but checkout is non-functional dead code.</p></div>
+
+    <div class="card"><h3><span class="sev low">LOW</span> B-L3 — <code>guestEstimate</code> split uses <code>Math.floor</code> for both halves on manage page<span class="status todo">⬜</span></h3>
+      <div class="code">EventManagePage.jsx:341-342</div>
+      <p>Comment even says "Fixed: should use ceil" but the code still uses <code>Math.floor</code> for both kids and adults. For an odd legacy <code>guestEstimate</code>, saving shows a total one lower than the guest list displays.</p></div>
+
+    <div class="card"><h3><span class="sev low">LOW</span> B-L4 — <code>LeaveMemoryPage</code> object-URL cleanup is a stale closure (memory leak)<span class="status todo">⬜</span></h3>
+      <div class="code">LeaveMemoryPage.jsx:48-50</div>
+      <p>Unmount cleanup iterates <code>files</code> captured from the first render (always <code>[]</code>, deps <code>[]</code>). Preview object URLs are never revoked on unmount despite the comment claiming they are.</p></div>
+
+    <div class="card"><h3><span class="sev low">LOW</span> B-L5 — Guest confirmation email shows "sorry you can't make it" banner for "maybe" RSVPs<span class="status todo">⬜</span></h3>
+      <div class="code">functions/index.js:317-321</div>
+      <p>Status banner only handles <code>needsApproval</code>/<code>isAttending</code>; <code>attending === 'maybe'</code> falls through to the decline banner. Mostly unreachable today (the client form only produces yes/no/needs_approval).</p></div>
+
+    <div class="card"><h3><span class="sev low">LOW</span> B-L6 — <code>GuestListPage</code> event date parsed as UTC (off-by-one day west of UTC)<span class="status todo">⬜</span></h3>
+      <div class="code">GuestListPage.jsx:297</div>
+      <p><code>new Date(event.date)</code> on a bare <code>YYYY-MM-DD</code> string parses as UTC midnight, then formats in local time. In any timezone west of UTC (e.g. AEST in winter) the banner shows the previous day. Every other page correctly appends <code>'T00:00:00'</code>.</p></div>
+
+    <div class="card"><h3><span class="sev low">LOW</span> B-L7 — <code>ThemedPage</code> doesn't swap font links on theme change<span class="status todo">⬜</span></h3>
+      <div class="code">ThemedPage.jsx:19-27</div>
+      <p>Effect early-returns if link element IDs already exist — so navigating between two events with different body fonts while staying mounted loads the first event's fonts only. Edge case.</p></div>
+
+    <div class="card"><h3><span class="sev low">LOW</span> B-L8 — <code>console.log</code>s ship in guest-facing pages<span class="status todo">⬜</span></h3>
+      <div class="code">EventLandingPage.jsx:82,85 · RSVPPage.jsx:181,184</div>
+      <p>Debug statements log event/RSVP data to the browser console in production. Remove before next deploy.</p></div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- C — UX & REQUIREMENTS                           -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <p id="sec-ux" class="chapter-title">C — UX &amp; Requirements Gaps</p>
+  <p style="font-size:14px;color:var(--muted);margin:0 0 20px;">Missing or broken user journeys — not cosmetic preferences. Verified in code; only gaps not already on the active roadmap are listed.</p>
+
+  <section class="group">
+    <h2 class="grouph">High — broken journeys or compliance-grade gaps</h2>
+
+    <div class="card">
+      <h3><span class="sev high">HIGH</span> C-H1 — Lost/cross-device RSVP recovery is effectively broken<span class="status todo">⬜ to do</span></h3>
+      <div class="code">EventLandingPage.jsx:292 (dead branch) + functions/index.js:289,369</div>
+      <p>The confirmation email tells guests: "Visit the invite page and use the 'Already RSVP'd?' lookup." That UI is in the dead invitation branch (B-L1) and is entirely unreachable. The reachable portal branch has no lookup entry point. The "Already RSVP'd?" link in <code>RSVPPage.jsx:708</code> navigates to <code>/portal</code> which also has no lookup — a dead-end loop.</p>
+      <p><strong>Cheapest fix (highest value):</strong> add <code>?rsvpId={id}</code> to the confirmation email's "View your RSVP" button. This is a one-line change in <code>functions/index.js:289</code> that requires only a functions deploy. It solves lost-link, cross-device access, and duplicate RSVPs for all guests who provided an email.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev high">HIGH</span> C-H2 — Multi-photo memories are silently truncated to one photo in the host capsule<span class="status todo">⬜ to do</span></h3>
+      <div class="code">MemoriesPage.jsx:42,73,125-144 · LeaveMemoryPage.jsx:108-117</div>
+      <p>Guests can upload up to 30 files saved as a <code>media</code> array. The host dashboard, Save button, and text export all read only <code>memory.mediaUrl || memory.photoUrl</code> (i.e. <code>media[0]</code>). Files 2–30 are invisible to the host. The Memory Capsule's core day-of payload is being lost.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev high">HIGH</span> C-H3 — Module toggles and RSVP settings are not enforced on the guest side<span class="status todo">⬜ to do</span></h3>
+      <div class="code">EventLandingPage.jsx:398 · RSVPPage.jsx (no rsvpEnabled check) · LeaveMemoryPage.jsx (no memoriesEnabled check)</div>
+      <ul>
+        <li><code>rsvpEnabled: false</code>: portal still shows "RSVP NOW" and <code>RSVPPage</code> has no guard — guests can still submit RSVPs when the host has turned RSVP off.</li>
+        <li><code>memoriesEnabled</code> + window dates: gates the link in <code>EventLandingPage</code> but not the page itself — <code>/:slug/memories/new</code> accepts submissions any time for any published event since rules only require <code>published == true</code>.</li>
+        <li><code>rsvpByDate</code>: displayed as "Please respond by…" but never blocks submission after the date passes.</li>
+        <li>Capacity: shown nowhere enforced — the auto-decline email claims "party has reached capacity" as a fact the system doesn't track.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev high">HIGH</span> C-H4 — No event cancel, reschedule, or delete — and no guest notification when details change<span class="status todo">⬜ to do</span></h3>
+      <div class="code">EventManagePage.jsx (no delete/unpublish action) + PrivacyPolicyPage.jsx:66,68</div>
+      <ul>
+        <li>There is no way to unpublish, cancel, or delete an event. Events are created as <code>published: true</code> (<code>CreateEventPage.jsx:146</code>) and stay public forever.</li>
+        <li>When a host edits date/time/venue, no guests are notified — guests who RSVP'd and added a calendar entry will go to the wrong place.</li>
+        <li>A host is never notified when a guest <em>changes</em> their RSVP (<code>onRsvpCreated</code> is create-only; a yes→no flip is silent).</li>
+        <li><strong>Compliance gap:</strong> the Privacy Policy promises "If you delete an event, its associated guest and RSVP data is also deleted" and "we can delete all your data on account closure" (<code>PrivacyPolicyPage.jsx:66,68</code>). Neither feature exists. Given the app collects children's names, ages, and allergies, these are unfulfillable compliance promises under the Privacy Act 1988.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev high">HIGH</span> C-H5 — No post-event journey (capsule delivery, thank-yous)<span class="status todo">⬜ to do</span></h3>
+      <div class="code">MemoriesPage.jsx:125-144 · EventLandingPage.jsx (no post-event state)</div>
+      <p>After the party: no thank-you action, no "your capsule is ready" host notification, export is a <code>.txt</code> of links (no zip of photos). Guests visiting the event page after the date see the same page with no post-event messaging. Given the Memory Capsule is the intended paid differentiator, the post-event journey is the roadmap's biggest uncovered area.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="sev high">HIGH</span> C-H6 — Monetisation is dead code — privacy policy describes it as live<span class="status todo">⬜ to do</span></h3>
+      <div class="code">BillingPage.jsx:54,70,87 · stripe.js:19 · PrivacyPolicyPage.jsx:67</div>
+      <p>Stripe checkout calls a Cloud Function that does not exist (B-L2). Upgrade buttons are disabled with "COMING SOON". Yet the privacy policy describes Memory Capsule as a "paid feature" with retention "for the duration of your active subscription." Guest limits advertised on the billing page (e.g. "Up to 50 guests") are not enforced anywhere. The marketing copy is ahead of the product.</p>
+    </div>
+  </section>
+
+  <section class="group compact">
+    <h2 class="grouph">Medium — suboptimal but not broken</h2>
+
+    <div class="card"><h3><span class="sev med">MED</span> C-M1 — Declining RSVP requires completing the full 4-step wizard<span class="status todo">⬜</span></h3>
+      <p>A guest answering "No, can't make it" must still enter child name, parent contact, and details. A one-tap decline with optional name is standard for invitation apps.</p></div>
+
+    <div class="card"><h3><span class="sev med">MED</span> C-M2 — No duplicate RSVP detection (without lockdown enabled)<span class="status todo">⬜</span></h3>
+      <div class="code">RSVPPage.jsx:383-397</div>
+      <p>The <code>lookupRsvp</code> dedup check only runs when <code>requireGuestMatch</code> is true (off by default). On a new device the guest sees "RSVP NOW", submits again, and creates a second doc. The host sees two rows with no indication they're the same family.</p></div>
+
+    <div class="card"><h3><span class="sev med">MED</span> C-M3 — Date/locale inconsistency (en-US on an Australian product)<span class="status todo">⬜</span></h3>
+      <div class="code">RSVPPage.jsx:486,499 · EventLandingPage.jsx:157</div>
+      <p>Guest pages format dates as <code>en-US</code> ("June 21") while emails and dashboard use <code>en-AU</code>. The <code>.ics</code> export uses floating time with no TZID — a guest in a different timezone sees the countdown/formatting in their own timezone with no indication.</p></div>
+
+    <div class="card"><h3><span class="sev med">MED</span> C-M4 — Aggregate dietary/allergy view is absent despite homepage claiming "flags dietary alerts"<span class="status todo">⬜</span></h3>
+      <div class="code">GuestListPage.jsx:840-858 vs. HomePage.jsx:26,146</div>
+      <p>The marketing home page claims a "3 Dietary alerts" metric. The guest list has no dietary summary panel — only per-row coral text and raw CSV export. An aggregated panel (modelled after the existing age-breakdown pills) would close this claims-vs-reality gap and is high value for the host on the day.</p></div>
+
+    <div class="card"><h3><span class="sev med">MED</span> C-M5 — Docs describe features that no longer exist in the codebase<span class="status todo">⬜</span></h3>
+      <div class="code">docs/USER_FLOWS.md · router.jsx</div>
+      <p>USER_FLOWS.md Flow 10 describes <code>/slug/live</code> with a live approval slideshow and <code>MemoriesPage</code> approve/unapprove toggles — the route doesn't exist in <code>router.jsx</code> and the components have no such controls. Flow 11 says "No email sent on decline" — stale; <code>onRsvpDeclined</code> exists and sends one. Signup password minimum is documented as 6 chars; the code requires 8.</p></div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- FOLLOW-UPS                                      -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <p id="sec-followups" class="chapter-title">Follow-ups requiring console or product decisions</p>
+  <section class="group">
     <div class="card">
       <ul>
-        <li><strong>F1</strong> — Route all guest RSVP reads/writes through Cloud Functions (removes the bearer-token residual in C1; makes approval/lockdown/deadline server-authoritative).</li>
-        <li><strong>F2</strong> — Enable <strong>Firebase App Check</strong> (reCAPTCHA Enterprise/v3) and enforce on callable functions and Firestore/Storage — the proper fix for H1/H2.</li>
-        <li><strong>F3</strong> — Add <code>@firebase/rules-unit-testing</code> tests so a regression like the <code>|| true</code> in C1 can never ship silently again.</li>
-        <li><strong>F4</strong> — Decide on memory moderation (currently auto-approved and shown on the live display within seconds of upload).</li>
+        <li><strong>F1</strong> — Route all guest RSVP reads/writes through Cloud Functions (makes approval/lockdown/deadline/module toggles server-authoritative; eliminates bearer-token residual from A-C1).</li>
+        <li><strong>F2</strong> — Enable <strong>Firebase App Check</strong> (reCAPTCHA Enterprise or v3) and enforce on callable functions and Firestore/Storage. This is the correct fix for A-C4, A-H1, A-M3 and prevents unauthenticated API abuse at scale.</li>
+        <li><strong>F3</strong> — Add <code>@firebase/rules-unit-testing</code> tests so a regression like the original <code>|| true</code> can never ship silently again.</li>
+        <li><strong>F4</strong> — Memory moderation policy: memories are currently auto-approved and visible in the host capsule within seconds of upload. Decide on a moderation step if needed.</li>
+        <li><strong>F5</strong> — Data retention / deletion: implement event delete with cascade cleanup of <code>rsvps</code>, <code>memories</code>, and Storage files to fulfil the privacy policy promise. This is also needed for account closure. Consider a scheduled Cloud Function to purge events older than N months after their date.</li>
+        <li><strong>F6</strong> — Stripe: complete <code>createStripeCheckoutSession</code> Cloud Function and webhook handler before enabling the upgrade buttons (see B-L2 / C-H6).</li>
       </ul>
     </div>
   </section>
 
   <!-- DEPLOY -->
+  <p id="sec-deploy" class="chapter-title">Deployment notes — order matters on a live site</p>
   <section class="group">
-    <h2 class="grouph">Deployment notes — order matters (live site)</h2>
-    <div class="note">The rules changes depend on the new <code>lookupRsvp</code> function and the rebuilt client.
-      Deploy in this order to avoid breaking the live guest flow. If rules are deployed first, the "Already RSVP'd?"
-      lookup will fail until the client/function catch up.</div>
-    <pre>1. firebase deploy --only functions                 # publishes lookupRsvp + validation
-2. npm run build &amp;&amp; firebase deploy --only hosting   # client that calls lookupRsvp
-3. firebase deploy --only firestore:rules,storage   # locks down access</pre>
+    <div class="note">Rules changes that restrict previously-open access (e.g. A-H2, A-H3) should always be deployed after the client that handles the new errors, not before, to avoid breaking the live guest flow.</div>
+    <pre>
+# Safe deploy order for rules hardening (A-H2, A-H3, A-M1, A-M2):
+1. npm run build && firebase deploy --only hosting   # client-side fixes first
+2. firebase deploy --only functions                  # updated lookupRsvp, email fixes
+3. firebase deploy --only firestore:rules,storage    # lock down access last
+
+# Security headers (A-M2) — firebase.json only, no code rebuild needed:
+firebase deploy --only hosting
+    </pre>
   </section>
 
   <footer>
-    Generated from <code>docs/SECURITY_AND_DESIGN_REVIEW.md</code> · Tiny Party Portal
+    Tiny Party Portal — Security, Bugs &amp; Design Review · Updated 2026-07-03 · Prior pass 2026-06-13
   </footer>
 
 </div>

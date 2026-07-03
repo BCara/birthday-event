@@ -38,16 +38,23 @@ export default function LeaveMemoryPage() {
 
   const fileInputRef = useRef(null);
 
+  // Track the current preview URLs so the unmount cleanup revokes the actual
+  // set (avoids a stale closure over the first render's empty `files`).
+  const previewUrlsRef = useRef([]);
+  useEffect(() => {
+    previewUrlsRef.current = files.map(f => f.previewUrl);
+  }, [files]);
+
   useEffect(() => {
     fetchEventBySlug(slug)
       .then(e => { setEvent(e); setLoading(false); })
       .catch(() => setLoading(false));
   }, [slug]);
 
-  // Revoke object URLs on unmount to avoid memory leaks.
+  // Revoke any remaining object URLs on unmount to avoid memory leaks.
   useEffect(() => {
-    return () => files.forEach(f => URL.revokeObjectURL(f.previewUrl));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => previewUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+  }, []);
 
   const addFiles = (selected) => {
     const incoming = Array.from(selected).slice(0, MAX_FILES - files.length);
@@ -144,8 +151,7 @@ export default function LeaveMemoryPage() {
   }
 
   const themeKey = event.theme?.startsWith('kids-') ? event.theme : `kids-${event.theme || 'generic'}`;
-  const ord = (n) => { const s = n % 100; if (s >= 11 && s <= 13) return `${n}th`; return `${n}${['th', 'st', 'nd', 'rd'][(n % 10 > 0 && n % 10 < 4) ? n % 10 : 0]}`; };
-  const birthdayLine = `${event.childAge ? ord(event.childAge) : '3rd'} Birthday`;
+  const birthdayLine = event.name || 'Birthday';
 
   if (success) {
     return (
@@ -155,6 +161,44 @@ export default function LeaveMemoryPage() {
             <div className="lm-success-emoji">🎉</div>
             <h1 className="lm-success-title">Memory saved!</h1>
             <p className="lm-success-msg">Thank you for sharing this special moment.</p>
+            <div className="lm-success-actions">
+              <Link to={`/${slug}`} className="lm-btn lm-btn-accent" style={{ width: '100%' }}>
+                ← View Event Details
+              </Link>
+            </div>
+          </div>
+        </div>
+      </ThemedPage>
+    );
+  }
+
+  // Enforce the host's capsule settings: disabled, or outside the
+  // open/close window. Mirrors EventLandingPage's `capsule` logic so
+  // behaviour stays consistent across the guest experience.
+  const now = Date.now();
+  const openTime = event.memoriesOpenDate ? new Date(event.memoriesOpenDate + 'T00:00:00').getTime() : null;
+  const closeTime = event.memoriesCloseDate ? new Date(event.memoriesCloseDate + 'T23:59:59').getTime() : null;
+  const capsuleClosed =
+    !event.memoriesEnabled ||
+    (openTime && now < openTime) ||
+    (closeTime && now > closeTime);
+
+  if (capsuleClosed) {
+    const notYetOpen = openTime && now < openTime;
+    const openDateLabel = event.memoriesOpenDate
+      ? new Date(event.memoriesOpenDate + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'long' })
+      : null;
+    return (
+      <ThemedPage themeKey={themeKey} themeColor={event.themeColor}>
+        <div className="lm-center">
+          <div className="lm-card lm-success-card">
+            <div className="lm-success-emoji">📸</div>
+            <h1 className="lm-success-title">The memory capsule isn't open</h1>
+            <p className="lm-success-msg">
+              {notYetOpen && openDateLabel
+                ? `Check back from ${openDateLabel} to share your photos and messages.`
+                : 'This memory capsule isn’t accepting new memories right now. Thanks so much for wanting to share!'}
+            </p>
             <div className="lm-success-actions">
               <Link to={`/${slug}`} className="lm-btn lm-btn-accent" style={{ width: '100%' }}>
                 ← View Event Details
